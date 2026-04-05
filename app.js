@@ -3226,6 +3226,393 @@ function renderCategoryStackItem(folder, category) {
   `;
 }
 
+function renderStats() {
+  renderStatsTabs();
+  renderStatsFilters();
+
+  const range = state.ui.statsRange;
+  const stats = buildStatsDataset(range);
+  dom.statsTitle.textContent =
+    range === "today" ? "Today's Color" : range === "week" ? "Weekly Color" : range === "month" ? "Monthly Color" : "Custom Color";
+  dom.statsRangeNote.textContent = stats.note;
+  dom.customRangeRow.hidden = range !== "custom";
+  dom.customStartDate.value = state.ui.customRange.start;
+  dom.customEndDate.value = state.ui.customRange.end;
+
+  renderStatsWheel(stats);
+  renderStatsBreakdown(stats);
+  renderTrendPanel();
+}
+
+function renderStatsTabs() {
+  const rangeOptions = [
+    { id: "today", label: "Today" },
+    { id: "week", label: "Week" },
+    { id: "month", label: "Month" },
+    { id: "custom", label: "Custom" },
+  ];
+
+  dom.statsRangeTabs.className = "range-switch";
+  dom.statsRangeTabs.innerHTML = rangeOptions
+    .map(
+      (option) => `
+        <button class="range-tab-link ${state.ui.statsRange === option.id ? "is-active" : ""}" data-stats-range="${option.id}" type="button">
+          ${option.label}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.statsModeTabs.innerHTML = `<span>View:</span><strong>Category</strong>`;
+
+  dom.statsRangeTabs.querySelectorAll("[data-stats-range]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.statsRange = button.dataset.statsRange;
+      state.ui.selectedSegment = null;
+      renderStats();
+      persistState();
+    };
+  });
+}
+
+function renderStatsFilters() {
+  const options = [
+    { value: "all", label: "All categories" },
+    ...state.folders.map((folder) => ({ value: `folder:${folder.id}`, label: folder.name })),
+    ...state.folders.flatMap((folder) =>
+      folder.categories.map((category) => ({ value: `category:${category.id}`, label: `${folder.name} / ${category.name}` }))
+    ),
+  ];
+
+  dom.statsCategoryFilter.innerHTML = options
+    .map((option) => `<option value="${option.value}">${escapeHtml(option.label)}</option>`)
+    .join("");
+  dom.statsCategoryFilter.value = state.ui.statsCategoryFilter || "all";
+  dom.statsCategoryFilter.onchange = (event) => {
+    state.ui.statsCategoryFilter = event.target.value;
+    state.ui.selectedSegment = null;
+    renderStats();
+    persistState();
+  };
+}
+
+function buildStatsDataset(range) {
+  const sessions = getFilteredSessions(range);
+  const totalMinutes = sessions.reduce((sum, session) => sum + getSessionMinutes(session), 0);
+  const note =
+    range === "today" ? formatHeroDate(new Date()) : range === "week" ? "Last 7 days" : range === "month" ? "This month" : "Picked range";
+
+  if (range === "today") {
+    const segments = sessions.map((session, index) => {
+      const start = new Date(session.start);
+      const end = new Date(session.end);
+      const task = state.tasks.find((entry) => entry.id === session.taskId);
+      const visual = getTaskVisual(task || session);
+      return {
+        key: `clock-${index}`,
+        startMinutes: start.getHours() * 60 + start.getMinutes(),
+        endMinutes: end.getHours() * 60 + end.getMinutes(),
+        color: visual.color,
+        label: visual.label,
+        note: `${formatClock(start)} - ${formatClock(end)} · ${formatDuration(getSessionMinutes(session))}`,
+        ratio: Math.max(0, (end - start) / 86400000),
+      };
+    });
+    return {
+      type: "clock",
+      totalMinutes,
+      centerLabel: "",
+      note,
+      segments,
+      selected: segments.find((entry) => entry.key === state.ui.selectedSegment) || null,
+      breakdown: groupBreakdown(sessions),
+    };
+  }
+
+  const grouped = groupBreakdown(sessions);
+  const segments = grouped.map((item, index) => ({
+    key: `pie-${index}`,
+    ...item,
+    note: `${formatDuration(item.minutes)} · ${item.percent}%`,
+    ratio: item.minutes / Math.max(totalMinutes, 1),
+  }));
+
+  return {
+    type: "pie",
+    totalMinutes,
+    centerLabel: "",
+    note,
+    segments,
+    selected: segments.find((entry) => entry.key === state.ui.selectedSegment) || null,
+    breakdown: grouped,
+  };
+}
+
+function groupBreakdown(sessions) {
+  const map = new Map();
+  const filtered = sessions.filter((session) => matchesStatsCategoryFilter(session));
+
+  filtered.forEach((session) => {
+    const task = state.tasks.find((entry) => entry.id === session.taskId);
+    const visual = getTaskVisual(task || session);
+    const key = session.categoryId || "uncategorized";
+    const label = visual.categoryName;
+    if (!map.has(key)) {
+      map.set(key, { key, label, color: visual.color, minutes: 0 });
+    }
+    map.get(key).minutes += getSessionMinutes(session);
+  });
+
+  const total = [...map.values()].reduce((sum, item) => sum + item.minutes, 0) || 1;
+  return [...map.values()]
+    .sort((a, b) => b.minutes - a.minutes)
+    .map((item) => ({ ...item, percent: Math.round((item.minutes / total) * 100) }));
+}
+
+function matchesStatsCategoryFilter(session) {
+  const filterValue = state.ui.statsCategoryFilter || "all";
+  if (filterValue === "all") return true;
+
+  const task = state.tasks.find((entry) => entry.id === session.taskId);
+  if (!task) return false;
+
+  if (filterValue.startsWith("folder:")) {
+    return task.folderId === filterValue.slice(7);
+  }
+  if (filterValue.startsWith("category:")) {
+    return task.categoryId === filterValue.slice(9);
+  }
+  return true;
+}
+
+function getFilteredSessions(range) {
+  const now = new Date();
+  return state.sessions.filter((session) => {
+    const start = new Date(session.start);
+    if (!matchesStatsCategoryFilter(session)) return false;
+    if (range === "today") return isSameDay(start, now);
+    if (range === "week") return differenceInDays(now, start) < 7;
+    if (range === "month") return start.getFullYear() === now.getFullYear() && start.getMonth() === now.getMonth();
+    const customStart = state.ui.customRange.start ? new Date(`${state.ui.customRange.start}T00:00:00`) : null;
+    const customEnd = state.ui.customRange.end ? new Date(`${state.ui.customRange.end}T23:59:59`) : null;
+    if (!customStart || !customEnd) return true;
+    return start >= customStart && start <= customEnd;
+  });
+}
+
+function renderStatsWheel(stats) {
+  const chart = state.ui.statsRange === "today" ? renderClockDialSvg(stats) : renderPieSvg(stats);
+  dom.statsWheelCard.innerHTML = `
+    <div class="wheel-shell">
+      ${chart}
+      ${
+        stats.selected
+          ? `<div class="stats-floating-note"><strong>${escapeHtml(stats.selected.label)}</strong><span>${escapeHtml(stats.selected.note)}</span></div>`
+          : ""
+      }
+    </div>
+  `;
+
+  dom.statsTotalRow.innerHTML = `
+    <div class="stats-total-chip">
+      <strong>${formatDuration(stats.totalMinutes)}</strong>
+    </div>
+  `;
+
+  dom.statsLegend.innerHTML = "";
+  dom.statsWheelCard.querySelectorAll("[data-segment-key]").forEach((node) => {
+    node.onclick = (event) => {
+      event.stopPropagation();
+      state.ui.selectedSegment = state.ui.selectedSegment === node.dataset.segmentKey ? null : node.dataset.segmentKey;
+      renderStats();
+      persistState();
+    };
+  });
+
+  dom.statsWheelCard.onclick = (event) => {
+    if (!event.target.closest("[data-segment-key]") && state.ui.selectedSegment) {
+      state.ui.selectedSegment = null;
+      renderStats();
+      persistState();
+    }
+  };
+}
+
+function renderClockDialSvg(stats) {
+  const cx = 170;
+  const cy = 170;
+  const radius = 126;
+  const ticks = Array.from({ length: 12 }, (_, index) => {
+    const hour = index * 2;
+    const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+    const x1 = cx + Math.cos(angle) * (radius + 6);
+    const y1 = cy + Math.sin(angle) * (radius + 6);
+    const x2 = cx + Math.cos(angle) * (radius + 18);
+    const y2 = cy + Math.sin(angle) * (radius + 18);
+    const tx = cx + Math.cos(angle) * (radius + 32);
+    const ty = cy + Math.sin(angle) * (radius + 32);
+    return `
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(86,97,126,0.24)" stroke-width="2" />
+      <text x="${tx}" y="${ty}" fill="rgba(86,97,126,0.64)" font-size="12" text-anchor="middle" dominant-baseline="middle">${hour === 0 ? 24 : hour}</text>
+    `;
+  }).join("");
+
+  const segments = stats.segments
+    .map((segment) => {
+      const label = renderSegmentLabel({
+        label: segment.label,
+        ratio: segment.ratio,
+        midpointRatio: (segment.startMinutes / 1440 + segment.endMinutes / 1440) / 2,
+        cx,
+        cy,
+        radius: radius * 0.58,
+      });
+      return `
+        <g>
+          <path
+            d="${describePieSlice(cx, cy, radius, segment.startMinutes / 1440, segment.endMinutes / 1440)}"
+            fill="${segment.color}"
+            opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.24 : 0.96}"
+            data-segment-key="${segment.key}"
+            style="cursor:pointer"
+          ></path>
+          ${label}
+        </g>
+      `;
+    })
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="time clock">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      ${ticks}
+      ${segments}
+    </svg>
+  `;
+}
+
+function renderPieSvg(stats) {
+  const cx = 170;
+  const cy = 170;
+  const radius = 126;
+
+  if (!stats.segments.length) {
+    return `
+      <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="pie chart">
+        <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      </svg>
+    `;
+  }
+
+  let currentRatio = 0;
+  const segments = stats.segments
+    .map((segment) => {
+      const start = currentRatio;
+      const end = currentRatio + segment.ratio;
+      currentRatio = end;
+      const label = renderSegmentLabel({
+        label: segment.label,
+        ratio: segment.ratio,
+        midpointRatio: (start + end) / 2,
+        cx,
+        cy,
+        radius: radius * 0.56,
+      });
+      return `
+        <g>
+          <path
+            d="${describePieSlice(cx, cy, radius, start, end)}"
+            fill="${segment.color}"
+            opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.28 : 0.96}"
+            data-segment-key="${segment.key}"
+            style="cursor:pointer"
+          ></path>
+          ${label}
+        </g>
+      `;
+    })
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="pie chart">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      ${segments}
+    </svg>
+  `;
+}
+
+function renderSegmentLabel({ label, ratio, midpointRatio, cx, cy, radius }) {
+  if (ratio < 0.08) return "";
+  const shortened = escapeHtml(label.length > 10 ? `${label.slice(0, 10)}…` : label);
+  const angle = midpointRatio * Math.PI * 2 - Math.PI / 2;
+  const x = cx + Math.cos(angle) * radius;
+  const y = cy + Math.sin(angle) * radius;
+  return `<text x="${x}" y="${y}" fill="rgba(35,52,73,0.72)" font-size="10.5" text-anchor="middle" dominant-baseline="middle">${shortened}</text>`;
+}
+
+function renderTasksTree() {
+  dom.tasksTree.innerHTML = state.folders
+    .map((folder) => {
+      const content = folder.expanded
+        ? `<div class="folder-content">${folder.categories.map((category) => renderCategoryStackItem(folder, category)).join("")}</div>`
+        : "";
+
+      return `
+        <article class="folder-block">
+          <div class="folder-headline">
+            <div class="folder-name">${escapeHtml(folder.name)}</div>
+            <div class="tree-controls">
+              <button class="tree-plus-plain" data-add-child="category" data-parent-folder="${folder.id}" type="button">+</button>
+              ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="folder" data-node-id="${folder.id}" type="button">✎</button>` : ""}
+              <button class="tree-toggle ${folder.expanded ? "is-open" : ""}" data-toggle-folder="${folder.id}" type="button">▾</button>
+            </div>
+          </div>
+          ${content}
+        </article>
+      `;
+    })
+    .join("");
+
+  bindTreeEvents();
+}
+
+function renderCategoryStackItem(folder, category) {
+  const templateMarkup = category.expanded
+    ? `
+      <div class="template-list-flat">
+        ${category.templates
+          .map(
+            (template) => `
+              <div class="template-row-flat">
+                <span>${escapeHtml(template.name)}</span>
+                <span class="template-duration">${template.durationMin} min</span>
+                ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="template" data-node-id="${template.id}" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">✎</button>` : ""}
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+    `
+    : "";
+
+  return `
+    <section class="category-stack-item" style="--tree-color:${category.color};">
+      <div class="category-line">
+        <button class="category-toggle-line" data-toggle-category="${category.id}" type="button">
+          <span class="category-color-bar"></span>
+          <span class="category-inline-caret ${category.expanded ? "is-open" : ""}">▸</span>
+          <span class="category-title">${escapeHtml(category.name)}</span>
+        </button>
+        <div class="tree-controls">
+          <button class="tree-plus-plain" data-add-child="template" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
+          ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button">✎</button>` : ""}
+        </div>
+      </div>
+      ${templateMarkup}
+    </section>
+  `;
+}
+
 function toggleTaskComplete(taskId) {
   const task = state.tasks.find((entry) => entry.id === taskId);
   if (!task) return;
