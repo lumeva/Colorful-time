@@ -1,0 +1,2095 @@
+const STORAGE_KEY = "colorful-time-state-v1";
+
+const CATEGORY_COLORS = [
+  "#6ea8ff",
+  "#8bda9f",
+  "#ffbe65",
+  "#ff9d8d",
+  "#b193ff",
+  "#5ec7c0",
+];
+
+const THEME_OPTIONS = [
+  {
+    id: "paper",
+    name: "Simple Paper",
+    note: "奶油纸、细线、贴纸感。",
+  },
+  {
+    id: "adventure",
+    name: "Adventure",
+    note: "更轻快、更手绘，给后面的动漫感留入口。",
+  },
+];
+
+const dom = {
+  body: document.body,
+  pages: [...document.querySelectorAll(".page")],
+  navItems: [...document.querySelectorAll(".nav-item")],
+  homeDate: document.getElementById("home-date"),
+  timerStrip: document.getElementById("timer-strip"),
+  nextScroll: document.getElementById("next-scroll"),
+  todoGroups: document.getElementById("todo-groups"),
+  fab: document.getElementById("fab-button"),
+  scrim: document.getElementById("scrim"),
+  actionSheet: document.getElementById("action-sheet"),
+  todayRefresh: document.getElementById("today-refresh"),
+  statsTitle: document.getElementById("stats-title"),
+  statsRangeNote: document.getElementById("stats-range-note"),
+  statsRangeTabs: document.getElementById("stats-range-tabs"),
+  statsModeTabs: document.getElementById("stats-mode-tabs"),
+  statsWheelCard: document.getElementById("stats-wheel-card"),
+  statsLegend: document.getElementById("stats-legend"),
+  statsCategoryFilter: document.getElementById("stats-category-filter"),
+  statsTaskFilter: document.getElementById("stats-task-filter"),
+  statsBreakdown: document.getElementById("stats-breakdown"),
+  trendToggle: document.getElementById("trend-toggle"),
+  trendPanel: document.getElementById("trend-panel"),
+  customRangeRow: document.getElementById("custom-range-row"),
+  customStartDate: document.getElementById("custom-start-date"),
+  customEndDate: document.getElementById("custom-end-date"),
+  tasksTree: document.getElementById("tasks-tree"),
+  tasksEditToggle: document.getElementById("tasks-edit-toggle"),
+  addFolderButton: document.getElementById("add-folder-button"),
+  themeGrid: document.getElementById("theme-grid"),
+  dayStartInput: document.getElementById("day-start-input"),
+  defaultDurationSelect: document.getElementById("default-duration-select"),
+  completedDefaultToggle: document.getElementById("completed-default-toggle"),
+  reduceTextureToggle: document.getElementById("reduce-texture-toggle"),
+  taskSheet: document.getElementById("task-sheet"),
+  taskSheetTitle: document.getElementById("task-sheet-title"),
+  taskForm: document.getElementById("task-form"),
+  taskNameInput: document.getElementById("task-name-input"),
+  taskCategoryButton: document.getElementById("task-category-button"),
+  taskCategoryLabel: document.getElementById("task-category-label"),
+  taskTimeInput: document.getElementById("task-time-input"),
+  taskDurationInput: document.getElementById("task-duration-input"),
+  taskImportantInput: document.getElementById("task-important-input"),
+  quickForm: document.getElementById("quick-form"),
+  quickNameInput: document.getElementById("quick-name-input"),
+  quickSuggestionList: document.getElementById("quick-suggestion-list"),
+  logForm: document.getElementById("log-form"),
+  logTaskInput: document.getElementById("log-task-input"),
+  logSuggestionList: document.getElementById("log-suggestion-list"),
+  logStartInput: document.getElementById("log-start-input"),
+  logEndInput: document.getElementById("log-end-input"),
+  logDurationNote: document.getElementById("log-duration-note"),
+  categorySheetTitle: document.getElementById("category-sheet-title"),
+  categoryBreadcrumb: document.getElementById("category-breadcrumb"),
+  categoryList: document.getElementById("category-list"),
+  treeEditorTitle: document.getElementById("tree-editor-title"),
+  treeEditorForm: document.getElementById("tree-editor-form"),
+  treeNameInput: document.getElementById("tree-name-input"),
+  treeDurationField: document.getElementById("tree-duration-field"),
+  treeDurationInput: document.getElementById("tree-duration-input"),
+  treeColorPicker: document.getElementById("tree-color-picker"),
+  treeDeleteButton: document.getElementById("tree-delete-button"),
+};
+
+let state = loadState();
+let clockTicker = null;
+
+boot();
+
+function boot() {
+  applyPageFromUrl();
+  bindEvents();
+  renderAll();
+  startTicker();
+}
+
+function applyPageFromUrl() {
+  const page = new URL(window.location.href).searchParams.get("page");
+  if (["home", "stats", "tasks", "settings"].includes(page)) {
+    state.currentPage = page;
+  }
+}
+
+function createSeedState(baseDate = new Date()) {
+  const dayStart = cloneDate(baseDate);
+  dayStart.setHours(0, 0, 0, 0);
+
+  const folders = [
+    {
+      id: makeId("folder"),
+      name: "Study",
+      expanded: true,
+      categories: [
+        {
+          id: makeId("cat"),
+          name: "Math",
+          color: "#6ea8ff",
+          expanded: true,
+          templates: [
+            { id: makeId("tpl"), name: "Do Exercises", durationMin: 30 },
+            { id: makeId("tpl"), name: "Review Notes", durationMin: 25 },
+            { id: makeId("tpl"), name: "整理错题", durationMin: 20 },
+          ],
+        },
+        {
+          id: makeId("cat"),
+          name: "English",
+          color: "#ffcb63",
+          expanded: true,
+          templates: [
+            { id: makeId("tpl"), name: "Read Book", durationMin: 30 },
+            { id: makeId("tpl"), name: "Practice Vocabulary", durationMin: 20 },
+          ],
+        },
+      ],
+    },
+    {
+      id: makeId("folder"),
+      name: "Life",
+      expanded: true,
+      categories: [
+        {
+          id: makeId("cat"),
+          name: "Daily",
+          color: "#8bda9f",
+          expanded: true,
+          templates: [
+            { id: makeId("tpl"), name: "Lunch", durationMin: 40 },
+            { id: makeId("tpl"), name: "Shower", durationMin: 15 },
+          ],
+        },
+        {
+          id: makeId("cat"),
+          name: "Fitness",
+          color: "#ffb16f",
+          expanded: true,
+          templates: [{ id: makeId("tpl"), name: "Exercise", durationMin: 30 }],
+        },
+      ],
+    },
+    {
+      id: makeId("folder"),
+      name: "Work",
+      expanded: false,
+      categories: [
+        {
+          id: makeId("cat"),
+          name: "Admin",
+          color: "#ff9d8d",
+          expanded: true,
+          templates: [
+            { id: makeId("tpl"), name: "Fill Survey", durationMin: 5 },
+            { id: makeId("tpl"), name: "Reply Messages", durationMin: 10 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const lookup = buildLookupFromFolders(folders);
+  const tasks = [
+    createTask({
+      name: "Read Book",
+      time: "08:00",
+      folderId: lookup.byTemplateName["Read Book"].folder.id,
+      categoryId: lookup.byTemplateName["Read Book"].category.id,
+      templateId: lookup.byTemplateName["Read Book"].template.id,
+      durationMin: 30,
+    }),
+    createTask({
+      name: "Exercise",
+      time: "09:30",
+      folderId: lookup.byTemplateName["Exercise"].folder.id,
+      categoryId: lookup.byTemplateName["Exercise"].category.id,
+      templateId: lookup.byTemplateName["Exercise"].template.id,
+      durationMin: 30,
+    }),
+    createTask({
+      name: "Study Math",
+      time: "11:00",
+      folderId: lookup.byTemplateName["Do Exercises"].folder.id,
+      categoryId: lookup.byTemplateName["Do Exercises"].category.id,
+      templateId: lookup.byTemplateName["Do Exercises"].template.id,
+      durationMin: 45,
+      important: true,
+    }),
+    createTask({
+      name: "Lunch",
+      time: "13:00",
+      folderId: lookup.byTemplateName["Lunch"].folder.id,
+      categoryId: lookup.byTemplateName["Lunch"].category.id,
+      templateId: lookup.byTemplateName["Lunch"].template.id,
+      durationMin: 40,
+    }),
+    createTask({
+      name: "Review Notes",
+      time: "18:30",
+      folderId: lookup.byTemplateName["Review Notes"].folder.id,
+      categoryId: lookup.byTemplateName["Review Notes"].category.id,
+      templateId: lookup.byTemplateName["Review Notes"].template.id,
+      durationMin: 25,
+      important: true,
+    }),
+    createTask({
+      name: "Fill Survey",
+      folderId: lookup.byTemplateName["Fill Survey"].folder.id,
+      categoryId: lookup.byTemplateName["Fill Survey"].category.id,
+      templateId: lookup.byTemplateName["Fill Survey"].template.id,
+      durationMin: 5,
+      important: true,
+    }),
+    createTask({
+      name: "Room Reset",
+      folderId: lookup.byTemplateName["Shower"].folder.id,
+      categoryId: lookup.byTemplateName["Shower"].category.id,
+      durationMin: 15,
+    }),
+    createTask({
+      name: "Morning Pages",
+      time: "06:40",
+      folderId: lookup.byTemplateName["Review Notes"].folder.id,
+      categoryId: lookup.byTemplateName["Review Notes"].category.id,
+      durationMin: 20,
+      completed: true,
+      completedAt: addMinutes(dayStart, 410).toISOString(),
+    }),
+  ];
+
+  const activeTimerTask = tasks.find((task) => task.name === "Study Math");
+  const sessions = [
+    createSession(tasks.find((task) => task.name === "Read Book"), dayStart, 8, 10, 8, 55),
+    createSession(tasks.find((task) => task.name === "Exercise"), dayStart, 9, 36, 10, 8),
+    createSession(activeTimerTask, dayStart, 10, 15, 11, 45),
+    createSession(tasks.find((task) => task.name === "Lunch"), dayStart, 12, 10, 12, 52),
+    createSession(tasks.find((task) => task.name === "Fill Survey"), dayStart, 14, 20, 14, 35),
+    createSession(tasks.find((task) => task.name === "Review Notes"), shiftDate(dayStart, -1), 19, 0, 19, 28),
+    createSession(tasks.find((task) => task.name === "Exercise"), shiftDate(dayStart, -1), 9, 20, 9, 55),
+    createSession(tasks.find((task) => task.name === "Read Book"), shiftDate(dayStart, -2), 8, 5, 8, 40),
+    createSession(tasks.find((task) => task.name === "Lunch"), shiftDate(dayStart, -2), 12, 0, 12, 38),
+    createSession(tasks.find((task) => task.name === "Review Notes"), shiftDate(dayStart, -3), 18, 30, 19, 5),
+    createSession(tasks.find((task) => task.name === "Fill Survey"), shiftDate(dayStart, -3), 14, 0, 14, 10),
+    createSession(tasks.find((task) => task.name === "Exercise"), shiftDate(dayStart, -4), 9, 10, 9, 40),
+    createSession(tasks.find((task) => task.name === "Read Book"), shiftDate(dayStart, -5), 8, 0, 8, 25),
+    createSession(tasks.find((task) => task.name === "Study Math"), shiftDate(dayStart, -5), 10, 0, 11, 20),
+    createSession(tasks.find((task) => task.name === "Lunch"), shiftDate(dayStart, -6), 12, 18, 12, 55),
+  ];
+
+  return {
+    currentPage: "home",
+    theme: "paper",
+    dayStart: "00:00",
+    defaultDuration: 25,
+    reduceTexture: false,
+    showCompletedOpen: false,
+    ui: {
+      openSheet: null,
+      statsRange: "today",
+      statsMode: "category",
+      statsCategoryFilter: "all",
+      statsTaskFilter: "all",
+      selectedSegment: null,
+      showTrend: false,
+      tasksEditMode: false,
+      editingTaskId: null,
+      createTaskSelection: null,
+      categoryTrail: [],
+      treeEditor: null,
+      customRange: {
+        start: formatInputDate(shiftDate(dayStart, -6)),
+        end: formatInputDate(dayStart),
+      },
+    },
+    folders,
+    tasks,
+    sessions,
+    activeTimer: {
+      taskId: activeTimerTask.id,
+      startedAt: new Date(Date.now() - (25 * 60 + 32) * 1000).toISOString(),
+      pausedElapsedMs: 0,
+      running: true,
+    },
+  };
+}
+
+function createTask({
+  name,
+  time = "",
+  folderId = null,
+  categoryId = null,
+  templateId = null,
+  durationMin = 25,
+  important = false,
+  completed = false,
+  completedAt = null,
+}) {
+  return {
+    id: makeId("task"),
+    name,
+    scheduledMinutes: time ? parseTimeString(time) : null,
+    durationMin,
+    important,
+    completed,
+    completedAt,
+    folderId,
+    categoryId,
+    templateId,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function createSession(task, day, startHour, startMinute, endHour, endMinute) {
+  const start = cloneDate(day);
+  start.setHours(startHour, startMinute, 0, 0);
+  const end = cloneDate(day);
+  end.setHours(endHour, endMinute, 0, 0);
+  return {
+    id: makeId("session"),
+    taskId: task?.id || null,
+    taskName: task?.name || "Untitled",
+    categoryId: task?.categoryId || null,
+    templateId: task?.templateId || null,
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
+}
+
+function bindEvents() {
+  dom.navItems.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.currentPage = button.dataset.target;
+      closeAllSheets();
+      renderAll();
+      persistState();
+    });
+  });
+
+  dom.fab.addEventListener("click", () => toggleSheet("action-sheet"));
+  dom.scrim.addEventListener("click", closeAllSheets);
+  dom.todayRefresh.addEventListener("click", renderHome);
+
+  document.querySelectorAll("[data-close-sheet]").forEach((button) => {
+    button.addEventListener("click", closeAllSheets);
+  });
+
+  document.querySelectorAll("[data-open-sheet]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.openSheet;
+      if (target === "task-sheet") {
+        prepareTaskDraft();
+      }
+      if (target === "quick-sheet") {
+        dom.quickNameInput.value = "";
+      }
+      if (target === "log-sheet") {
+        dom.logTaskInput.value = "";
+      }
+      openSheet(target);
+    });
+  });
+
+  dom.taskCategoryButton.addEventListener("click", () => {
+    state.ui.categoryTrail = [];
+    renderCategorySheet();
+    openSheet("category-sheet");
+  });
+
+  dom.taskForm.addEventListener("submit", handleTaskSubmit);
+  dom.quickForm.addEventListener("submit", handleQuickStart);
+  dom.logForm.addEventListener("submit", handleLogTime);
+  dom.tasksEditToggle.addEventListener("click", () => {
+    state.ui.tasksEditMode = !state.ui.tasksEditMode;
+    renderTasksTree();
+    persistState();
+  });
+
+  dom.addFolderButton.addEventListener("click", () => openTreeEditor({ mode: "create", type: "folder" }));
+  dom.treeEditorForm.addEventListener("submit", handleTreeEditorSubmit);
+  dom.treeDeleteButton.addEventListener("click", handleTreeDelete);
+
+  dom.quickNameInput.addEventListener("input", renderQuickSuggestions);
+  dom.logTaskInput.addEventListener("input", renderLogSuggestions);
+  dom.logStartInput.addEventListener("input", updateLogDuration);
+  dom.logEndInput.addEventListener("input", updateLogDuration);
+
+  dom.trendToggle.addEventListener("click", () => {
+    state.ui.showTrend = !state.ui.showTrend;
+    renderStats();
+    persistState();
+  });
+
+  dom.dayStartInput.addEventListener("input", (event) => {
+    state.dayStart = event.target.value || "00:00";
+    persistState();
+  });
+
+  dom.defaultDurationSelect.addEventListener("change", (event) => {
+    state.defaultDuration = Number(event.target.value);
+    persistState();
+  });
+
+  dom.completedDefaultToggle.addEventListener("change", (event) => {
+    state.showCompletedOpen = event.target.checked;
+    renderHome();
+    persistState();
+  });
+
+  dom.reduceTextureToggle.addEventListener("change", (event) => {
+    state.reduceTexture = event.target.checked;
+    applyBodyFlags();
+    persistState();
+  });
+
+  dom.customStartDate.addEventListener("change", (event) => {
+    state.ui.customRange.start = event.target.value;
+    renderStats();
+    persistState();
+  });
+
+  dom.customEndDate.addEventListener("change", (event) => {
+    state.ui.customRange.end = event.target.value;
+    renderStats();
+    persistState();
+  });
+}
+
+function startTicker() {
+  if (clockTicker) {
+    clearInterval(clockTicker);
+  }
+  clockTicker = setInterval(() => {
+    renderHomeTimerOnly();
+  }, 1000);
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  updateLogDuration();
+}
+
+function renderNavigation() {
+  dom.pages.forEach((page) => {
+    page.classList.toggle("is-active", page.dataset.page === state.currentPage);
+  });
+  dom.navItems.forEach((item) => {
+    item.classList.toggle("is-active", item.dataset.target === state.currentPage);
+  });
+}
+
+function renderHome() {
+  dom.homeDate.textContent = formatHeroDate(new Date());
+  renderHomeTimerOnly();
+  renderNextTasks();
+  renderTodoGroups();
+}
+
+function renderHomeTimerOnly() {
+  const timerState = getTimerPresentation();
+  dom.timerStrip.innerHTML = timerState
+    ? `
+      <div class="timer-row">
+        <div class="timer-chip" style="background:${timerState.color};">${escapeHtml(timerState.badge)}</div>
+        <div class="timer-main">
+          <p class="timer-name">${escapeHtml(timerState.name)}</p>
+          <div class="timer-meta">
+            <div class="timer-clock">${timerState.elapsed}</div>
+            <p class="timer-sub">${escapeHtml(timerState.meta)}</p>
+          </div>
+          <div class="timer-progress">
+            <span style="width:${timerState.progress}%;"></span>
+          </div>
+        </div>
+        <div class="timer-actions">
+          <button class="timer-button" id="timer-toggle" type="button">${state.activeTimer.running ? "Pause" : "Play"}</button>
+          <button class="timer-button stop" id="timer-stop" type="button">Stop</button>
+        </div>
+      </div>
+    `
+    : `
+      <div class="timer-row">
+        <div class="timer-main">
+          <p class="timer-name">No timer running</p>
+          <div class="timer-meta">
+            <div class="timer-clock">00:00:00</div>
+            <p class="timer-sub">Quick Start 可以立刻把一件事送进现在。</p>
+          </div>
+          <div class="timer-progress"><span style="width:0%"></span></div>
+        </div>
+        <div class="timer-actions">
+          <button class="timer-button" id="timer-new" type="button">Start</button>
+        </div>
+      </div>
+    `;
+
+  document.getElementById("timer-toggle")?.addEventListener("click", toggleTimer);
+  document.getElementById("timer-stop")?.addEventListener("click", stopTimer);
+  document.getElementById("timer-new")?.addEventListener("click", () => {
+    dom.quickNameInput.value = "";
+    openSheet("quick-sheet");
+  });
+}
+
+function renderNextTasks() {
+  const nextTasks = getNextTasks();
+  if (!nextTasks.length) {
+    dom.nextScroll.innerHTML = `<p class="empty-note">今天的待办已经抽空了。</p>`;
+    return;
+  }
+
+  dom.nextScroll.innerHTML = nextTasks
+    .map((task) => {
+      const meta = getTaskVisual(task);
+      const badge = task.scheduledMinutes == null ? "Flexible" : formatMinutes(task.scheduledMinutes);
+      return `
+        <article class="next-card" style="${paperGradient(meta.color)}">
+          <div class="next-topline">
+            <span>${badge}</span>
+            <span>${task.important ? "Starred" : meta.groupLabel}</span>
+          </div>
+          <h3 class="next-name">${escapeHtml(task.name)}</h3>
+          <p class="next-meta">${escapeHtml(meta.shortPath)} · ${task.durationMin || state.defaultDuration} min</p>
+          <div class="next-footer">
+            <div class="chip-row">
+              <span class="sticker">${escapeHtml(meta.categoryName)}</span>
+              ${task.important ? `<span class="sticker">Important</span>` : ""}
+            </div>
+            <button class="timeline-start small" data-start-task="${task.id}" type="button">Start</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  dom.nextScroll.querySelectorAll("[data-start-task]").forEach((button) => {
+    button.addEventListener("click", () => startTimerForTask(button.dataset.startTask));
+  });
+}
+
+function renderTodoGroups() {
+  const groups = getGroupedTasks();
+  dom.todoGroups.innerHTML = [
+    renderTaskGroup("Overdue", groups.overdue, "⚠"),
+    renderTaskGroup("Today", groups.today, ""),
+    renderTaskGroup("Flexible", groups.flexible, ""),
+    renderCompletedGroup(groups.completed),
+  ].join("");
+
+  dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
+    input.addEventListener("change", () => toggleTaskComplete(input.dataset.taskCheck));
+  });
+  dom.todoGroups.querySelectorAll("[data-task-start]").forEach((button) => {
+    button.addEventListener("click", () => startTimerForTask(button.dataset.taskStart));
+  });
+  dom.todoGroups.querySelectorAll("[data-task-edit]").forEach((button) => {
+    button.addEventListener("click", () => prepareTaskDraft(button.dataset.taskEdit));
+  });
+  dom.todoGroups.querySelectorAll("[data-toggle-completed]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.showCompletedOpen = !state.showCompletedOpen;
+      renderHome();
+      persistState();
+    });
+  });
+}
+
+function renderTaskGroup(title, tasks, marker) {
+  return `
+    <section class="todo-group">
+      <div class="group-head">
+        <h3>${marker ? `${marker} ${title}` : title}</h3>
+        <div class="group-dash"></div>
+      </div>
+      ${
+        tasks.length
+          ? `<div class="task-list">${tasks.map((task) => renderTaskRow(task)).join("")}</div>`
+          : `<p class="empty-note">${title === "Flexible" ? "没有无时间任务。" : "这一组现在是空的。"}</p>`
+      }
+    </section>
+  `;
+}
+
+function renderCompletedGroup(tasks) {
+  const open = state.showCompletedOpen;
+  return `
+    <section class="todo-group">
+      <button class="collapse-button" data-toggle-completed type="button">
+        Completed · ${tasks.length} ${open ? "▾" : "▸"}
+      </button>
+      ${
+        open
+          ? tasks.length
+            ? `<div class="task-list" style="margin-top:12px;">${tasks
+                .map((task) => renderTaskRow(task, true))
+                .join("")}</div>`
+            : `<p class="empty-note">完成区还是空的。</p>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderTaskRow(task, isCompleted = false) {
+  const visual = getTaskVisual(task);
+  return `
+    <article class="task-row ${isCompleted ? "is-completed" : ""}">
+      <label class="task-check">
+        <input type="checkbox" data-task-check="${task.id}" ${task.completed ? "checked" : ""} />
+        <span></span>
+      </label>
+      <div class="task-main">
+        <div class="task-title-row">
+          ${task.scheduledMinutes != null ? `<span class="task-time">${formatMinutes(task.scheduledMinutes)}</span>` : ""}
+          <h4 class="task-name">${escapeHtml(task.name)}</h4>
+        </div>
+        <div class="task-tags">
+          <span class="mini-pill" style="${chipStyle(visual.color)}">${escapeHtml(visual.categoryName)}</span>
+          ${task.important ? `<span class="mini-pill">Important</span>` : ""}
+          ${task.durationMin ? `<span class="mini-pill">${task.durationMin} min</span>` : ""}
+        </div>
+      </div>
+      <div class="task-side">
+        ${!task.completed ? `<button class="timeline-start small" data-task-start="${task.id}" type="button">Start</button>` : ""}
+        <button class="task-action" data-task-edit="${task.id}" type="button">✎</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderStats() {
+  renderStatsTabs();
+  renderStatsFilters();
+
+  const range = state.ui.statsRange;
+  const stats = buildStatsDataset(range);
+  const rangeTitle =
+    range === "today"
+      ? "Today's Color"
+      : range === "week"
+        ? "Weekly Color"
+        : range === "month"
+          ? "Monthly Color"
+          : "Custom Color";
+
+  dom.statsTitle.textContent = rangeTitle;
+  dom.statsRangeNote.textContent = stats.note;
+  dom.customRangeRow.hidden = range !== "custom";
+  dom.customStartDate.value = state.ui.customRange.start;
+  dom.customEndDate.value = state.ui.customRange.end;
+
+  renderStatsWheel(stats);
+  renderStatsBreakdown(stats);
+  renderTrendPanel();
+}
+
+function renderStatsTabs() {
+  const rangeOptions = [
+    { id: "today", label: "Today" },
+    { id: "week", label: "Week" },
+    { id: "month", label: "Month" },
+    { id: "custom", label: "Custom" },
+  ];
+  const modeOptions = [
+    { id: "category", label: "By Category" },
+    { id: "task", label: "By Task" },
+  ];
+
+  dom.statsRangeTabs.innerHTML = rangeOptions
+    .map(
+      (option) => `
+      <button class="seg-button ${state.ui.statsRange === option.id ? "is-active" : ""}" data-stats-range="${option.id}" type="button">
+        ${option.label}
+      </button>
+    `
+    )
+    .join("");
+
+  dom.statsModeTabs.innerHTML = modeOptions
+    .map(
+      (option) => `
+      <button class="seg-button ${state.ui.statsMode === option.id ? "is-active" : ""}" data-stats-mode="${option.id}" type="button">
+        ${option.label}
+      </button>
+    `
+    )
+    .join("");
+
+  dom.statsRangeTabs.querySelectorAll("[data-stats-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.ui.statsRange = button.dataset.statsRange;
+      state.ui.selectedSegment = null;
+      renderStats();
+      persistState();
+    });
+  });
+  dom.statsModeTabs.querySelectorAll("[data-stats-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.ui.statsMode = button.dataset.statsMode;
+      renderStats();
+      persistState();
+    });
+  });
+}
+
+function renderStatsFilters() {
+  const categories = getAllCategories();
+  const taskOptions = getTaskSuggestions();
+
+  dom.statsCategoryFilter.innerHTML = [
+    `<option value="all">All categories</option>`,
+    ...categories.map((category) => `<option value="${category.id}">${escapeHtml(category.name)}</option>`),
+  ].join("");
+  dom.statsTaskFilter.innerHTML = [
+    `<option value="all">All tasks</option>`,
+    ...taskOptions.map((task) => `<option value="${task.key}">${escapeHtml(task.label)}</option>`),
+  ].join("");
+
+  dom.statsCategoryFilter.value = state.ui.statsCategoryFilter;
+  dom.statsTaskFilter.value = state.ui.statsTaskFilter;
+  dom.statsCategoryFilter.onchange = (event) => {
+    state.ui.statsCategoryFilter = event.target.value;
+    renderStats();
+    persistState();
+  };
+  dom.statsTaskFilter.onchange = (event) => {
+    state.ui.statsTaskFilter = event.target.value;
+    renderStats();
+    persistState();
+  };
+}
+
+function renderStatsWheel(stats) {
+  dom.statsWheelCard.innerHTML = `
+    <div class="wheel-shell">
+      ${stats.type === "clock" ? renderClockSvg(stats) : renderDonutSvg(stats)}
+      <div class="wheel-center">
+        <div>
+          <div class="wheel-total">${formatDuration(stats.totalMinutes)}</div>
+          <div class="wheel-sub">${escapeHtml(stats.centerLabel)}</div>
+        </div>
+      </div>
+    </div>
+    ${
+      stats.selected
+        ? `
+          <div class="segment-annotation">
+            <span class="annotation-dot" style="background:${stats.selected.color};"></span>
+            <div>
+              <strong>${escapeHtml(stats.selected.label)}</strong>
+              <div class="wheel-sub">${escapeHtml(stats.selected.note)}</div>
+            </div>
+          </div>
+        `
+        : ""
+    }
+  `;
+
+  dom.statsLegend.innerHTML = stats.legend
+    .map(
+      (item) => `
+      <article class="legend-item">
+        <span class="legend-dot" style="background:${item.color};"></span>
+        <div class="legend-meta">
+          <div class="legend-name">${escapeHtml(item.label)}</div>
+          <div class="legend-sub">${formatDuration(item.minutes)} · ${item.percent}%</div>
+        </div>
+      </article>
+    `
+    )
+    .join("");
+
+  dom.statsWheelCard.querySelectorAll("[data-segment-key]").forEach((node) => {
+    node.addEventListener("click", () => {
+      state.ui.selectedSegment =
+        state.ui.selectedSegment === node.dataset.segmentKey ? null : node.dataset.segmentKey;
+      renderStats();
+      persistState();
+    });
+  });
+}
+
+function renderStatsBreakdown(stats) {
+  if (!stats.breakdown.length) {
+    dom.statsBreakdown.innerHTML = `<p class="empty-note">这段时间还没有记录。</p>`;
+    return;
+  }
+
+  dom.statsBreakdown.innerHTML = stats.breakdown
+    .map(
+      (item) => `
+        <article class="breakdown-row">
+          <span class="breakdown-dot" style="background:${item.color};"></span>
+          <span class="breakdown-name">${escapeHtml(item.label)}</span>
+          <strong>${formatDuration(item.minutes)}</strong>
+          <span class="breakdown-right">${item.percent}%</span>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderTrendPanel() {
+  const label = state.ui.showTrend ? "Hide weekly trend" : "Show weekly trend";
+  dom.trendToggle.querySelector("span").textContent = label;
+  dom.trendPanel.hidden = !state.ui.showTrend;
+  if (!state.ui.showTrend) {
+    return;
+  }
+
+  const trend = buildWeeklyTrend();
+  dom.trendPanel.innerHTML = `
+    <div class="trend-grid">
+      ${trend
+        .map(
+          (entry) => `
+          <div class="trend-row">
+            <span>${entry.label}</span>
+            <div class="trend-bar"><span style="width:${entry.width}%; background:${entry.color};"></span></div>
+            <strong>${formatDuration(entry.minutes)}</strong>
+          </div>
+        `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderTasksTree() {
+  dom.tasksEditToggle.textContent = state.ui.tasksEditMode ? "Done" : "Edit";
+  dom.tasksTree.innerHTML = state.folders
+    .map((folder) => {
+      const folderChildren = folder.expanded
+        ? folder.categories.map((category) => renderCategoryRow(folder, category)).join("")
+        : "";
+      return `
+        <article class="tree-row folder">
+          <div class="tree-head">
+            <button class="tree-toggle" data-toggle-folder="${folder.id}" type="button">${folder.expanded ? "▾" : "▸"}</button>
+            <div class="tree-name">${escapeHtml(folder.name)}</div>
+            <div class="tree-controls">
+              <button class="tree-mini" data-add-child="category" data-parent-folder="${folder.id}" type="button">＋</button>
+              ${
+                state.ui.tasksEditMode
+                  ? `
+                    <button class="tree-mini" data-edit-node="folder" data-node-id="${folder.id}" type="button">✎</button>
+                    <button class="tree-mini" data-move-folder="${folder.id}" data-direction="up" type="button">↑</button>
+                    <button class="tree-mini" data-move-folder="${folder.id}" data-direction="down" type="button">↓</button>
+                  `
+                  : ""
+              }
+            </div>
+          </div>
+          ${folderChildren}
+        </article>
+      `;
+    })
+    .join("");
+
+  bindTreeEvents();
+}
+
+function renderCategoryRow(folder, category) {
+  const templates = category.expanded
+    ? category.templates
+        .map(
+          (template) => `
+          <article class="tree-row template">
+            <div class="tree-head">
+              <div class="tree-name">${escapeHtml(template.name)}</div>
+              <div class="tree-sub">${template.durationMin} min</div>
+              <div class="tree-controls">
+                ${
+                  state.ui.tasksEditMode
+                    ? `<button class="tree-mini" data-edit-node="template" data-node-id="${template.id}" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">✎</button>`
+                    : ""
+                }
+              </div>
+            </div>
+          </article>
+        `
+        )
+        .join("")
+    : "";
+
+  return `
+    <article class="tree-row category" style="--tree-color:${category.color};">
+      <div class="tree-head">
+        <button class="tree-toggle" data-toggle-category="${category.id}" type="button">${category.expanded ? "▾" : "▸"}</button>
+        <div>
+          <div class="tree-name">${escapeHtml(category.name)}</div>
+          <div class="tree-sub">color-bound category</div>
+        </div>
+        <div class="tree-controls">
+          <button class="tree-mini" data-add-child="template" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">＋</button>
+          ${
+            state.ui.tasksEditMode
+              ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button">✎</button>`
+              : ""
+          }
+        </div>
+      </div>
+      ${templates}
+    </article>
+  `;
+}
+
+function bindTreeEvents() {
+  dom.tasksTree.querySelectorAll("[data-toggle-folder]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const folder = state.folders.find((item) => item.id === button.dataset.toggleFolder);
+      if (!folder) return;
+      folder.expanded = !folder.expanded;
+      renderTasksTree();
+      persistState();
+    });
+  });
+
+  dom.tasksTree.querySelectorAll("[data-toggle-category]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const category = getAllCategories().find((item) => item.id === button.dataset.toggleCategory);
+      if (!category) return;
+      category.expanded = !category.expanded;
+      renderTasksTree();
+      persistState();
+    });
+  });
+
+  dom.tasksTree.querySelectorAll("[data-add-child]").forEach((button) => {
+    button.addEventListener("click", () => {
+      openTreeEditor({
+        mode: "create",
+        type: button.dataset.addChild,
+        parentFolderId: button.dataset.parentFolder || null,
+        parentCategoryId: button.dataset.parentCategory || null,
+      });
+    });
+  });
+
+  dom.tasksTree.querySelectorAll("[data-edit-node]").forEach((button) => {
+    button.addEventListener("click", () => {
+      openTreeEditor({
+        mode: "edit",
+        type: button.dataset.editNode,
+        nodeId: button.dataset.nodeId,
+        parentFolderId: button.dataset.parentFolder || null,
+        parentCategoryId: button.dataset.parentCategory || null,
+      });
+    });
+  });
+
+  dom.tasksTree.querySelectorAll("[data-move-folder]").forEach((button) => {
+    button.addEventListener("click", () => {
+      moveFolder(button.dataset.moveFolder, button.dataset.direction);
+    });
+  });
+}
+
+function renderSettings() {
+  dom.themeGrid.innerHTML = THEME_OPTIONS.map(
+    (theme) => `
+      <button class="theme-card ${state.theme === theme.id ? "is-active" : ""}" data-theme-card="${theme.id}" type="button">
+        <div class="theme-preview ${theme.id}"></div>
+        <strong>${escapeHtml(theme.name)}</strong>
+        <div class="inline-note">${escapeHtml(theme.note)}</div>
+      </button>
+    `
+  ).join("");
+
+  dom.dayStartInput.value = state.dayStart;
+  dom.defaultDurationSelect.value = String(state.defaultDuration);
+  dom.completedDefaultToggle.checked = state.showCompletedOpen;
+  dom.reduceTextureToggle.checked = state.reduceTexture;
+
+  dom.themeGrid.querySelectorAll("[data-theme-card]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.theme = button.dataset.themeCard;
+      applyTheme();
+      renderSettings();
+      persistState();
+    });
+  });
+}
+
+function renderQuickSuggestions() {
+  const query = dom.quickNameInput.value.trim().toLowerCase();
+  const suggestions = getTaskSuggestions()
+    .filter((item) => !query || item.label.toLowerCase().includes(query))
+    .slice(0, 5);
+  dom.quickSuggestionList.innerHTML = suggestions
+    .map((item) => `<button class="suggestion-pill" data-quick-suggestion="${item.key}" type="button">${escapeHtml(item.label)}</button>`)
+    .join("");
+
+  dom.quickSuggestionList.querySelectorAll("[data-quick-suggestion]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const chosen = getTaskSuggestions().find((item) => item.key === button.dataset.quickSuggestion);
+      if (chosen) {
+        dom.quickNameInput.value = chosen.label;
+      }
+      renderQuickSuggestions();
+    });
+  });
+}
+
+function renderLogSuggestions() {
+  const query = dom.logTaskInput.value.trim().toLowerCase();
+  const suggestions = getTaskSuggestions()
+    .filter((item) => !query || item.label.toLowerCase().includes(query))
+    .slice(0, 5);
+  dom.logSuggestionList.innerHTML = suggestions
+    .map((item) => `<button class="suggestion-pill" data-log-suggestion="${item.key}" type="button">${escapeHtml(item.label)}</button>`)
+    .join("");
+
+  dom.logSuggestionList.querySelectorAll("[data-log-suggestion]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const chosen = getTaskSuggestions().find((item) => item.key === button.dataset.logSuggestion);
+      if (chosen) {
+        dom.logTaskInput.value = chosen.label;
+      }
+      renderLogSuggestions();
+    });
+  });
+}
+
+function updateLogDuration() {
+  const start = parseTimeString(dom.logStartInput.value);
+  const end = parseTimeString(dom.logEndInput.value);
+  const minutes = start != null && end != null && end > start ? end - start : 0;
+  dom.logDurationNote.textContent = `Duration: ${minutes} min`;
+}
+
+function prepareTaskDraft(taskId = null) {
+  const task = taskId ? state.tasks.find((item) => item.id === taskId) : null;
+  state.ui.editingTaskId = taskId;
+  state.ui.createTaskSelection = task
+    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
+    : null;
+
+  dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
+  dom.taskNameInput.value = task?.name || "";
+  dom.taskTimeInput.value = task?.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : "";
+  dom.taskDurationInput.value = task?.durationMin || "";
+  dom.taskImportantInput.checked = Boolean(task?.important);
+  updateTaskCategoryLabel();
+  openSheet("task-sheet");
+}
+
+function updateTaskCategoryLabel() {
+  if (!state.ui.createTaskSelection?.categoryId) {
+    dom.taskCategoryLabel.textContent = "Choose category";
+    return;
+  }
+  const path = getSelectionPath(state.ui.createTaskSelection);
+  dom.taskCategoryLabel.textContent = path.fullPath;
+}
+
+function renderCategorySheet() {
+  const trail = state.ui.categoryTrail;
+  const level = trail.length;
+  dom.categorySheetTitle.textContent =
+    level === 0 ? "Choose folder" : level === 1 ? "Choose category" : "Choose template";
+
+  dom.categoryBreadcrumb.innerHTML = [
+    `<button class="quick-chip" data-category-root type="button">Root</button>`,
+    ...trail.map(
+      (crumb, index) => `<button class="quick-chip" data-category-breadcrumb="${index}" type="button">${escapeHtml(crumb.label)}</button>`
+    ),
+  ].join("");
+
+  const items = getCategoryLevelItems(trail);
+  dom.categoryList.innerHTML = items
+    .map((item) => {
+      const colorDot = item.color ? `<span class="annotation-dot" style="background:${item.color};"></span>` : "";
+      return `
+        <button class="category-item" data-category-item="${item.id}" data-category-kind="${item.kind}" type="button">
+          <span>${colorDot}${escapeHtml(item.label)}</span>
+          <strong>${item.kind === "template" ? "Use" : "›"}</strong>
+        </button>
+      `;
+    })
+    .join("");
+
+  dom.categoryBreadcrumb.querySelector("[data-category-root]")?.addEventListener("click", () => {
+    state.ui.categoryTrail = [];
+    renderCategorySheet();
+  });
+  dom.categoryBreadcrumb.querySelectorAll("[data-category-breadcrumb]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.categoryBreadcrumb);
+      state.ui.categoryTrail = state.ui.categoryTrail.slice(0, index + 1);
+      renderCategorySheet();
+    });
+  });
+  dom.categoryList.querySelectorAll("[data-category-item]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const item = items.find((entry) => entry.id === button.dataset.categoryItem);
+      if (!item) return;
+      if (item.kind === "use-category") {
+        state.ui.createTaskSelection = {
+          folderId: item.folderId,
+          categoryId: item.categoryId,
+          templateId: null,
+        };
+        updateTaskCategoryLabel();
+        openSheet("task-sheet");
+        return;
+      }
+      if (item.kind === "folder" || item.kind === "category") {
+        state.ui.categoryTrail = [...state.ui.categoryTrail, item];
+        renderCategorySheet();
+        return;
+      }
+      state.ui.createTaskSelection = {
+        folderId: item.folderId,
+        categoryId: item.categoryId,
+        templateId: item.id,
+      };
+      updateTaskCategoryLabel();
+      openSheet("task-sheet");
+    });
+  });
+}
+
+function openTreeEditor(config) {
+  state.ui.treeEditor = config;
+  const current = getTreeEditorCurrent(config);
+  dom.treeEditorTitle.textContent = `${config.mode === "edit" ? "Edit" : "New"} ${capitalize(config.type)}`;
+  dom.treeNameInput.value = current?.name || "";
+  dom.treeDurationField.hidden = config.type !== "template";
+  dom.treeDurationInput.value = current?.durationMin || "";
+  dom.treeColorPicker.hidden = config.type !== "category";
+  dom.treeDeleteButton.hidden = config.mode !== "edit";
+  renderColorPicker(current?.color || CATEGORY_COLORS[0]);
+  openSheet("tree-editor-sheet");
+}
+
+function renderColorPicker(selected) {
+  if (dom.treeColorPicker.hidden) return;
+  const current = selected || CATEGORY_COLORS[0];
+  dom.treeColorPicker.dataset.selectedColor = current;
+  dom.treeColorPicker.innerHTML = CATEGORY_COLORS.map(
+    (color) => `
+      <button
+        class="color-swatch ${current === color ? "is-selected" : ""}"
+        data-color-swatch="${color}"
+        type="button"
+        style="background:${color};"
+      ></button>
+    `
+  ).join("");
+  dom.treeColorPicker.querySelectorAll("[data-color-swatch]").forEach((button) => {
+    button.addEventListener("click", () => renderColorPicker(button.dataset.colorSwatch));
+  });
+}
+
+function handleTaskSubmit(event) {
+  event.preventDefault();
+  const name = dom.taskNameInput.value.trim();
+  if (!name) {
+    dom.taskNameInput.focus();
+    return;
+  }
+
+  const draft = {
+    name,
+    scheduledMinutes: parseTimeString(dom.taskTimeInput.value),
+    durationMin: Number(dom.taskDurationInput.value) || state.defaultDuration,
+    important: dom.taskImportantInput.checked,
+    folderId: state.ui.createTaskSelection?.folderId || null,
+    categoryId: state.ui.createTaskSelection?.categoryId || null,
+    templateId: state.ui.createTaskSelection?.templateId || null,
+  };
+
+  if (state.ui.editingTaskId) {
+    const task = state.tasks.find((item) => item.id === state.ui.editingTaskId);
+    if (task) {
+      Object.assign(task, draft);
+    }
+  } else {
+    state.tasks.unshift({
+      id: makeId("task"),
+      createdAt: new Date().toISOString(),
+      completed: false,
+      completedAt: null,
+      ...draft,
+    });
+  }
+
+  closeAllSheets();
+  renderAll();
+  persistState();
+}
+
+function handleQuickStart(event) {
+  event.preventDefault();
+  const name = dom.quickNameInput.value.trim();
+  if (!name) {
+    dom.quickNameInput.focus();
+    return;
+  }
+
+  const match = resolveSuggestion(name);
+  let task = null;
+  if (match?.type === "task") {
+    task = state.tasks.find((entry) => entry.id === match.taskId) || null;
+  } else if (match?.type === "template") {
+    task = {
+      id: makeId("task"),
+      name: match.label,
+      scheduledMinutes: null,
+      durationMin: match.durationMin || state.defaultDuration,
+      important: false,
+      completed: false,
+      completedAt: null,
+      folderId: match.folderId,
+      categoryId: match.categoryId,
+      templateId: match.templateId,
+      createdAt: new Date().toISOString(),
+    };
+    state.tasks.unshift(task);
+  } else {
+    task = {
+      id: makeId("task"),
+      name,
+      scheduledMinutes: null,
+      durationMin: state.defaultDuration,
+      important: false,
+      completed: false,
+      completedAt: null,
+      folderId: null,
+      categoryId: null,
+      templateId: null,
+      createdAt: new Date().toISOString(),
+    };
+    state.tasks.unshift(task);
+  }
+
+  if (task) startTimerForTask(task.id);
+  closeAllSheets();
+  state.currentPage = "home";
+  renderAll();
+  persistState();
+}
+
+function handleLogTime(event) {
+  event.preventDefault();
+  const label = dom.logTaskInput.value.trim();
+  const start = parseTimeString(dom.logStartInput.value);
+  const end = parseTimeString(dom.logEndInput.value);
+  if (!label || start == null || end == null || end <= start) {
+    return;
+  }
+
+  const match = resolveSuggestion(label);
+  let task = null;
+  if (match?.type === "task") {
+    task = state.tasks.find((entry) => entry.id === match.taskId) || null;
+  } else if (match?.type === "template") {
+    task = {
+      id: makeId("task"),
+      name: match.label,
+      scheduledMinutes: null,
+      durationMin: end - start,
+      important: false,
+      completed: false,
+      completedAt: null,
+      folderId: match.folderId,
+      categoryId: match.categoryId,
+      templateId: match.templateId,
+      createdAt: new Date().toISOString(),
+    };
+    state.tasks.unshift(task);
+  } else {
+    task = {
+      id: makeId("task"),
+      name: label,
+      scheduledMinutes: null,
+      durationMin: end - start,
+      important: false,
+      completed: false,
+      completedAt: null,
+      folderId: null,
+      categoryId: null,
+      templateId: null,
+      createdAt: new Date().toISOString(),
+    };
+    state.tasks.unshift(task);
+  }
+
+  const day = new Date();
+  day.setHours(0, 0, 0, 0);
+  state.sessions.unshift({
+    id: makeId("session"),
+    taskId: task.id,
+    taskName: task.name,
+    categoryId: task.categoryId,
+    templateId: task.templateId,
+    start: addMinutes(day, start).toISOString(),
+    end: addMinutes(day, end).toISOString(),
+  });
+
+  dom.logForm.reset();
+  updateLogDuration();
+  closeAllSheets();
+  state.currentPage = "stats";
+  renderAll();
+  persistState();
+}
+
+function handleTreeEditorSubmit(event) {
+  event.preventDefault();
+  const config = state.ui.treeEditor;
+  if (!config) return;
+  const name = dom.treeNameInput.value.trim();
+  if (!name) {
+    dom.treeNameInput.focus();
+    return;
+  }
+
+  if (config.type === "folder") {
+    if (config.mode === "edit") {
+      const folder = state.folders.find((entry) => entry.id === config.nodeId);
+      if (folder) folder.name = name;
+    } else {
+      state.folders.push({ id: makeId("folder"), name, expanded: true, categories: [] });
+    }
+  }
+
+  if (config.type === "category") {
+    const folder = state.folders.find((entry) => entry.id === config.parentFolderId);
+    if (!folder) return;
+    if (config.mode === "edit") {
+      const category = folder.categories.find((entry) => entry.id === config.nodeId);
+      if (category) {
+        category.name = name;
+        category.color = dom.treeColorPicker.dataset.selectedColor || category.color;
+      }
+    } else {
+      folder.categories.push({
+        id: makeId("cat"),
+        name,
+        color: dom.treeColorPicker.dataset.selectedColor || CATEGORY_COLORS[0],
+        expanded: true,
+        templates: [],
+      });
+      folder.expanded = true;
+    }
+  }
+
+  if (config.type === "template") {
+    const category = findCategory(config.parentFolderId, config.parentCategoryId);
+    if (!category) return;
+    const duration = Number(dom.treeDurationInput.value) || state.defaultDuration;
+    if (config.mode === "edit") {
+      const template = category.templates.find((entry) => entry.id === config.nodeId);
+      if (template) {
+        template.name = name;
+        template.durationMin = duration;
+      }
+    } else {
+      category.templates.push({ id: makeId("tpl"), name, durationMin: duration });
+      category.expanded = true;
+    }
+  }
+
+  closeAllSheets();
+  renderAll();
+  persistState();
+}
+
+function handleTreeDelete() {
+  const config = state.ui.treeEditor;
+  if (!config || config.mode !== "edit") return;
+  if (!window.confirm("Delete this item?")) return;
+
+  if (config.type === "folder") {
+    if (folderHasLinkedItems(config.nodeId)) {
+      window.alert("This folder is still used by tasks.");
+      return;
+    }
+    state.folders = state.folders.filter((folder) => folder.id !== config.nodeId);
+  }
+
+  if (config.type === "category") {
+    if (hasTasksUsingCategory(config.nodeId)) {
+      window.alert("This category is still used by tasks or sessions.");
+      return;
+    }
+    const folder = state.folders.find((entry) => entry.id === config.parentFolderId);
+    if (folder) {
+      folder.categories = folder.categories.filter((category) => category.id !== config.nodeId);
+    }
+  }
+
+  if (config.type === "template") {
+    if (hasTasksUsingTemplate(config.nodeId)) {
+      window.alert("This template is still used by tasks or sessions.");
+      return;
+    }
+    const category = findCategory(config.parentFolderId, config.parentCategoryId);
+    if (category) {
+      category.templates = category.templates.filter((template) => template.id !== config.nodeId);
+    }
+  }
+
+  closeAllSheets();
+  renderAll();
+  persistState();
+}
+
+function toggleTaskComplete(taskId) {
+  const task = state.tasks.find((entry) => entry.id === taskId);
+  if (!task) return;
+  task.completed = !task.completed;
+  task.completedAt = task.completed ? new Date().toISOString() : null;
+  if (task.completed && state.activeTimer?.taskId === task.id) {
+    stopTimer();
+  }
+  renderHome();
+  renderStats();
+  persistState();
+}
+
+function startTimerForTask(taskId) {
+  if (state.activeTimer?.taskId && state.activeTimer.running) {
+    finalizeRunningSession();
+  }
+  state.activeTimer = {
+    taskId,
+    startedAt: new Date().toISOString(),
+    pausedElapsedMs: 0,
+    running: true,
+  };
+  closeAllSheets();
+  renderHomeTimerOnly();
+  persistState();
+}
+
+function toggleTimer() {
+  if (!state.activeTimer) return;
+  if (state.activeTimer.running) {
+    state.activeTimer.pausedElapsedMs = getElapsedMs(state.activeTimer);
+    state.activeTimer.running = false;
+  } else {
+    state.activeTimer.startedAt = new Date(Date.now() - state.activeTimer.pausedElapsedMs).toISOString();
+    state.activeTimer.running = true;
+  }
+  renderHomeTimerOnly();
+  persistState();
+}
+
+function stopTimer() {
+  finalizeRunningSession();
+  state.activeTimer = null;
+  renderAll();
+  persistState();
+}
+
+function finalizeRunningSession() {
+  const active = state.activeTimer;
+  if (!active?.taskId) return;
+  const task = state.tasks.find((entry) => entry.id === active.taskId);
+  if (!task) return;
+  const elapsedMs = getElapsedMs(active);
+  const end = new Date();
+  const start = new Date(end.getTime() - elapsedMs);
+  state.sessions.unshift({
+    id: makeId("session"),
+    taskId: task.id,
+    taskName: task.name,
+    categoryId: task.categoryId,
+    templateId: task.templateId,
+    start: start.toISOString(),
+    end: end.toISOString(),
+  });
+}
+
+function buildStatsDataset(range) {
+  const sessions = getFilteredSessions(range);
+  const totalMinutes = sessions.reduce((sum, session) => sum + getSessionMinutes(session), 0);
+  const centerLabel =
+    range === "today" ? "Tracked today" : range === "week" ? "Tracked this week" : range === "month" ? "Tracked this month" : "Tracked in range";
+  const note =
+    range === "today" ? formatHeroDate(new Date()) : range === "week" ? "最近 7 天" : range === "month" ? "这个月" : "你挑出来的时间段";
+
+  if (range === "today") {
+    const segments = sessions.map((session, index) => {
+      const start = new Date(session.start);
+      const end = new Date(session.end);
+      const task = state.tasks.find((entry) => entry.id === session.taskId);
+      const visual = getTaskVisual(task || session);
+      return {
+        key: `clock-${index}`,
+        startMinutes: start.getHours() * 60 + start.getMinutes(),
+        endMinutes: end.getHours() * 60 + end.getMinutes(),
+        color: visual.color,
+        label: visual.label,
+        note: `${formatClock(start)} - ${formatClock(end)} · ${formatDuration(getSessionMinutes(session))}`,
+      };
+    });
+    return {
+      type: "clock",
+      totalMinutes,
+      centerLabel,
+      note,
+      segments,
+      selected: segments.find((entry) => entry.key === state.ui.selectedSegment) || null,
+      legend: groupBreakdown(sessions, "category").slice(0, 6),
+      breakdown: groupBreakdown(sessions, state.ui.statsMode),
+    };
+  }
+
+  const grouped = groupBreakdown(sessions, state.ui.statsMode);
+  let current = 0;
+  const segments = grouped.map((item, index) => {
+    current += item.minutes;
+    return { key: `donut-${index}`, ...item, note: `${formatDuration(item.minutes)} · ${item.percent}%` };
+  });
+  return {
+    type: "donut",
+    totalMinutes,
+    centerLabel,
+    note,
+    segments,
+    selected: segments.find((entry) => entry.key === state.ui.selectedSegment) || null,
+    legend: groupBreakdown(sessions, "category").slice(0, 6),
+    breakdown: grouped,
+  };
+}
+
+function renderClockSvg(stats) {
+  const cx = 170;
+  const cy = 170;
+  const radius = 122;
+  const thickness = 40;
+  const ticks = Array.from({ length: 12 }, (_, index) => {
+    const hour = index * 2;
+    const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+    const x1 = cx + Math.cos(angle) * (radius + 12);
+    const y1 = cy + Math.sin(angle) * (radius + 12);
+    const x2 = cx + Math.cos(angle) * (radius + 22);
+    const y2 = cy + Math.sin(angle) * (radius + 22);
+    const tx = cx + Math.cos(angle) * (radius + 36);
+    const ty = cy + Math.sin(angle) * (radius + 36);
+    return `
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(86,97,126,0.28)" stroke-width="2" />
+      <text x="${tx}" y="${ty}" fill="rgba(86,97,126,0.68)" font-size="12" text-anchor="middle" dominant-baseline="middle">${hour === 0 ? 24 : hour}</text>
+    `;
+  }).join("");
+
+  const segments = stats.segments
+    .map(
+      (segment) => `
+        <path
+          d="${describeArc(cx, cy, radius, thickness, segment.startMinutes / 1440, segment.endMinutes / 1440)}"
+          fill="${segment.color}"
+          opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.4 : 0.95}"
+          data-segment-key="${segment.key}"
+          style="cursor:pointer"
+        ></path>
+      `
+    )
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="time wheel">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="rgba(255,255,255,0.64)" stroke-width="${thickness + 6}" />
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="rgba(96,106,138,0.08)" stroke-width="${thickness}" />
+      ${ticks}
+      ${segments}
+    </svg>
+  `;
+}
+
+function renderDonutSvg(stats) {
+  const cx = 170;
+  const cy = 170;
+  const radius = 122;
+  const thickness = 44;
+  let currentRatio = 0;
+  const segments = stats.segments
+    .map((segment) => {
+      const start = currentRatio;
+      const end = currentRatio + segment.minutes / Math.max(stats.totalMinutes, 1);
+      currentRatio = end;
+      return `
+        <path
+          d="${describeArc(cx, cy, radius, thickness, start, end)}"
+          fill="${segment.color}"
+          opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.42 : 0.96}"
+          data-segment-key="${segment.key}"
+          style="cursor:pointer"
+        ></path>
+      `;
+    })
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="donut chart">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="rgba(96,106,138,0.08)" stroke-width="${thickness}" />
+      ${segments}
+    </svg>
+  `;
+}
+
+function groupBreakdown(sessions, mode) {
+  const map = new Map();
+  const filtered = sessions.filter((session) => {
+    const categoryOkay = state.ui.statsCategoryFilter === "all" || session.categoryId === state.ui.statsCategoryFilter;
+    const taskOkay =
+      state.ui.statsTaskFilter === "all" ||
+      session.taskId === state.ui.statsTaskFilter ||
+      session.templateId === state.ui.statsTaskFilter;
+    return categoryOkay && taskOkay;
+  });
+
+  filtered.forEach((session) => {
+    const task = state.tasks.find((entry) => entry.id === session.taskId);
+    const visual = getTaskVisual(task || session);
+    const key = mode === "task" ? session.taskId || session.templateId || session.taskName : session.categoryId || "uncategorized";
+    const label = mode === "task" ? session.taskName : visual.categoryName;
+    if (!map.has(key)) {
+      map.set(key, { key, label, color: visual.color, minutes: 0 });
+    }
+    map.get(key).minutes += getSessionMinutes(session);
+  });
+
+  const total = [...map.values()].reduce((sum, item) => sum + item.minutes, 0) || 1;
+  return [...map.values()]
+    .sort((a, b) => b.minutes - a.minutes)
+    .map((item) => ({ ...item, percent: Math.round((item.minutes / total) * 100) }));
+}
+
+function buildWeeklyTrend() {
+  const days = Array.from({ length: 7 }, (_, index) => shiftDate(new Date(), -6 + index));
+  const totals = days.map((day) => {
+    const sameDaySessions = state.sessions.filter((session) => isSameDay(new Date(session.start), day));
+    return {
+      label: `${day.getMonth() + 1}/${day.getDate()}`,
+      minutes: sameDaySessions.reduce((sum, session) => sum + getSessionMinutes(session), 0),
+    };
+  });
+  const max = Math.max(...totals.map((entry) => entry.minutes), 1);
+  return totals.map((entry, index) => ({
+    ...entry,
+    width: Math.round((entry.minutes / max) * 100),
+    color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+  }));
+}
+
+function getFilteredSessions(range) {
+  const now = new Date();
+  return state.sessions.filter((session) => {
+    const start = new Date(session.start);
+    const categoryOkay = state.ui.statsCategoryFilter === "all" || session.categoryId === state.ui.statsCategoryFilter;
+    const taskOkay =
+      state.ui.statsTaskFilter === "all" ||
+      session.taskId === state.ui.statsTaskFilter ||
+      session.templateId === state.ui.statsTaskFilter;
+    if (!categoryOkay || !taskOkay) return false;
+    if (range === "today") return isSameDay(start, now);
+    if (range === "week") return differenceInDays(now, start) < 7;
+    if (range === "month") return start.getFullYear() === now.getFullYear() && start.getMonth() === now.getMonth();
+    const customStart = state.ui.customRange.start ? new Date(`${state.ui.customRange.start}T00:00:00`) : null;
+    const customEnd = state.ui.customRange.end ? new Date(`${state.ui.customRange.end}T23:59:59`) : null;
+    if (!customStart || !customEnd) return true;
+    return start >= customStart && start <= customEnd;
+  });
+}
+
+function getGroupedTasks() {
+  const nowMinutes = getMinutesNow();
+  const incomplete = state.tasks.filter((task) => !task.completed);
+  const completed = state.tasks.filter((task) => task.completed);
+  return {
+    overdue: incomplete.filter((task) => task.scheduledMinutes != null && task.scheduledMinutes < nowMinutes).sort(sortByTime),
+    today: incomplete.filter((task) => task.scheduledMinutes != null && task.scheduledMinutes >= nowMinutes).sort(sortByTime),
+    flexible: incomplete.filter((task) => task.scheduledMinutes == null).sort((a, b) => Number(b.important) - Number(a.important)),
+    completed: completed.sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0)),
+  };
+}
+
+function getNextTasks() {
+  const nowMinutes = getMinutesNow();
+  const incomplete = state.tasks.filter((task) => !task.completed);
+  const chosen = [];
+  const seen = new Set();
+
+  incomplete
+    .filter((task) => task.scheduledMinutes != null)
+    .sort((a, b) => Math.abs(a.scheduledMinutes - nowMinutes) - Math.abs(b.scheduledMinutes - nowMinutes) || sortByTime(a, b))
+    .slice(0, 3)
+    .forEach((task) => {
+      if (!seen.has(task.id)) {
+        seen.add(task.id);
+        chosen.push(task);
+      }
+    });
+
+  incomplete
+    .filter((task) => task.important)
+    .sort((a, b) => (a.scheduledMinutes ?? 9999) - (b.scheduledMinutes ?? 9999))
+    .forEach((task) => {
+      if (!seen.has(task.id) && chosen.length < 5) {
+        seen.add(task.id);
+        chosen.push(task);
+      }
+    });
+
+  incomplete
+    .filter((task) => task.scheduledMinutes == null)
+    .forEach((task) => {
+      if (!seen.has(task.id) && chosen.length < 5) {
+        seen.add(task.id);
+        chosen.push(task);
+      }
+    });
+
+  return chosen;
+}
+
+function getTaskVisual(taskLike) {
+  const category = taskLike?.categoryId ? getAllCategories().find((entry) => entry.id === taskLike.categoryId) : null;
+  const template = taskLike?.templateId ? getAllTemplates().find((entry) => entry.id === taskLike.templateId) : null;
+  const folder = taskLike?.folderId ? state.folders.find((entry) => entry.id === taskLike.folderId) : null;
+  const color = category?.color || "#b8bfd1";
+  return {
+    color,
+    categoryName: category?.name || "Unfiled",
+    label: taskLike?.name || taskLike?.taskName || template?.name || "Untitled",
+    shortPath: template?.name || category?.name || folder?.name || "Unfiled",
+    fullPath: [folder?.name, category?.name, template?.name].filter(Boolean).join(" / "),
+    badge: category?.name || "Quick Start",
+    name: taskLike?.name || taskLike?.taskName || template?.name || "Untitled",
+    meta: template?.name && category?.name ? `${category.name} · ${template.name}` : category?.name || "Flexible task",
+    groupLabel: taskLike?.scheduledMinutes == null ? "Flexible" : "Timeline",
+  };
+}
+
+function getTimerPresentation() {
+  if (!state.activeTimer?.taskId) return null;
+  const task = state.tasks.find((entry) => entry.id === state.activeTimer.taskId);
+  if (!task) return null;
+  const visual = getTaskVisual(task);
+  const elapsedMs = getElapsedMs(state.activeTimer);
+  const planned = Math.max(task.durationMin || state.defaultDuration, 1) * 60000;
+  return {
+    color: visual.color,
+    badge: visual.categoryName,
+    name: task.name,
+    elapsed: formatClockDuration(elapsedMs),
+    progress: Math.min(100, Math.round((elapsedMs / planned) * 100)),
+    meta: state.activeTimer.running ? `${visual.shortPath} · recording now` : `${visual.shortPath} · paused`,
+  };
+}
+
+function getElapsedMs(timer) {
+  if (!timer) return 0;
+  if (!timer.running) return timer.pausedElapsedMs || 0;
+  return Math.max(0, Date.now() - new Date(timer.startedAt).getTime());
+}
+
+function resolveSuggestion(label) {
+  const normalized = label.trim().toLowerCase();
+  return getTaskSuggestions().find((item) => item.label.toLowerCase() === normalized) || null;
+}
+
+function getTaskSuggestions() {
+  const taskItems = state.tasks.map((task) => ({ key: task.id, label: task.name, type: "task", taskId: task.id }));
+  const templateItems = getAllTemplates().map((entry) => ({
+    key: entry.id,
+    label: entry.name,
+    type: "template",
+    templateId: entry.id,
+    categoryId: entry.categoryId,
+    folderId: entry.folderId,
+    durationMin: entry.durationMin,
+  }));
+  const unique = new Map();
+  [...taskItems, ...templateItems].forEach((item) => {
+    if (!unique.has(item.label.toLowerCase())) unique.set(item.label.toLowerCase(), item);
+  });
+  return [...unique.values()];
+}
+
+function getSelectionPath(selection) {
+  const folder = state.folders.find((entry) => entry.id === selection.folderId);
+  const category = getAllCategories().find((entry) => entry.id === selection.categoryId);
+  const template = getAllTemplates().find((entry) => entry.id === selection.templateId);
+  return { fullPath: [folder?.name, category?.name, template?.name].filter(Boolean).join(" / ") };
+}
+
+function getCategoryLevelItems(trail) {
+  if (!trail.length) {
+    return state.folders.map((folder) => ({ id: folder.id, label: folder.name, kind: "folder" }));
+  }
+  if (trail.length === 1) {
+    const folder = state.folders.find((entry) => entry.id === trail[0].id);
+    return (folder?.categories.map((category) => ({ id: category.id, label: category.name, kind: "category", color: category.color, folderId: folder.id })) || []);
+  }
+  const folder = state.folders.find((entry) => entry.id === trail[0].id);
+  const category = folder?.categories.find((entry) => entry.id === trail[1].id);
+  return [
+    {
+      id: `${category?.id}-direct`,
+      label: `直接使用 ${category?.name || "这个分类"}`,
+      kind: "use-category",
+      color: category?.color,
+      folderId: folder?.id,
+      categoryId: category?.id,
+    },
+    ...(
+      category?.templates.map((template) => ({
+      id: template.id,
+      label: template.name,
+      kind: "template",
+      color: category.color,
+      folderId: folder.id,
+      categoryId: category.id,
+      })) || []
+    ),
+  ];
+}
+
+function openSheet(id) {
+  closeAllSheets(false);
+  state.ui.openSheet = id;
+  dom.scrim.hidden = false;
+  const target = document.getElementById(id);
+  target?.removeAttribute("hidden");
+  requestAnimationFrame(() => target?.classList.add("is-open"));
+}
+
+function toggleSheet(id) {
+  if (state.ui.openSheet === id) closeAllSheets();
+  else openSheet(id);
+}
+
+function closeAllSheets(persist = true) {
+  state.ui.openSheet = null;
+  dom.scrim.hidden = true;
+  document.querySelectorAll(".sheet-panel").forEach((sheet) => {
+    sheet.classList.remove("is-open");
+    sheet.setAttribute("hidden", "");
+  });
+  if (persist) persistState();
+}
+
+function applyTheme() {
+  dom.body.dataset.theme = state.theme;
+  applyBodyFlags();
+}
+
+function applyBodyFlags() {
+  dom.body.classList.toggle("reduce-texture", state.reduceTexture);
+}
+
+function moveFolder(folderId, direction) {
+  const index = state.folders.findIndex((entry) => entry.id === folderId);
+  if (index === -1) return;
+  const swap = direction === "up" ? index - 1 : index + 1;
+  if (swap < 0 || swap >= state.folders.length) return;
+  [state.folders[index], state.folders[swap]] = [state.folders[swap], state.folders[index]];
+  renderTasksTree();
+  persistState();
+}
+
+function getAllCategories() {
+  return state.folders.flatMap((folder) => folder.categories);
+}
+
+function getAllTemplates() {
+  return state.folders.flatMap((folder) =>
+    folder.categories.flatMap((category) =>
+      category.templates.map((template) => ({ ...template, categoryId: category.id, folderId: folder.id }))
+    )
+  );
+}
+
+function findCategory(folderId, categoryId) {
+  const folder = state.folders.find((entry) => entry.id === folderId);
+  return folder?.categories.find((entry) => entry.id === categoryId) || null;
+}
+
+function getTreeEditorCurrent(config) {
+  if (config.type === "folder") return state.folders.find((entry) => entry.id === config.nodeId) || null;
+  if (config.type === "category") return findCategory(config.parentFolderId, config.nodeId);
+  if (config.type === "template") {
+    const category = findCategory(config.parentFolderId, config.parentCategoryId);
+    return category?.templates.find((entry) => entry.id === config.nodeId) || null;
+  }
+  return null;
+}
+
+function buildLookupFromFolders(folders) {
+  const byTemplateName = {};
+  folders.forEach((folder) => {
+    folder.categories.forEach((category) => {
+      category.templates.forEach((template) => {
+        byTemplateName[template.name] = { folder, category, template };
+      });
+    });
+  });
+  return { byTemplateName };
+}
+
+function persistState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return createSeedState();
+  try {
+    const parsed = JSON.parse(raw);
+    const seed = createSeedState();
+    return {
+      ...seed,
+      ...parsed,
+      ui: {
+        ...seed.ui,
+        ...parsed.ui,
+        customRange: { ...seed.ui.customRange, ...parsed.ui?.customRange },
+      },
+    };
+  } catch (error) {
+    console.warn("Failed to load saved state, resetting.", error);
+    return createSeedState();
+  }
+}
+
+function hasTasksUsingCategory(categoryId) {
+  return state.tasks.some((task) => task.categoryId === categoryId) || state.sessions.some((session) => session.categoryId === categoryId);
+}
+
+function hasTasksUsingTemplate(templateId) {
+  return state.tasks.some((task) => task.templateId === templateId) || state.sessions.some((session) => session.templateId === templateId);
+}
+
+function folderHasLinkedItems(folderId) {
+  return state.tasks.some((task) => task.folderId === folderId);
+}
+
+function paperGradient(color) {
+  return `background: linear-gradient(160deg, color-mix(in srgb, white 58%, ${color}), color-mix(in srgb, ${color} 22%, white)), linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.36));`;
+}
+
+function chipStyle(color) {
+  return `background: color-mix(in srgb, ${color} 24%, white); color: ${color === "#ffcb63" ? "#7e5b1f" : "#294569"};`;
+}
+
+function describeArc(cx, cy, radius, thickness, startRatio, endRatio) {
+  const startAngle = startRatio * 360 - 90;
+  const endAngle = endRatio * 360 - 90;
+  const outerStart = polarToCartesian(cx, cy, radius, endAngle);
+  const outerEnd = polarToCartesian(cx, cy, radius, startAngle);
+  const innerStart = polarToCartesian(cx, cy, radius - thickness, startAngle);
+  const innerEnd = polarToCartesian(cx, cy, radius - thickness, endAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+  return ["M", outerStart.x, outerStart.y, "A", radius, radius, 0, largeArcFlag, 0, outerEnd.x, outerEnd.y, "L", innerStart.x, innerStart.y, "A", radius - thickness, radius - thickness, 0, largeArcFlag, 1, innerEnd.x, innerEnd.y, "Z"].join(" ");
+}
+
+function polarToCartesian(cx, cy, radius, angleInDegrees) {
+  const radians = (angleInDegrees * Math.PI) / 180;
+  return { x: cx + radius * Math.cos(radians), y: cy + radius * Math.sin(radians) };
+}
+
+function formatHeroDate(date) {
+  const weekday = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"][date.getDay()];
+  return `${date.getMonth() + 1}月${date.getDate()}日 · ${weekday}`;
+}
+
+function formatMinutes(minutes) {
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function formatInputTime(minutes) {
+  return formatMinutes(minutes);
+}
+
+function parseTimeString(value) {
+  if (!value || !value.includes(":")) return null;
+  const [hour, minute] = value.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+function formatDuration(minutes) {
+  if (!minutes) return "0m";
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return hour ? `${hour}h ${minute}m` : `${minute}m`;
+}
+
+function formatClock(date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatClockDuration(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hour = Math.floor(totalSeconds / 3600);
+  const minute = Math.floor((totalSeconds % 3600) / 60);
+  const second = totalSeconds % 60;
+  return [hour, minute, second].map((part) => String(part).padStart(2, "0")).join(":");
+}
+
+function formatInputDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function shiftDate(date, dayOffset) {
+  const copy = cloneDate(date);
+  copy.setDate(copy.getDate() + dayOffset);
+  return copy;
+}
+
+function cloneDate(date) {
+  return new Date(date.getTime());
+}
+
+function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60000);
+}
+
+function getMinutesNow() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function sortByTime(a, b) {
+  return (a.scheduledMinutes ?? 9999) - (b.scheduledMinutes ?? 9999);
+}
+
+function differenceInDays(a, b) {
+  const start = new Date(a);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(b);
+  end.setHours(0, 0, 0, 0);
+  return Math.abs(Math.round((start - end) / 86400000));
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function getSessionMinutes(session) {
+  return Math.max(1, Math.round((new Date(session.end) - new Date(session.start)) / 60000));
+}
+
+function capitalize(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function makeId(prefix) {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}

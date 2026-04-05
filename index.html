@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f6efe5" />
+    <title>Colorful Time</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-theme="paper">
+    <div class="paper-noise" aria-hidden="true"></div>
+    <main class="app-shell" id="app-shell">
+      <section class="page is-active" data-page="home">
+        <header class="page-hero home-hero">
+          <p class="hero-date" id="home-date"></p>
+          <div class="hero-heading">
+            <div>
+              <h1>Today</h1>
+              <p class="hero-note">按时间排开，也给临时灵感留空位。</p>
+            </div>
+            <button class="hero-mini" id="today-refresh" type="button">
+              重新抽取
+            </button>
+          </div>
+        </header>
+
+        <section class="timer-strip paper-band" id="timer-strip"></section>
+
+        <section class="paper-sheet" aria-labelledby="next-title">
+          <div class="section-head">
+            <h2 id="next-title">Next</h2>
+          </div>
+          <div class="next-scroll" id="next-scroll"></div>
+        </section>
+
+        <section class="paper-sheet" aria-labelledby="todo-title">
+          <div class="section-head">
+            <h2 id="todo-title">To-Do List</h2>
+          </div>
+          <div class="todo-groups" id="todo-groups"></div>
+        </section>
+      </section>
+
+      <section class="page" data-page="stats">
+        <header class="page-hero">
+          <p class="hero-date" id="stats-range-note"></p>
+          <div class="hero-heading">
+            <div>
+              <h1 id="stats-title">Today's Color</h1>
+              <p class="hero-note">时间被分给了什么，也会留下颜色。</p>
+            </div>
+          </div>
+        </header>
+
+        <section class="paper-sheet stats-sheet">
+          <div class="segmented-control" id="stats-range-tabs"></div>
+          <div class="stats-wheel-wrap">
+            <div class="stats-wheel-card" id="stats-wheel-card"></div>
+            <div class="stats-legend" id="stats-legend"></div>
+          </div>
+          <div class="segmented-control wide" id="stats-mode-tabs"></div>
+          <div class="filter-row">
+            <label class="filter-pill">
+              <span>Category</span>
+              <select id="stats-category-filter"></select>
+            </label>
+            <label class="filter-pill">
+              <span>Task</span>
+              <select id="stats-task-filter"></select>
+            </label>
+          </div>
+          <div class="custom-range-row" id="custom-range-row" hidden>
+            <label class="line-field">
+              <span>Start</span>
+              <input type="date" id="custom-start-date" />
+            </label>
+            <label class="line-field">
+              <span>End</span>
+              <input type="date" id="custom-end-date" />
+            </label>
+          </div>
+          <div class="stats-breakdown" id="stats-breakdown"></div>
+          <button class="trend-toggle" id="trend-toggle" type="button">
+            <span>Show weekly trend</span>
+            <span class="trend-arrow">›</span>
+          </button>
+          <div class="trend-panel" id="trend-panel" hidden></div>
+        </section>
+      </section>
+
+      <section class="page" data-page="tasks">
+        <header class="page-hero">
+          <p class="hero-date">分类树会把颜色一路带到计时与统计。</p>
+          <div class="hero-heading">
+            <div>
+              <h1>Tasks</h1>
+              <p class="hero-note">一级收纳，二级着色，三级作为任务模板。</p>
+            </div>
+            <div class="page-actions">
+              <button class="hero-mini" id="tasks-edit-toggle" type="button">
+                Edit
+              </button>
+              <button class="hero-mini accent" id="add-folder-button" type="button">
+                ＋
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <section class="paper-sheet tree-sheet">
+          <div class="tree-list" id="tasks-tree"></div>
+        </section>
+      </section>
+
+      <section class="page" data-page="settings">
+        <header class="page-hero">
+          <p class="hero-date">先把骨架写稳，后面主题就能自然生长。</p>
+          <div class="hero-heading">
+            <div>
+              <h1>Settings</h1>
+              <p class="hero-note">这里先放主题、节奏和显示偏好的底层控制。</p>
+            </div>
+          </div>
+        </header>
+
+        <section class="paper-sheet settings-sheet">
+          <div class="settings-block">
+            <div class="settings-head">
+              <h2>Theme</h2>
+              <p>现在就把主题系统埋好，之后能扩成更完整的动漫感版本。</p>
+            </div>
+            <div class="theme-grid" id="theme-grid"></div>
+          </div>
+
+          <div class="settings-block">
+            <div class="settings-head">
+              <h2>Rhythm</h2>
+            </div>
+            <label class="line-field">
+              <span>Day starts at</span>
+              <input type="time" id="day-start-input" />
+            </label>
+            <label class="line-field">
+              <span>Default duration</span>
+              <select id="default-duration-select">
+                <option value="15">15 min</option>
+                <option value="20">20 min</option>
+                <option value="25">25 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="settings-block">
+            <div class="settings-head">
+              <h2>Display</h2>
+            </div>
+            <label class="toggle-row">
+              <span>Completed 默认展开</span>
+              <input type="checkbox" id="completed-default-toggle" />
+            </label>
+            <label class="toggle-row">
+              <span>减少纸张纹理</span>
+              <input type="checkbox" id="reduce-texture-toggle" />
+            </label>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <button class="fab" id="fab-button" type="button" aria-label="Add">
+      ＋
+    </button>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button class="nav-item is-active" data-target="home" type="button">
+        <span class="nav-icon">⌂</span>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-target="stats" type="button">
+        <span class="nav-icon">◔</span>
+        <span>Stats</span>
+      </button>
+      <button class="nav-item" data-target="tasks" type="button">
+        <span class="nav-icon">≡</span>
+        <span>Tasks</span>
+      </button>
+      <button class="nav-item" data-target="settings" type="button">
+        <span class="nav-icon">⚙</span>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="scrim" id="scrim" hidden></div>
+
+    <section class="sheet-panel" id="action-sheet" hidden aria-label="Quick actions">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h2>What do you want to do?</h2>
+        <button class="sheet-close" data-close-sheet type="button">×</button>
+      </div>
+      <div class="action-grid">
+        <button class="action-card" data-open-sheet="task-sheet" type="button">
+          <strong>Create Task</strong>
+          <span>按时间、分类和重要度收进今天。</span>
+        </button>
+        <button class="action-card" data-open-sheet="quick-sheet" type="button">
+          <strong>Quick Start</strong>
+          <span>输入一个名字，马上开始计时。</span>
+        </button>
+        <button class="action-card" data-open-sheet="log-sheet" type="button">
+          <strong>Log Time</strong>
+          <span>把已经做过的时间补回来。</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="sheet-panel" id="task-sheet" hidden aria-label="Create task">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="sheet-kicker">Task</p>
+          <h2 id="task-sheet-title">Create Task</h2>
+        </div>
+        <button class="sheet-close" data-close-sheet type="button">×</button>
+      </div>
+      <form class="sheet-form" id="task-form">
+        <label class="line-field">
+          <span>Task Name</span>
+          <input
+            type="text"
+            id="task-name-input"
+            name="taskName"
+            autocomplete="off"
+            placeholder="Study for math quiz"
+            required
+          />
+        </label>
+        <button class="picker-row" id="task-category-button" type="button">
+          <span>Category</span>
+          <strong id="task-category-label">Choose category</strong>
+        </button>
+        <label class="line-field">
+          <span>Time (optional)</span>
+          <input type="time" id="task-time-input" name="taskTime" />
+        </label>
+        <label class="line-field">
+          <span>Duration (optional)</span>
+          <input
+            type="number"
+            id="task-duration-input"
+            name="taskDuration"
+            min="1"
+            step="5"
+            placeholder="30"
+          />
+        </label>
+        <label class="toggle-row">
+          <span>Mark as important</span>
+          <input type="checkbox" id="task-important-input" name="taskImportant" />
+        </label>
+        <button class="primary-button" type="submit">Save</button>
+      </form>
+    </section>
+
+    <section class="sheet-panel" id="quick-sheet" hidden aria-label="Quick start">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="sheet-kicker">Quick Start</p>
+          <h2>Start right now</h2>
+        </div>
+        <button class="sheet-close" data-close-sheet type="button">×</button>
+      </div>
+      <form class="sheet-form" id="quick-form">
+        <label class="line-field">
+          <span>Task Name</span>
+          <input
+            type="text"
+            id="quick-name-input"
+            name="quickName"
+            autocomplete="off"
+            placeholder="Write reading notes"
+            required
+          />
+        </label>
+        <div class="suggestion-list" id="quick-suggestion-list"></div>
+        <button class="primary-button" type="submit">Start Now</button>
+      </form>
+    </section>
+
+    <section class="sheet-panel" id="log-sheet" hidden aria-label="Log time">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="sheet-kicker">Log Time</p>
+          <h2>补录一段时间</h2>
+        </div>
+        <button class="sheet-close" data-close-sheet type="button">×</button>
+      </div>
+      <form class="sheet-form" id="log-form">
+        <label class="line-field">
+          <span>Task</span>
+          <input
+            type="text"
+            id="log-task-input"
+            name="logTask"
+            autocomplete="off"
+            placeholder="Choose or type a task"
+            required
+          />
+        </label>
+        <div class="suggestion-list" id="log-suggestion-list"></div>
+        <div class="time-range-grid">
+          <label class="line-field">
+            <span>Start</span>
+            <input type="time" id="log-start-input" required />
+          </label>
+          <label class="line-field">
+            <span>End</span>
+            <input type="time" id="log-end-input" required />
+          </label>
+        </div>
+        <p class="inline-note" id="log-duration-note">Duration: 0 min</p>
+        <button class="primary-button" type="submit">Save</button>
+      </form>
+    </section>
+
+    <section class="sheet-panel" id="category-sheet" hidden aria-label="Choose category">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="sheet-kicker">Categories</p>
+          <h2 id="category-sheet-title">Choose category</h2>
+        </div>
+        <button class="sheet-close" data-close-sheet type="button">×</button>
+      </div>
+      <div class="category-breadcrumb" id="category-breadcrumb"></div>
+      <div class="category-list" id="category-list"></div>
+    </section>
+
+    <section class="sheet-panel" id="tree-editor-sheet" hidden aria-label="Edit tree node">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="sheet-kicker">Tasks</p>
+          <h2 id="tree-editor-title">New Category</h2>
+        </div>
+        <button class="sheet-close" data-close-sheet type="button">×</button>
+      </div>
+      <form class="sheet-form" id="tree-editor-form">
+        <label class="line-field">
+          <span>Name</span>
+          <input
+            type="text"
+            id="tree-name-input"
+            autocomplete="off"
+            placeholder="Name"
+            required
+          />
+        </label>
+        <label class="line-field" id="tree-duration-field" hidden>
+          <span>Default duration</span>
+          <input
+            type="number"
+            id="tree-duration-input"
+            min="1"
+            step="5"
+            placeholder="25"
+          />
+        </label>
+        <div class="color-picker" id="tree-color-picker" hidden></div>
+        <div class="sheet-button-row">
+          <button class="ghost-button danger" id="tree-delete-button" type="button" hidden>
+            Delete
+          </button>
+          <button class="primary-button" type="submit">Save</button>
+        </div>
+      </form>
+    </section>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
