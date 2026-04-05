@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="paper" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff7ee" />
+      <stop offset="100%" stop-color="#f8ecd8" />
+    </linearGradient>
+    <linearGradient id="sun" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffbf73" />
+      <stop offset="100%" stop-color="#5ec7c0" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="60" fill="url(#paper)" />
+  <rect x="26" y="26" width="204" height="204" rx="48" fill="#fffdf8" stroke="#eadcc7" stroke-width="4" />
+  <circle cx="128" cy="128" r="72" fill="none" stroke="#ebdfcf" stroke-width="20" />
+  <path d="M128 56 A72 72 0 0 1 196.1 106.4 L128 128 Z" fill="#6ea8ff" />
+  <path d="M196.1 106.4 A72 72 0 0 1 176.2 186.2 L128 128 Z" fill="#8bda9f" />
+  <path d="M176.2 186.2 A72 72 0 0 1 94 191.5 L128 128 Z" fill="#ffbe65" />
+  <path d="M94 191.5 A72 72 0 0 1 60.6 93.2 L128 128 Z" fill="#ff9d8d" />
+  <path d="M60.6 93.2 A72 72 0 0 1 128 56 L128 128 Z" fill="#b193ff" />
+  <circle cx="128" cy="128" r="26" fill="#fffaf1" stroke="#eadcc7" stroke-width="4" />
+  <rect x="170" y="40" width="38" height="14" rx="7" fill="url(#sun)" opacity="0.55" />
+  <path d="M74 178 h46" stroke="#234f54" stroke-linecap="round" stroke-width="8" />
+  <path d="M74 194 h64" stroke="#234f54" stroke-linecap="round" stroke-width="8" opacity="0.45" />
+</svg>

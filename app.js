@@ -40,6 +40,7 @@ const dom = {
   statsModeTabs: document.getElementById("stats-mode-tabs"),
   statsWheelCard: document.getElementById("stats-wheel-card"),
   statsLegend: document.getElementById("stats-legend"),
+  statsTotalRow: document.getElementById("stats-total-row"),
   statsCategoryFilter: document.getElementById("stats-category-filter"),
   statsTaskFilter: document.getElementById("stats-task-filter"),
   statsBreakdown: document.getElementById("stats-breakdown"),
@@ -52,6 +53,10 @@ const dom = {
   tasksEditToggle: document.getElementById("tasks-edit-toggle"),
   addFolderButton: document.getElementById("add-folder-button"),
   themeGrid: document.getElementById("theme-grid"),
+  pwaInstallButton: document.getElementById("pwa-install-button"),
+  pwaInstallNote: document.getElementById("pwa-install-note"),
+  nextTimePriorityToggle: document.getElementById("next-time-priority-toggle"),
+  nextImportantPriorityToggle: document.getElementById("next-important-priority-toggle"),
   dayStartInput: document.getElementById("day-start-input"),
   defaultDurationSelect: document.getElementById("default-duration-select"),
   completedDefaultToggle: document.getElementById("completed-default-toggle"),
@@ -62,9 +67,22 @@ const dom = {
   taskNameInput: document.getElementById("task-name-input"),
   taskCategoryButton: document.getElementById("task-category-button"),
   taskCategoryLabel: document.getElementById("task-category-label"),
+  taskTimeButton: document.getElementById("task-time-button"),
+  taskTimeLabel: document.getElementById("task-time-label"),
+  taskDateLabel: document.getElementById("task-date-label"),
   taskTimeInput: document.getElementById("task-time-input"),
   taskDurationInput: document.getElementById("task-duration-input"),
   taskImportantInput: document.getElementById("task-important-input"),
+  taskMoreToggle: document.getElementById("task-more-toggle"),
+  taskAdvancedPanel: document.getElementById("task-advanced-panel"),
+  taskRepeatSelect: document.getElementById("task-repeat-select"),
+  taskWeekdaysField: document.getElementById("task-weekdays-field"),
+  taskWeekdaysGrid: document.getElementById("task-weekdays-grid"),
+  taskTimerMode: document.getElementById("task-timer-mode"),
+  taskDateInput: document.getElementById("task-date-input"),
+  taskDateQuickGrid: document.getElementById("task-date-quick-grid"),
+  taskTimeClear: document.getElementById("task-time-clear"),
+  taskTimeApply: document.getElementById("task-time-apply"),
   quickForm: document.getElementById("quick-form"),
   quickNameInput: document.getElementById("quick-name-input"),
   quickSuggestionList: document.getElementById("quick-suggestion-list"),
@@ -88,6 +106,9 @@ const dom = {
 
 let state = loadState();
 let clockTicker = null;
+let deferredPromptEvent = null;
+
+state = upgradeState(state);
 
 boot();
 
@@ -2092,4 +2113,1140 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function boot() {
+  applyPageFromUrl();
+  bindEvents();
+  registerPwa();
+  renderAll();
+  startTicker();
+}
+
+function upgradeState(current) {
+  const today = formatInputDate(new Date());
+  current.ui = current.ui || {};
+  current.ui.groupOpen = {
+    overdue: current.ui.groupOpen?.overdue ?? true,
+    today: current.ui.groupOpen?.today ?? true,
+    flexible: current.ui.groupOpen?.flexible ?? true,
+    completed: current.ui.groupOpen?.completed ?? Boolean(current.showCompletedOpen),
+  };
+  current.ui.taskAdvancedOpen = current.ui.taskAdvancedOpen ?? false;
+  current.ui.taskWeekdays = current.ui.taskWeekdays || [];
+  current.ui.taskTimerMode = current.ui.taskTimerMode || "up";
+  current.ui.taskDatePreset = current.ui.taskDatePreset || "none";
+  current.nextRules = {
+    prioritizeTime: current.nextRules?.prioritizeTime ?? true,
+    prioritizeImportant: current.nextRules?.prioritizeImportant ?? true,
+  };
+  current.tasks = (current.tasks || []).map((task) => ({
+    repeatMode: task.repeatMode || "none",
+    weekdays: task.weekdays || [],
+    timerMode: task.timerMode || "up",
+    scheduledDate: task.scheduledDate || null,
+    ...task,
+  }));
+  if (current.activeTimer?.taskId) {
+    const activeTask = current.tasks.find((task) => task.id === current.activeTimer.taskId);
+    current.activeTimer.mode = current.activeTimer.mode || activeTask?.timerMode || "up";
+    current.activeTimer.durationMin = current.activeTimer.durationMin || activeTask?.durationMin || current.defaultDuration;
+  }
+  return current;
+}
+
+function bindEvents() {
+  dom.navItems.forEach((button) => {
+    button.onclick = () => {
+      state.currentPage = button.dataset.target;
+      closeAllSheets();
+      renderAll();
+      persistState();
+    };
+  });
+
+  dom.fab.onclick = () => toggleSheet("action-sheet");
+  dom.scrim.onclick = closeAllSheets;
+
+  document.querySelectorAll("[data-close-sheet]").forEach((button) => {
+    button.onclick = closeAllSheets;
+  });
+  document.querySelectorAll("[data-open-sheet]").forEach((button) => {
+    button.onclick = () => {
+      const target = button.dataset.openSheet;
+      if (target === "task-sheet") prepareTaskDraft();
+      if (target === "quick-sheet") dom.quickNameInput.value = "";
+      if (target === "log-sheet") dom.logTaskInput.value = "";
+      openSheet(target);
+    };
+  });
+
+  dom.taskCategoryButton.onclick = () => {
+    state.ui.categoryTrail = [];
+    renderCategorySheet();
+    openSheet("category-sheet");
+  };
+  dom.taskTimeButton.onclick = () => openTimeSheet();
+  dom.taskMoreToggle.onclick = () => {
+    state.ui.taskAdvancedOpen = !state.ui.taskAdvancedOpen;
+    renderTaskAdvancedControls();
+  };
+  dom.taskRepeatSelect.onchange = () => {
+    renderTaskAdvancedControls();
+  };
+  dom.taskTimeClear.onclick = clearTaskTimeDraft;
+  dom.taskTimeApply.onclick = applyTaskTimeDraft;
+  dom.taskForm.addEventListener("submit", handleTaskSubmit);
+  dom.quickForm.addEventListener("submit", handleQuickStart);
+  dom.logForm.addEventListener("submit", handleLogTime);
+
+  dom.quickNameInput.oninput = renderQuickSuggestions;
+  dom.logTaskInput.oninput = renderLogSuggestions;
+  dom.logStartInput.oninput = updateLogDuration;
+  dom.logEndInput.oninput = updateLogDuration;
+
+  dom.trendToggle.onclick = () => {
+    state.ui.showTrend = !state.ui.showTrend;
+    renderStats();
+    persistState();
+  };
+
+  dom.tasksEditToggle.onclick = () => {
+    state.ui.tasksEditMode = !state.ui.tasksEditMode;
+    renderTasksTree();
+    persistState();
+  };
+  dom.addFolderButton.onclick = () => openTreeEditor({ mode: "create", type: "folder" });
+  dom.treeEditorForm.addEventListener("submit", handleTreeEditorSubmit);
+  dom.treeDeleteButton.onclick = handleTreeDelete;
+
+  dom.dayStartInput.oninput = (event) => {
+    state.dayStart = event.target.value || "00:00";
+    persistState();
+  };
+  dom.defaultDurationSelect.onchange = (event) => {
+    state.defaultDuration = Number(event.target.value);
+    persistState();
+  };
+  dom.completedDefaultToggle.onchange = (event) => {
+    state.ui.groupOpen.completed = event.target.checked;
+    renderHome();
+    persistState();
+  };
+  dom.reduceTextureToggle.onchange = (event) => {
+    state.reduceTexture = event.target.checked;
+    applyBodyFlags();
+    persistState();
+  };
+  dom.nextTimePriorityToggle.onchange = (event) => {
+    state.nextRules.prioritizeTime = event.target.checked;
+    renderHome();
+    persistState();
+  };
+  dom.nextImportantPriorityToggle.onchange = (event) => {
+    state.nextRules.prioritizeImportant = event.target.checked;
+    renderHome();
+    persistState();
+  };
+  dom.customStartDate.onchange = (event) => {
+    state.ui.customRange.start = event.target.value;
+    renderStats();
+    persistState();
+  };
+  dom.customEndDate.onchange = (event) => {
+    state.ui.customRange.end = event.target.value;
+    renderStats();
+    persistState();
+  };
+  dom.pwaInstallButton.onclick = handlePwaInstall;
+}
+
+function registerPwa() {
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredPromptEvent = event;
+    renderSettings();
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredPromptEvent = null;
+    renderSettings();
+  });
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  updateLogDuration();
+}
+
+function renderHome() {
+  dom.homeDate.textContent = formatHeroDate(new Date());
+  renderHomeTimerOnly();
+  renderNextTasks();
+  renderTodoGroups();
+}
+
+function renderHomeTimerOnly() {
+  const timerState = getTimerPresentation();
+  if (!timerState) {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-row">
+        <div class="timer-main">
+          <div class="timer-head">
+            <p class="timer-name">No timer running</p>
+          </div>
+          <div class="timer-clock">00:00</div>
+          <p class="timer-template">Quick Start 可以立刻把一件事送进现在。</p>
+          <div class="timer-progress"><span style="width:0%"></span></div>
+        </div>
+        <div class="timer-actions">
+          <button class="timer-button" id="timer-new" type="button">Start</button>
+        </div>
+      </div>
+    `;
+  } else {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-row">
+        <div class="timer-main">
+          <div class="timer-head">
+            <div class="timer-chip" style="background:${timerState.color};">${escapeHtml(timerState.badge)}</div>
+            <p class="timer-name">${escapeHtml(timerState.name)}${timerState.important ? ' <span class="task-star">★</span>' : ""}</p>
+          </div>
+          <p class="timer-template">${escapeHtml(timerState.template)}</p>
+          <div class="timer-clock">${timerState.elapsed}</div>
+          <div class="timer-progress"><span style="width:${timerState.progress}%;"></span></div>
+        </div>
+        <div class="timer-actions">
+          <button class="timer-button" id="timer-toggle" type="button">${state.activeTimer.running ? "Pause" : "Resume"}</button>
+          <button class="timer-button stop" id="timer-stop" type="button">Stop</button>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById("timer-toggle")?.addEventListener("click", toggleTimer);
+  document.getElementById("timer-stop")?.addEventListener("click", stopTimer);
+  document.getElementById("timer-new")?.addEventListener("click", () => {
+    dom.quickNameInput.value = "";
+    openSheet("quick-sheet");
+  });
+}
+
+function renderNextTasks() {
+  const nextTasks = getNextTasks();
+  if (!nextTasks.length) {
+    dom.nextScroll.innerHTML = `<p class="empty-note">今天已经没有待开始的任务了。</p>`;
+    return;
+  }
+
+  dom.nextScroll.innerHTML = nextTasks
+    .map((task) => {
+      const meta = getTaskVisual(task);
+      return `
+        <article class="next-card" style="${paperGradient(meta.color)}; --next-color:${meta.color};">
+          <div class="next-line">
+            <div class="next-time">${task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes)}</div>
+            <div class="next-main">
+              <div class="next-title-row">
+                <h3 class="next-name">${escapeHtml(task.name)}</h3>
+                ${task.important ? '<span class="task-star">★</span>' : ""}
+              </div>
+              <div class="chip-row">
+                <span class="mini-pill">${escapeHtml(meta.categoryName)}</span>
+              </div>
+            </div>
+            <button class="flat-start" data-start-task="${task.id}" type="button">Start</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  dom.nextScroll.querySelectorAll("[data-start-task]").forEach((button) => {
+    button.onclick = () => startTimerForTask(button.dataset.startTask);
+  });
+}
+
+function renderTodoGroups() {
+  const groups = getGroupedTasks();
+  dom.todoGroups.innerHTML = [
+    renderTaskGroup("overdue", "Overdue", groups.overdue),
+    renderTaskGroup("today", "Today", groups.today),
+    renderTaskGroup("flexible", "Flexible", groups.flexible),
+    renderTaskGroup("completed", "Completed", groups.completed, true),
+  ].join("");
+
+  dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
+    input.onchange = () => toggleTaskComplete(input.dataset.taskCheck);
+  });
+  dom.todoGroups.querySelectorAll("[data-task-start]").forEach((button) => {
+    button.onclick = () => startTimerForTask(button.dataset.taskStart);
+  });
+  dom.todoGroups.querySelectorAll("[data-task-edit]").forEach((button) => {
+    button.onclick = () => prepareTaskDraft(button.dataset.taskEdit);
+  });
+  dom.todoGroups.querySelectorAll("[data-toggle-group]").forEach((button) => {
+    button.onclick = () => {
+      const groupKey = button.dataset.toggleGroup;
+      state.ui.groupOpen[groupKey] = !state.ui.groupOpen[groupKey];
+      renderHome();
+      persistState();
+    };
+  });
+}
+
+function renderTaskGroup(groupKey, title, tasks, completed = false) {
+  const open = state.ui.groupOpen[groupKey];
+  return `
+    <section class="todo-group">
+      <button class="group-toggle" data-toggle-group="${groupKey}" type="button">
+        <h3>${title}</h3>
+        <div class="group-dash"></div>
+        <span class="group-caret">${open ? "▴" : "▾"}</span>
+      </button>
+      ${
+        open
+          ? tasks.length
+            ? `<div class="task-list">${tasks.map((task) => renderTaskRow(task, completed)).join("")}</div>`
+            : `<p class="empty-note">${title === "Flexible" ? "没有无时间任务。" : "这一组现在是空的。"}</p>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderTaskRow(task, isCompleted = false) {
+  const visual = getTaskVisual(task);
+  const timeText = task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes);
+  return `
+    <article class="task-row ${isCompleted ? "is-completed" : ""}">
+      <label class="task-check">
+        <input type="checkbox" data-task-check="${task.id}" ${task.completed ? "checked" : ""} />
+        <span></span>
+      </label>
+      <div class="task-time-block">${timeText}</div>
+      <div class="task-main">
+        <div class="task-title-row">
+          <h4 class="task-name">${escapeHtml(task.name)}</h4>
+          ${task.important ? '<span class="task-star">★</span>' : ""}
+        </div>
+        <div class="task-tags">
+          <span class="mini-pill" style="${chipStyle(visual.color)}">${escapeHtml(visual.categoryName)}</span>
+        </div>
+      </div>
+      <div class="task-side">
+        <div class="task-duration-row">
+          <span class="task-duration">${task.durationMin || state.defaultDuration} min</span>
+          <button class="task-action" data-task-edit="${task.id}" type="button">✎</button>
+        </div>
+        ${!task.completed ? `<button class="flat-start" data-task-start="${task.id}" type="button">Start</button>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function getGroupedTasks() {
+  const today = formatInputDate(new Date());
+  const nowMinutes = getMinutesNow();
+  const incomplete = state.tasks.filter((task) => !task.completed);
+  const completed = state.tasks.filter((task) => task.completed);
+  return {
+    overdue: incomplete
+      .filter((task) => isTaskOverdue(task, today, nowMinutes))
+      .sort(sortTasksForHome),
+    today: incomplete
+      .filter((task) => isTaskForToday(task, today, nowMinutes))
+      .sort(sortTasksForHome),
+    flexible: incomplete
+      .filter((task) => isTaskFlexible(task, today))
+      .sort(sortTasksForHome),
+    completed: completed.sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0)),
+  };
+}
+
+function getNextTasks() {
+  const nowMinutes = getMinutesNow();
+  const today = formatInputDate(new Date());
+  const available = state.tasks.filter((task) => !task.completed && isTaskVisibleOnHome(task, today));
+  const chosen = [];
+  const seen = new Set();
+
+  if (state.nextRules.prioritizeTime) {
+    available
+      .filter((task) => task.scheduledMinutes != null)
+      .sort((a, b) => Math.abs((a.scheduledMinutes ?? 0) - nowMinutes) - Math.abs((b.scheduledMinutes ?? 0) - nowMinutes))
+      .slice(0, 3)
+      .forEach((task) => {
+        if (!seen.has(task.id)) {
+          seen.add(task.id);
+          chosen.push(task);
+        }
+      });
+  }
+
+  if (state.nextRules.prioritizeImportant) {
+    available
+      .filter((task) => task.important)
+      .sort(sortTasksForHome)
+      .forEach((task) => {
+        if (!seen.has(task.id) && chosen.length < 5) {
+          seen.add(task.id);
+          chosen.push(task);
+        }
+      });
+  }
+
+  available
+    .filter((task) => task.scheduledMinutes == null)
+    .sort(sortTasksForHome)
+    .forEach((task) => {
+      if (!seen.has(task.id) && chosen.length < 5) {
+        seen.add(task.id);
+        chosen.push(task);
+      }
+    });
+
+  return chosen.slice(0, 5);
+}
+
+function sortTasksForHome(a, b) {
+  const aDate = a.scheduledDate || "";
+  const bDate = b.scheduledDate || "";
+  return aDate.localeCompare(bDate) || (a.scheduledMinutes ?? 9999) - (b.scheduledMinutes ?? 9999) || Number(b.important) - Number(a.important);
+}
+
+function isTaskVisibleOnHome(task, today) {
+  return !task.scheduledDate || task.scheduledDate <= today;
+}
+
+function isTaskOverdue(task, today, nowMinutes) {
+  if (!isTaskVisibleOnHome(task, today)) return false;
+  if (task.scheduledDate && task.scheduledDate < today) return true;
+  return task.scheduledDate === today && task.scheduledMinutes != null && task.scheduledMinutes < nowMinutes;
+}
+
+function isTaskForToday(task, today, nowMinutes) {
+  if (task.scheduledDate && task.scheduledDate !== today) return false;
+  return task.scheduledMinutes != null && !isTaskOverdue(task, today, nowMinutes);
+}
+
+function isTaskFlexible(task, today) {
+  if (task.scheduledMinutes != null) return false;
+  return !task.scheduledDate || task.scheduledDate === today;
+}
+
+function getTimerPresentation() {
+  if (!state.activeTimer?.taskId) return null;
+  const task = state.tasks.find((entry) => entry.id === state.activeTimer.taskId);
+  if (!task) return null;
+  const visual = getTaskVisual(task);
+  const elapsedMs = getElapsedMs(state.activeTimer);
+  const planned = Math.max(state.activeTimer.durationMin || task.durationMin || state.defaultDuration, 1) * 60000;
+  const remaining = Math.max(0, planned - elapsedMs);
+  return {
+    color: visual.color,
+    badge: visual.categoryName,
+    name: task.name,
+    template: visual.shortPath,
+    important: Boolean(task.important),
+    elapsed: state.activeTimer.mode === "down" ? formatAdaptiveDuration(remaining) : formatAdaptiveDuration(elapsedMs),
+    progress: Math.min(100, Math.round((elapsedMs / planned) * 100)),
+  };
+}
+
+function formatAdaptiveDuration(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hour = Math.floor(totalSeconds / 3600);
+  const minute = Math.floor((totalSeconds % 3600) / 60);
+  const second = totalSeconds % 60;
+  if (hour > 0) {
+    return [hour, minute, second].map((part) => String(part).padStart(2, "0")).join(":");
+  }
+  return `${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
+}
+
+function startTimerForTask(taskId) {
+  if (state.activeTimer?.taskId && state.activeTimer.running) {
+    finalizeRunningSession();
+  }
+  const task = state.tasks.find((entry) => entry.id === taskId);
+  state.activeTimer = {
+    taskId,
+    startedAt: new Date().toISOString(),
+    pausedElapsedMs: 0,
+    running: true,
+    mode: task?.timerMode || "up",
+    durationMin: task?.durationMin || state.defaultDuration,
+  };
+  closeAllSheets();
+  renderAll();
+  persistState();
+}
+
+function renderHomeTimerOnly() {
+  const timerState = getTimerPresentation();
+  if (!timerState) {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-row">
+        <div class="timer-main">
+          <div class="timer-head">
+            <p class="timer-name">No timer running</p>
+          </div>
+          <p class="timer-template">Quick Start can send one thing straight into now.</p>
+          <div class="timer-clock">00:00</div>
+          <div class="timer-progress"><span style="width:0%"></span></div>
+        </div>
+        <div class="timer-actions">
+          <button class="timer-button" id="timer-new" type="button">Start</button>
+        </div>
+      </div>
+    `;
+  } else {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-row">
+        <div class="timer-main">
+          <div class="timer-head">
+            <p class="timer-name">${escapeHtml(timerState.name)}${timerState.important ? ' <span class="task-star">★</span>' : ""}</p>
+            <div class="timer-chip" style="${chipStyle(timerState.color)}">${escapeHtml(timerState.badge)}</div>
+          </div>
+          <p class="timer-template">${escapeHtml(timerState.template)} · ${state.activeTimer.running ? "recording now" : "paused"}</p>
+          <div class="timer-clock">${timerState.elapsed}</div>
+          <div class="timer-progress"><span style="width:${timerState.progress}%;"></span></div>
+        </div>
+        <div class="timer-actions">
+          <button class="timer-button" id="timer-toggle" type="button">${state.activeTimer.running ? "Pause" : "Resume"}</button>
+          <button class="timer-button stop" id="timer-stop" type="button">Stop</button>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById("timer-toggle")?.addEventListener("click", toggleTimer);
+  document.getElementById("timer-stop")?.addEventListener("click", stopTimer);
+  document.getElementById("timer-new")?.addEventListener("click", () => {
+    dom.quickNameInput.value = "";
+    openSheet("quick-sheet");
+  });
+}
+
+function renderTaskAdvancedControls() {
+  if (!dom.taskAdvancedPanel) return;
+  const isOpen = Boolean(state.ui.taskAdvancedOpen);
+  dom.taskAdvancedPanel.hidden = !isOpen;
+  dom.taskMoreToggle.textContent = `More settings ${isOpen ? "▴" : "▾"}`;
+
+  const repeatMode = dom.taskRepeatSelect.value || "none";
+  const showWeekdays = repeatMode === "weekly" || repeatMode === "custom";
+  dom.taskWeekdaysField.hidden = !showWeekdays;
+
+  const weekdayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  dom.taskWeekdaysGrid.innerHTML = weekdayOptions
+    .map(
+      (day) => `
+        <button
+          class="weekday-chip ${state.ui.taskWeekdays.includes(day) ? "is-active" : ""}"
+          data-weekday-chip="${day}"
+          type="button"
+        >
+          ${day}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.taskWeekdaysGrid.querySelectorAll("[data-weekday-chip]").forEach((button) => {
+    button.onclick = () => {
+      const day = button.dataset.weekdayChip;
+      const hasDay = state.ui.taskWeekdays.includes(day);
+      state.ui.taskWeekdays = hasDay
+        ? state.ui.taskWeekdays.filter((entry) => entry !== day)
+        : [...state.ui.taskWeekdays, day];
+      renderTaskAdvancedControls();
+    };
+  });
+
+  dom.taskTimerMode.innerHTML = [
+    { id: "up", label: "Count up" },
+    { id: "down", label: "Count down" },
+  ]
+    .map(
+      (option) => `
+        <button
+          class="mini-seg-button ${state.ui.taskTimerMode === option.id ? "is-active" : ""}"
+          data-timer-mode="${option.id}"
+          type="button"
+        >
+          ${option.label}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.taskTimerMode.querySelectorAll("[data-timer-mode]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.taskTimerMode = button.dataset.timerMode;
+      renderTaskAdvancedControls();
+    };
+  });
+}
+
+function openTimeSheet() {
+  updateTaskTimeSummary();
+  openSheet("time-sheet");
+}
+
+function updateTaskTimeSummary() {
+  if (!dom.taskTimeLabel || !dom.taskDateLabel) return;
+
+  const today = formatInputDate(new Date());
+  const tomorrow = formatInputDate(shiftDate(new Date(), 1));
+  const quickOptions = [
+    { id: "none", label: "No date" },
+    { id: "today", label: "Today" },
+    { id: "tomorrow", label: "Tomorrow" },
+    { id: "pick", label: "Pick date" },
+  ];
+
+  dom.taskDateQuickGrid.innerHTML = quickOptions
+    .map(
+      (option) => `
+        <button class="quick-option ${state.ui.taskDatePreset === option.id ? "is-active" : ""}" data-date-preset="${option.id}" type="button">
+          ${option.label}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.taskDateQuickGrid.querySelectorAll("[data-date-preset]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.taskDatePreset = button.dataset.datePreset;
+      if (state.ui.taskDatePreset === "none") {
+        dom.taskDateInput.value = "";
+      }
+      if (state.ui.taskDatePreset === "today") {
+        dom.taskDateInput.value = today;
+      }
+      if (state.ui.taskDatePreset === "tomorrow") {
+        dom.taskDateInput.value = tomorrow;
+      }
+      if (state.ui.taskDatePreset === "pick" && !dom.taskDateInput.value) {
+        dom.taskDateInput.value = today;
+      }
+      updateTaskTimeSummary();
+    };
+  });
+
+  dom.taskDateInput.onchange = () => {
+    if (!dom.taskDateInput.value) {
+      state.ui.taskDatePreset = "none";
+    } else if (dom.taskDateInput.value === today) {
+      state.ui.taskDatePreset = "today";
+    } else if (dom.taskDateInput.value === tomorrow) {
+      state.ui.taskDatePreset = "tomorrow";
+    } else {
+      state.ui.taskDatePreset = "pick";
+    }
+    updateTaskTimeSummary();
+  };
+
+  dom.taskTimeInput.oninput = () => updateTaskTimeSummary();
+
+  const dateValue = getTaskDraftDate();
+  const timeValue = parseTimeString(dom.taskTimeInput.value);
+  dom.taskTimeLabel.textContent = timeValue == null ? "Any time" : formatMinutes(timeValue);
+  dom.taskDateLabel.textContent = formatTaskDateNote(dateValue);
+}
+
+function clearTaskTimeDraft() {
+  dom.taskDateInput.value = "";
+  dom.taskTimeInput.value = "";
+  state.ui.taskDatePreset = "none";
+  updateTaskTimeSummary();
+  openSheet("task-sheet");
+}
+
+function applyTaskTimeDraft() {
+  if (state.ui.taskDatePreset === "pick" && !dom.taskDateInput.value) {
+    state.ui.taskDatePreset = "none";
+  }
+  updateTaskTimeSummary();
+  openSheet("task-sheet");
+}
+
+function getTaskDraftDate() {
+  if (state.ui.taskDatePreset === "today") return formatInputDate(new Date());
+  if (state.ui.taskDatePreset === "tomorrow") return formatInputDate(shiftDate(new Date(), 1));
+  if (state.ui.taskDatePreset === "pick") return dom.taskDateInput.value || null;
+  return dom.taskDateInput.value || null;
+}
+
+function formatTaskDateNote(dateValue) {
+  if (!dateValue) return "No date";
+  const today = formatInputDate(new Date());
+  const tomorrow = formatInputDate(shiftDate(new Date(), 1));
+  if (dateValue === today) return "Today";
+  if (dateValue === tomorrow) return "Tomorrow";
+  const date = new Date(`${dateValue}T00:00:00`);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function prepareTaskDraft(taskId = null) {
+  const task = taskId ? state.tasks.find((item) => item.id === taskId) : null;
+  state.ui.editingTaskId = taskId;
+  state.ui.createTaskSelection = task
+    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
+    : null;
+
+  dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
+  dom.taskNameInput.value = task?.name || "";
+  dom.taskDurationInput.value = task?.durationMin || "";
+  dom.taskImportantInput.checked = Boolean(task?.important);
+  dom.taskRepeatSelect.value = task?.repeatMode || "none";
+  state.ui.taskWeekdays = [...(task?.weekdays || [])];
+  state.ui.taskTimerMode = task?.timerMode || "up";
+  dom.taskDateInput.value = task?.scheduledDate || "";
+  dom.taskTimeInput.value = task?.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : "";
+
+  const today = formatInputDate(new Date());
+  const tomorrow = formatInputDate(shiftDate(new Date(), 1));
+  if (!task?.scheduledDate) {
+    state.ui.taskDatePreset = "none";
+  } else if (task.scheduledDate === today) {
+    state.ui.taskDatePreset = "today";
+  } else if (task.scheduledDate === tomorrow) {
+    state.ui.taskDatePreset = "tomorrow";
+  } else {
+    state.ui.taskDatePreset = "pick";
+  }
+
+  state.ui.taskAdvancedOpen = Boolean(
+    task && ((task.repeatMode && task.repeatMode !== "none") || task.timerMode === "down" || (task.weekdays || []).length)
+  );
+
+  updateTaskCategoryLabel();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  openSheet("task-sheet");
+}
+
+function handleTaskSubmit(event) {
+  event.preventDefault();
+  const name = dom.taskNameInput.value.trim();
+  if (!name) {
+    dom.taskNameInput.focus();
+    return;
+  }
+
+  const repeatMode = dom.taskRepeatSelect.value || "none";
+  const draft = {
+    name,
+    scheduledDate: getTaskDraftDate(),
+    scheduledMinutes: parseTimeString(dom.taskTimeInput.value),
+    durationMin: Number(dom.taskDurationInput.value) || state.defaultDuration,
+    important: dom.taskImportantInput.checked,
+    repeatMode,
+    weekdays: repeatMode === "weekly" || repeatMode === "custom" ? [...state.ui.taskWeekdays] : [],
+    timerMode: state.ui.taskTimerMode || "up",
+    folderId: state.ui.createTaskSelection?.folderId || null,
+    categoryId: state.ui.createTaskSelection?.categoryId || null,
+    templateId: state.ui.createTaskSelection?.templateId || null,
+  };
+
+  if (state.ui.editingTaskId) {
+    const task = state.tasks.find((item) => item.id === state.ui.editingTaskId);
+    if (task) {
+      Object.assign(task, draft);
+    }
+  } else {
+    state.tasks.unshift({
+      id: makeId("task"),
+      createdAt: new Date().toISOString(),
+      completed: false,
+      completedAt: null,
+      ...draft,
+    });
+  }
+
+  closeAllSheets();
+  renderAll();
+  persistState();
+}
+
+function renderSettings() {
+  dom.themeGrid.innerHTML = THEME_OPTIONS.map(
+    (theme) => `
+      <button class="theme-card ${state.theme === theme.id ? "is-active" : ""}" data-theme-card="${theme.id}" type="button">
+        <div class="theme-preview ${theme.id}"></div>
+        <strong>${escapeHtml(theme.name)}</strong>
+        <div class="inline-note">${escapeHtml(theme.note)}</div>
+      </button>
+    `
+  ).join("");
+
+  dom.dayStartInput.value = state.dayStart;
+  dom.defaultDurationSelect.value = String(state.defaultDuration);
+  dom.completedDefaultToggle.checked = Boolean(state.ui.groupOpen?.completed);
+  dom.reduceTextureToggle.checked = state.reduceTexture;
+  dom.nextTimePriorityToggle.checked = state.nextRules.prioritizeTime;
+  dom.nextImportantPriorityToggle.checked = state.nextRules.prioritizeImportant;
+
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isStandalone) {
+    dom.pwaInstallButton.textContent = "Installed";
+    dom.pwaInstallButton.disabled = true;
+    dom.pwaInstallNote.textContent = "This app is already running in installed mode.";
+  } else if (deferredPromptEvent) {
+    dom.pwaInstallButton.textContent = "Install app";
+    dom.pwaInstallButton.disabled = false;
+    dom.pwaInstallNote.textContent = "This device can install the app directly from here.";
+  } else {
+    dom.pwaInstallButton.textContent = "How to install";
+    dom.pwaInstallButton.disabled = false;
+    dom.pwaInstallNote.textContent = "If the prompt does not appear, use your browser menu and choose Add to Home Screen.";
+  }
+
+  dom.themeGrid.querySelectorAll("[data-theme-card]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.theme = button.dataset.themeCard;
+      applyTheme();
+      renderSettings();
+      persistState();
+    });
+  });
+}
+
+async function handlePwaInstall() {
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isStandalone) {
+    renderSettings();
+    return;
+  }
+
+  if (deferredPromptEvent) {
+    deferredPromptEvent.prompt();
+    try {
+      await deferredPromptEvent.userChoice;
+    } catch {
+      // ignore aborted prompt
+    }
+    deferredPromptEvent = null;
+    renderSettings();
+    return;
+  }
+
+  window.alert("If your browser does not show an install prompt, open the browser menu and tap Add to Home Screen.");
+}
+
+function renderStats() {
+  renderStatsTabs();
+  renderStatsFilters();
+
+  const range = state.ui.statsRange;
+  const stats = buildStatsDataset(range);
+  dom.statsTitle.textContent =
+    range === "today" ? "Today's Color" : range === "week" ? "Weekly Color" : range === "month" ? "Monthly Color" : "Custom Color";
+  dom.statsRangeNote.textContent = stats.note;
+  dom.customRangeRow.hidden = range !== "custom";
+  dom.customStartDate.value = state.ui.customRange.start;
+  dom.customEndDate.value = state.ui.customRange.end;
+
+  renderStatsWheel(stats);
+  renderStatsBreakdown(stats);
+  renderTrendPanel();
+}
+
+function renderStatsWheel(stats) {
+  const chart = state.ui.statsRange === "today" ? renderClockDialSvg(stats) : renderPieSvg(stats);
+  dom.statsWheelCard.innerHTML = `
+    <div class="wheel-shell">
+      ${chart}
+      ${
+        stats.selected
+          ? `<div class="stats-floating-note"><strong>${escapeHtml(stats.selected.label)}</strong><span>${escapeHtml(stats.selected.note)}</span></div>`
+          : ""
+      }
+    </div>
+  `;
+
+  dom.statsTotalRow.innerHTML = `
+    <div class="stats-total-chip">
+      <strong>${formatDuration(stats.totalMinutes)}</strong>
+      <span>${escapeHtml(stats.centerLabel)}</span>
+    </div>
+  `;
+
+  dom.statsLegend.innerHTML = "";
+  dom.statsWheelCard.querySelectorAll("[data-segment-key]").forEach((node) => {
+    node.addEventListener("click", (event) => {
+      event.stopPropagation();
+      state.ui.selectedSegment = state.ui.selectedSegment === node.dataset.segmentKey ? null : node.dataset.segmentKey;
+      renderStats();
+      persistState();
+    });
+  });
+
+  dom.statsWheelCard.onclick = (event) => {
+    if (!event.target.closest("[data-segment-key]") && state.ui.selectedSegment) {
+      state.ui.selectedSegment = null;
+      renderStats();
+      persistState();
+    }
+  };
+}
+
+function renderClockDialSvg(stats) {
+  const cx = 170;
+  const cy = 170;
+  const outerRadius = 126;
+  const innerRadius = 58;
+  const thickness = outerRadius - innerRadius;
+  const ticks = Array.from({ length: 12 }, (_, index) => {
+    const hour = index * 2;
+    const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+    const x1 = cx + Math.cos(angle) * (outerRadius + 6);
+    const y1 = cy + Math.sin(angle) * (outerRadius + 6);
+    const x2 = cx + Math.cos(angle) * (outerRadius + 18);
+    const y2 = cy + Math.sin(angle) * (outerRadius + 18);
+    const tx = cx + Math.cos(angle) * (outerRadius + 32);
+    const ty = cy + Math.sin(angle) * (outerRadius + 32);
+    return `
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(86,97,126,0.24)" stroke-width="2" />
+      <text x="${tx}" y="${ty}" fill="rgba(86,97,126,0.68)" font-size="12" text-anchor="middle" dominant-baseline="middle">${hour === 0 ? 24 : hour}</text>
+    `;
+  }).join("");
+
+  const segments = stats.segments
+    .map(
+      (segment) => `
+        <path
+          d="${describeArc(cx, cy, outerRadius, thickness, segment.startMinutes / 1440, segment.endMinutes / 1440)}"
+          fill="${segment.color}"
+          opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.26 : 0.96}"
+          data-segment-key="${segment.key}"
+          style="cursor:pointer"
+        ></path>
+      `
+    )
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="time clock">
+      <circle cx="${cx}" cy="${cy}" r="${outerRadius}" fill="none" stroke="rgba(96,106,138,0.08)" stroke-width="${thickness}" />
+      ${ticks}
+      ${segments}
+    </svg>
+  `;
+}
+
+function renderPieSvg(stats) {
+  const cx = 170;
+  const cy = 170;
+  const radius = 126;
+
+  if (!stats.segments.length) {
+    return `
+      <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="pie chart">
+        <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      </svg>
+    `;
+  }
+
+  if (stats.segments.length === 1) {
+    const segment = stats.segments[0];
+    return `
+      <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="pie chart">
+        <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+        <circle
+          cx="${cx}"
+          cy="${cy}"
+          r="${radius}"
+          fill="${segment.color}"
+          opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.28 : 0.96}"
+          data-segment-key="${segment.key}"
+          style="cursor:pointer"
+        ></circle>
+      </svg>
+    `;
+  }
+
+  let currentRatio = 0;
+  const segments = stats.segments
+    .map((segment) => {
+      const start = currentRatio;
+      const end = currentRatio + segment.minutes / Math.max(stats.totalMinutes, 1);
+      currentRatio = end;
+      return `
+        <path
+          d="${describePieSlice(cx, cy, radius, start, end)}"
+          fill="${segment.color}"
+          opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.28 : 0.96}"
+          data-segment-key="${segment.key}"
+          style="cursor:pointer"
+        ></path>
+      `;
+    })
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="pie chart">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      ${segments}
+    </svg>
+  `;
+}
+
+function describePieSlice(cx, cy, radius, startRatio, endRatio) {
+  const startAngle = startRatio * 360 - 90;
+  const endAngle = endRatio * 360 - 90;
+  const start = polarToCartesian(cx, cy, radius, startAngle);
+  const end = polarToCartesian(cx, cy, radius, endAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+  return ["M", cx, cy, "L", start.x, start.y, "A", radius, radius, 0, largeArcFlag, 1, end.x, end.y, "Z"].join(" ");
+}
+
+function renderTrendPanel() {
+  const label = state.ui.showTrend ? "Hide weekly trend" : "Show weekly trend";
+  dom.trendToggle.querySelector("span").textContent = label;
+  dom.trendPanel.hidden = !state.ui.showTrend;
+  if (!state.ui.showTrend) return;
+
+  const trend = buildWeeklyTrend();
+  dom.trendPanel.innerHTML = `
+    <div class="trend-grid">
+      ${trend
+        .map(
+          (entry) => `
+            <div class="trend-row">
+              <span>${entry.label}</span>
+              <div class="trend-bar"><span style="width:${entry.width}%; background:${entry.color};"></span></div>
+              <strong>${formatDuration(entry.minutes)}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderTasksTree() {
+  dom.tasksEditToggle.textContent = state.ui.tasksEditMode ? "Done" : "Edit";
+  dom.tasksTree.innerHTML = state.folders
+    .map((folder) => {
+      const content = folder.expanded
+        ? `
+          <div class="folder-content">
+            ${folder.categories.map((category) => renderCategoryStackItem(folder, category)).join("")}
+          </div>
+        `
+        : "";
+
+      return `
+        <article class="folder-block">
+          <div class="folder-headline">
+            <button class="tree-toggle" data-toggle-folder="${folder.id}" type="button">${folder.expanded ? "▾" : "▸"}</button>
+            <div class="folder-name">${escapeHtml(folder.name)}</div>
+            <div class="tree-controls">
+              <button class="tree-mini" data-add-child="category" data-parent-folder="${folder.id}" type="button">+</button>
+              ${
+                state.ui.tasksEditMode
+                  ? `
+                    <button class="tree-mini" data-edit-node="folder" data-node-id="${folder.id}" type="button">✎</button>
+                    <button class="tree-mini" data-move-folder="${folder.id}" data-direction="up" type="button">↑</button>
+                    <button class="tree-mini" data-move-folder="${folder.id}" data-direction="down" type="button">↓</button>
+                  `
+                  : ""
+              }
+            </div>
+          </div>
+          ${content}
+        </article>
+      `;
+    })
+    .join("");
+
+  bindTreeEvents();
+}
+
+function renderCategoryStackItem(folder, category) {
+  const templateMarkup = category.expanded
+    ? `
+      <div class="template-list-flat">
+        ${category.templates
+          .map(
+            (template) => `
+              <div class="template-row-flat">
+                <span>${escapeHtml(template.name)}</span>
+                <span class="template-duration">${template.durationMin} min</span>
+                ${
+                  state.ui.tasksEditMode
+                    ? `<button class="tree-mini" data-edit-node="template" data-node-id="${template.id}" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">✎</button>`
+                    : ""
+                }
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+    `
+    : "";
+
+  return `
+    <section class="category-stack-item" style="--tree-color:${category.color};">
+      <div class="category-line">
+        <button class="tree-toggle" data-toggle-category="${category.id}" type="button">${category.expanded ? "▾" : "▸"}</button>
+        <div class="category-anchor">
+          <span class="category-color-bar"></span>
+          <div class="category-title">${escapeHtml(category.name)}</div>
+        </div>
+        <div class="tree-controls">
+          <button class="tree-mini" data-add-child="template" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
+          ${
+            state.ui.tasksEditMode
+              ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button">✎</button>`
+              : ""
+          }
+        </div>
+      </div>
+      ${templateMarkup}
+    </section>
+  `;
+}
+
+function toggleTaskComplete(taskId) {
+  const task = state.tasks.find((entry) => entry.id === taskId);
+  if (!task) return;
+  const completing = !task.completed;
+  task.completed = !task.completed;
+  task.completedAt = task.completed ? new Date().toISOString() : null;
+
+  if (task.completed && state.activeTimer?.taskId === task.id) {
+    stopTimer();
+    return;
+  }
+
+  const rerender = () => {
+    renderHome();
+    renderStats();
+    persistState();
+  };
+
+  if (completing) {
+    window.setTimeout(rerender, 180);
+  } else {
+    rerender();
+  }
 }

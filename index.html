@@ -7,7 +7,11 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="theme-color" content="#f6efe5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Colorful Time</title>
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-theme="paper">
@@ -61,6 +65,7 @@
             <div class="stats-wheel-card" id="stats-wheel-card"></div>
             <div class="stats-legend" id="stats-legend"></div>
           </div>
+          <div class="stats-total-row" id="stats-total-row"></div>
           <div class="segmented-control wide" id="stats-mode-tabs"></div>
           <div class="filter-row">
             <label class="filter-pill">
@@ -127,6 +132,32 @@
         </header>
 
         <section class="paper-sheet settings-sheet">
+          <div class="settings-block">
+            <div class="settings-head">
+              <h2>Install</h2>
+              <p>把网页装进手机主屏幕，之后我们就能顺着这套骨架继续做 APK。</p>
+            </div>
+            <button class="primary-button settings-install" id="pwa-install-button" type="button">
+              Install app
+            </button>
+            <p class="inline-note" id="pwa-install-note">当前设备还没有暴露安装提示。</p>
+          </div>
+
+          <div class="settings-block">
+            <div class="settings-head">
+              <h2>Next</h2>
+              <p>首页不解释逻辑，这里才是抽取规则以后要细调的地方。</p>
+            </div>
+            <label class="toggle-row">
+              <span>优先最近时间任务</span>
+              <input type="checkbox" id="next-time-priority-toggle" checked />
+            </label>
+            <label class="toggle-row">
+              <span>优先重要任务</span>
+              <input type="checkbox" id="next-important-priority-toggle" checked />
+            </label>
+          </div>
+
           <div class="settings-block">
             <div class="settings-head">
               <h2>Theme</h2>
@@ -244,12 +275,13 @@
           <span>Category</span>
           <strong id="task-category-label">Choose category</strong>
         </button>
+        <button class="picker-row dual-line" id="task-time-button" type="button">
+          <span>Time</span>
+          <strong id="task-time-label">Any time</strong>
+          <small id="task-date-label">No date</small>
+        </button>
         <label class="line-field">
-          <span>Time (optional)</span>
-          <input type="time" id="task-time-input" name="taskTime" />
-        </label>
-        <label class="line-field">
-          <span>Duration (optional)</span>
+          <span>Duration</span>
           <input
             type="number"
             id="task-duration-input"
@@ -260,11 +292,62 @@
           />
         </label>
         <label class="toggle-row">
-          <span>Mark as important</span>
+          <span>Important</span>
           <input type="checkbox" id="task-important-input" name="taskImportant" />
         </label>
+        <button class="collapse-button task-more-toggle" id="task-more-toggle" type="button">
+          More settings ▸
+        </button>
+        <div class="task-advanced-panel" id="task-advanced-panel" hidden>
+          <label class="line-field">
+            <span>Repeat</span>
+            <select id="task-repeat-select">
+              <option value="none">None</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <div class="line-field" id="task-weekdays-field" hidden>
+            <span>Weekdays</span>
+            <div class="weekday-grid" id="task-weekdays-grid"></div>
+          </div>
+          <div class="line-field">
+            <span>Timer mode</span>
+            <div class="mini-segmented" id="task-timer-mode"></div>
+          </div>
+        </div>
         <button class="primary-button" type="submit">Save</button>
       </form>
+    </section>
+
+    <section class="sheet-panel" id="time-sheet" hidden aria-label="Time and date">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <p class="sheet-kicker">Time & Date</p>
+          <h2>Choose when</h2>
+        </div>
+        <button class="sheet-close" data-close-sheet type="button">×</button>
+      </div>
+      <div class="sheet-form">
+        <div class="line-field">
+          <span>Date</span>
+          <div class="quick-option-grid" id="task-date-quick-grid"></div>
+        </div>
+        <label class="line-field">
+          <span>Pick date</span>
+          <input type="date" id="task-date-input" />
+        </label>
+        <label class="line-field">
+          <span>Time</span>
+          <input type="time" id="task-time-input" name="taskTime" />
+        </label>
+        <div class="sheet-button-row">
+          <button class="ghost-button" id="task-time-clear" type="button">Clear</button>
+          <button class="primary-button" id="task-time-apply" type="button">Apply</button>
+        </div>
+      </div>
     </section>
 
     <section class="sheet-panel" id="quick-sheet" hidden aria-label="Quick start">
