@@ -3250,3 +3250,377 @@ function toggleTaskComplete(taskId) {
     rerender();
   }
 }
+
+function renderHomeTimerOnly() {
+  const timerState = getTimerPresentation();
+  if (!timerState) {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-row timer-row-compact is-idle">
+        <div class="timer-left">
+          <p class="timer-name">No timer running</p>
+          <p class="timer-template">Quick Start can send one thing straight into now.</p>
+        </div>
+        <div class="timer-actions">
+          <button class="timer-button" id="timer-new" type="button">Start</button>
+        </div>
+        <div class="timer-progress timer-progress-wide"><span style="width:0%"></span></div>
+      </div>
+    `;
+  } else {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-row timer-row-compact">
+        <div class="timer-left">
+          <p class="timer-name">${escapeHtml(timerState.name)}</p>
+          <div class="timer-inline-meta">
+            <span class="mini-pill inline-tag" style="${chipStyle(timerState.color)}">${escapeHtml(timerState.badge)}</span>
+            ${timerState.important ? '<span class="task-star">★</span>' : ""}
+          </div>
+        </div>
+        <div class="timer-clock timer-clock-compact">${timerState.elapsed}</div>
+        <div class="timer-actions">
+          <button class="timer-button" id="timer-toggle" type="button">${state.activeTimer.running ? "Pause" : "Resume"}</button>
+          <button class="timer-button stop" id="timer-stop" type="button">Stop</button>
+        </div>
+        <div class="timer-progress timer-progress-wide"><span style="width:${timerState.progress}%;"></span></div>
+      </div>
+    `;
+  }
+
+  document.getElementById("timer-toggle")?.addEventListener("click", toggleTimer);
+  document.getElementById("timer-stop")?.addEventListener("click", stopTimer);
+  document.getElementById("timer-new")?.addEventListener("click", () => {
+    dom.quickNameInput.value = "";
+    openSheet("quick-sheet");
+  });
+}
+
+function renderNextTasks() {
+  const nextTasks = getNextTasks();
+  if (!nextTasks.length) {
+    dom.nextScroll.innerHTML = `<p class="empty-note">今天已经没有待开始的任务了。</p>`;
+    return;
+  }
+
+  dom.nextScroll.innerHTML = nextTasks
+    .map((task) => {
+      const meta = getTaskVisual(task);
+      const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+      return `
+        <article class="next-card next-card-square" style="${paperGradient(meta.color)}; --next-color:${meta.color};">
+          <div class="next-time">${task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes)}</div>
+          <div class="next-main">
+            <h3 class="next-name">${escapeHtml(task.name)}</h3>
+            <div class="next-meta-row">
+              <span class="mini-pill inline-tag" style="${chipStyle(meta.color)}">${escapeHtml(meta.categoryName)}</span>
+              ${task.important ? '<span class="task-star">★</span>' : ""}
+            </div>
+          </div>
+          <button class="flat-start ${isLive ? "is-live" : ""}" data-start-task="${task.id}" type="button" ${isLive ? "disabled" : ""}>
+            ${isLive ? "Running" : "Start"}
+          </button>
+        </article>
+      `;
+    })
+    .join("");
+
+  dom.nextScroll.querySelectorAll("[data-start-task]").forEach((button) => {
+    if (!button.disabled) {
+      button.onclick = () => startTimerForTask(button.dataset.startTask);
+    }
+  });
+}
+
+function renderTodoGroups() {
+  const groups = getGroupedTasks();
+  dom.todoGroups.innerHTML = [
+    renderTaskGroup("overdue", "Overdue", groups.overdue),
+    renderTaskGroup("today", "Today", groups.today),
+    renderTaskGroup("flexible", "Flexible", groups.flexible),
+    renderTaskGroup("completed", "Completed", groups.completed, true),
+  ].join("");
+
+  dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
+    input.onchange = () => toggleTaskComplete(input.dataset.taskCheck);
+  });
+  dom.todoGroups.querySelectorAll("[data-task-start]").forEach((button) => {
+    if (!button.disabled) {
+      button.onclick = () => startTimerForTask(button.dataset.taskStart);
+    }
+  });
+  dom.todoGroups.querySelectorAll("[data-toggle-group]").forEach((button) => {
+    button.onclick = () => {
+      const groupKey = button.dataset.toggleGroup;
+      state.ui.groupOpen[groupKey] = !state.ui.groupOpen[groupKey];
+      renderHome();
+      persistState();
+    };
+  });
+
+  bindTaskRowLongPress();
+}
+
+function renderTaskGroup(groupKey, title, tasks, completed = false) {
+  const open = state.ui.groupOpen[groupKey];
+  return `
+    <section class="todo-group">
+      <button class="group-toggle" data-toggle-group="${groupKey}" type="button">
+        <h3>${title}</h3>
+        <div class="group-dash"></div>
+        <span class="group-caret ${open ? "is-open" : ""}">^</span>
+      </button>
+      ${
+        open
+          ? tasks.length
+            ? `<div class="task-list">${tasks.map((task) => renderTaskRow(task, completed)).join("")}</div>`
+            : `<p class="empty-note">${title === "Flexible" ? "没有无时间任务。" : "这一组现在是空的。"}</p>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderTaskRow(task, isCompleted = false) {
+  const visual = getTaskVisual(task);
+  const timeText = task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes);
+  const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+  return `
+    <article class="task-row ${isCompleted ? "is-completed" : ""} ${isLive ? "is-running" : ""}" data-task-row="${task.id}">
+      <label class="task-check">
+        <input type="checkbox" data-task-check="${task.id}" ${task.completed ? "checked" : ""} />
+        <span></span>
+      </label>
+      <div class="task-time-block">${timeText}</div>
+      <div class="task-main">
+        <div class="task-title-row task-title-inline">
+          <h4 class="task-name">${escapeHtml(task.name)}</h4>
+          <span class="mini-pill inline-tag" style="${chipStyle(visual.color)}">${escapeHtml(visual.categoryName)}</span>
+          ${task.important ? '<span class="task-star">★</span>' : ""}
+        </div>
+        <div class="task-subline">
+          <span class="task-duration">${task.durationMin || state.defaultDuration} min</span>
+        </div>
+      </div>
+      <div class="task-side">
+        ${
+          !task.completed
+            ? `<button class="flat-start ${isLive ? "is-live" : ""}" data-task-start="${task.id}" type="button" ${isLive ? "disabled" : ""}>${isLive ? "Running" : "Start"}</button>`
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function bindTaskRowLongPress() {
+  let pressTimer = null;
+  let activeTaskId = null;
+  const clearPress = () => {
+    if (pressTimer) {
+      window.clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+    activeTaskId = null;
+  };
+
+  dom.todoGroups.querySelectorAll("[data-task-row]").forEach((row) => {
+    row.onpointerdown = (event) => {
+      if (event.target.closest(".task-check") || event.target.closest("[data-task-start]")) return;
+      activeTaskId = row.dataset.taskRow;
+      pressTimer = window.setTimeout(() => {
+        if (activeTaskId) {
+          prepareTaskDraft(activeTaskId);
+        }
+        clearPress();
+      }, 420);
+    };
+    row.onpointerup = clearPress;
+    row.onpointerleave = clearPress;
+    row.onpointercancel = clearPress;
+    row.onpointermove = clearPress;
+  });
+}
+
+function renderStatsWheel(stats) {
+  const chart = state.ui.statsRange === "today" ? renderClockDialSvg(stats) : renderPieSvg(stats);
+  dom.statsWheelCard.innerHTML = `
+    <div class="wheel-shell">
+      ${chart}
+      ${
+        stats.selected
+          ? `<div class="stats-floating-note"><strong>${escapeHtml(stats.selected.label)}</strong><span>${escapeHtml(stats.selected.note)}</span></div>`
+          : ""
+      }
+    </div>
+  `;
+
+  dom.statsTotalRow.innerHTML = `
+    <div class="stats-total-chip">
+      <strong>${formatDuration(stats.totalMinutes)}</strong>
+      <span>${escapeHtml(stats.centerLabel)}</span>
+    </div>
+  `;
+
+  dom.statsLegend.innerHTML = "";
+  dom.statsWheelCard.querySelectorAll("[data-segment-key]").forEach((node) => {
+    node.onclick = (event) => {
+      event.stopPropagation();
+      state.ui.selectedSegment = state.ui.selectedSegment === node.dataset.segmentKey ? null : node.dataset.segmentKey;
+      renderStats();
+      persistState();
+    };
+  });
+
+  dom.statsWheelCard.onclick = (event) => {
+    if (!event.target.closest("[data-segment-key]") && state.ui.selectedSegment) {
+      state.ui.selectedSegment = null;
+      renderStats();
+      persistState();
+    }
+  };
+}
+
+function renderClockDialSvg(stats) {
+  const cx = 170;
+  const cy = 170;
+  const radius = 126;
+  const ticks = Array.from({ length: 12 }, (_, index) => {
+    const hour = index * 2;
+    const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+    const x1 = cx + Math.cos(angle) * (radius + 6);
+    const y1 = cy + Math.sin(angle) * (radius + 6);
+    const x2 = cx + Math.cos(angle) * (radius + 18);
+    const y2 = cy + Math.sin(angle) * (radius + 18);
+    const tx = cx + Math.cos(angle) * (radius + 32);
+    const ty = cy + Math.sin(angle) * (radius + 32);
+    return `
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(86,97,126,0.24)" stroke-width="2" />
+      <text x="${tx}" y="${ty}" fill="rgba(86,97,126,0.64)" font-size="12" text-anchor="middle" dominant-baseline="middle">${hour === 0 ? 24 : hour}</text>
+    `;
+  }).join("");
+
+  const segments = stats.segments
+    .map(
+      (segment) => `
+        <path
+          d="${describePieSlice(cx, cy, radius, segment.startMinutes / 1440, segment.endMinutes / 1440)}"
+          fill="${segment.color}"
+          opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.24 : 0.96}"
+          data-segment-key="${segment.key}"
+          style="cursor:pointer"
+        ></path>
+      `
+    )
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="time clock">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      ${ticks}
+      ${segments}
+    </svg>
+  `;
+}
+
+function renderTrendPanel() {
+  const label = state.ui.showTrend ? "Hide weekly trend" : "Show weekly trend";
+  dom.trendToggle.querySelector("span").textContent = label;
+  dom.trendPanel.hidden = !state.ui.showTrend;
+  if (!state.ui.showTrend) return;
+
+  const trend = buildWeeklyTrend();
+  dom.trendPanel.innerHTML = `
+    <div class="trend-grid">
+      ${trend
+        .map(
+          (entry) => `
+            <div class="trend-row">
+              <span class="trend-date">${entry.label}</span>
+              <div class="trend-bar"><span style="width:${entry.width}%; background:${entry.color};"></span></div>
+              <strong>${formatDuration(entry.minutes)}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderTasksTree() {
+  dom.tasksEditToggle.textContent = state.ui.tasksEditMode ? "Done" : "Edit";
+  dom.tasksTree.innerHTML = state.folders
+    .map((folder) => {
+      const content = folder.expanded
+        ? `<div class="folder-content">${folder.categories.map((category) => renderCategoryStackItem(folder, category)).join("")}</div>`
+        : "";
+
+      return `
+        <article class="folder-block">
+          <div class="folder-headline">
+            <div class="folder-name">${escapeHtml(folder.name)}</div>
+            <div class="tree-controls">
+              <button class="tree-mini" data-add-child="category" data-parent-folder="${folder.id}" type="button">+</button>
+              ${
+                state.ui.tasksEditMode
+                  ? `
+                    <button class="tree-mini" data-edit-node="folder" data-node-id="${folder.id}" type="button">✎</button>
+                    <button class="tree-mini" data-move-folder="${folder.id}" data-direction="up" type="button">↑</button>
+                    <button class="tree-mini" data-move-folder="${folder.id}" data-direction="down" type="button">↓</button>
+                  `
+                  : ""
+              }
+              <button class="tree-toggle ${folder.expanded ? "is-open" : ""}" data-toggle-folder="${folder.id}" type="button">^</button>
+            </div>
+          </div>
+          ${content}
+        </article>
+      `;
+    })
+    .join("");
+
+  bindTreeEvents();
+}
+
+function renderCategoryStackItem(folder, category) {
+  const templateMarkup = category.expanded
+    ? `
+      <div class="template-list-flat">
+        ${category.templates
+          .map(
+            (template) => `
+              <div class="template-row-flat">
+                <span>${escapeHtml(template.name)}</span>
+                <span class="template-duration">${template.durationMin} min</span>
+                ${
+                  state.ui.tasksEditMode
+                    ? `<button class="tree-mini" data-edit-node="template" data-node-id="${template.id}" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">✎</button>`
+                    : ""
+                }
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+    `
+    : "";
+
+  return `
+    <section class="category-stack-item" style="--tree-color:${category.color};">
+      <div class="category-line">
+        <div class="category-anchor">
+          <span class="category-color-bar"></span>
+          <div class="category-title">${escapeHtml(category.name)}</div>
+        </div>
+        <div class="tree-controls">
+          <button class="tree-mini" data-add-child="template" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
+          ${
+            state.ui.tasksEditMode
+              ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button">✎</button>`
+              : ""
+          }
+          <button class="tree-toggle ${category.expanded ? "is-open" : ""}" data-toggle-category="${category.id}" type="button">^</button>
+        </div>
+      </div>
+      ${templateMarkup}
+    </section>
+  `;
+}
