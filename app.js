@@ -5769,5 +5769,1435 @@ function bindTreeEvents() {
   });
 }
 
+dom.todoSortToggle = document.getElementById("todo-sort-toggle");
+
+state.ui.todoSortMode = Boolean(state.ui.todoSortMode);
+state.ui.editingTaskNoteId = state.ui.editingTaskNoteId || null;
+state.ui.draftTabTop = typeof state.ui.draftTabTop === "number" ? state.ui.draftTabTop : 34;
+state.tasks = (state.tasks || []).map((task, index) => ({
+  note: task.note || "",
+  manualOrder: Number.isFinite(task.manualOrder) ? task.manualOrder : index,
+  ...task,
+}));
+
+let draggedTodoTaskId = null;
+
+function ensureUiCopy() {
+  const actionTitle = document.querySelector("#action-sheet .sheet-header h2");
+  if (actionTitle) actionTitle.textContent = "Add";
+
+  const taskKicker = document.querySelector("#task-sheet .sheet-kicker");
+  if (taskKicker) taskKicker.textContent = "";
+  if (dom.taskNameInput) dom.taskNameInput.placeholder = "Task Name";
+  if (dom.quickNameInput) dom.quickNameInput.placeholder = "Task Name";
+  if (dom.logTaskInput) dom.logTaskInput.placeholder = "Task Name";
+
+  const quickTitle = document.querySelector("#quick-sheet .sheet-header h2");
+  if (quickTitle) quickTitle.textContent = "Quick Start";
+  const quickKicker = document.querySelector("#quick-sheet .sheet-kicker");
+  if (quickKicker) quickKicker.textContent = "";
+  const quickSubmit = document.querySelector("#quick-sheet .primary-button");
+  if (quickSubmit) quickSubmit.textContent = "Start";
+
+  const logTitle = document.querySelector("#log-sheet .sheet-header h2");
+  if (logTitle) logTitle.textContent = "Log Time";
+  const logKicker = document.querySelector("#log-sheet .sheet-kicker");
+  if (logKicker) logKicker.textContent = "";
+
+  const timeKicker = document.querySelector("#time-sheet .sheet-kicker");
+  if (timeKicker) timeKicker.textContent = "";
+
+  if (!document.getElementById("time-back-button")) {
+    const header = document.querySelector("#time-sheet .sheet-header");
+    if (header) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.id = "time-back-button";
+      button.className = "sheet-back";
+      button.setAttribute("aria-label", "Back");
+      button.textContent = "‹";
+      header.insertBefore(button, header.firstElementChild);
+    }
+  }
+
+  document.getElementById("time-back-button")?.addEventListener("click", () => openSheet("task-sheet"));
+}
+
+function reindexTaskOrder() {
+  state.tasks.forEach((task, index) => {
+    task.manualOrder = index;
+  });
+}
+
+function taskManualRank(task) {
+  return Number.isFinite(task.manualOrder) ? task.manualOrder : Number.MAX_SAFE_INTEGER;
+}
+
+function sortTasksForHome(a, b) {
+  const aDate = a.scheduledDate || "";
+  const bDate = b.scheduledDate || "";
+  return (
+    aDate.localeCompare(bDate) ||
+    taskManualRank(a) - taskManualRank(b) ||
+    (a.scheduledMinutes ?? 9999) - (b.scheduledMinutes ?? 9999) ||
+    Number(b.important) - Number(a.important)
+  );
+}
+
+function renderDraftDrawer() {
+  if (!dom.draftDrawer || !dom.draftTab || !dom.draftList) return;
+
+  dom.draftTab.style.top = `${state.ui.draftTabTop}%`;
+  dom.draftTab.setAttribute("aria-expanded", String(state.ui.draftOpen));
+  dom.draftDrawer.hidden = false;
+  dom.draftDrawer.classList.toggle("is-open", state.ui.draftOpen);
+
+  if (!state.drafts.length) {
+    dom.draftList.innerHTML = `<p class="empty-note draft-empty">临时想法先放这里。</p>`;
+    return;
+  }
+
+  dom.draftList.innerHTML = state.drafts
+    .map(
+      (draft, index) => `
+        <button
+          class="draft-note"
+          draggable="true"
+          data-draft-note="${draft.id}"
+          type="button"
+          style="--draft-note:${formatDraftCardColor(index)};"
+        >
+          <span class="draft-note-text">${escapeHtml(draft.text)}</span>
+          <span class="draft-note-close" data-draft-delete="${draft.id}" aria-label="Delete">×</span>
+        </button>
+      `
+    )
+    .join("");
+
+  dom.draftList.querySelectorAll("[data-draft-delete]").forEach((button) => {
+    button.onclick = (event) => {
+      event.stopPropagation();
+      state.drafts = state.drafts.filter((entry) => entry.id !== button.dataset.draftDelete);
+      renderDraftDrawer();
+      persistState();
+    };
+  });
+
+  dom.draftList.querySelectorAll("[data-draft-note]").forEach((note) => {
+    note.onclick = () => {
+      const draft = state.drafts.find((entry) => entry.id === note.dataset.draftNote);
+      if (!draft) return;
+      prepareTaskDraft();
+      dom.taskNameInput.value = draft.text;
+      openSheet("task-sheet");
+    };
+    note.ondragstart = () => {
+      note.classList.add("is-dragging");
+    };
+    note.ondragend = () => {
+      note.classList.remove("is-dragging");
+    };
+  });
+
+  dom.draftList.ondragover = (event) => event.preventDefault();
+  dom.draftList.ondrop = (event) => {
+    event.preventDefault();
+  };
+}
+
+function bindDraftEvents() {
+  if (!dom.draftTab || dom.draftTab.dataset.bound === "true") return;
+  dom.draftTab.dataset.bound = "true";
+
+  let draftDragging = false;
+  let dragMoved = false;
+  let startY = 0;
+  let startTop = state.ui.draftTabTop;
+
+  dom.draftTab.onpointerdown = (event) => {
+    draftDragging = true;
+    dragMoved = false;
+    startY = event.clientY;
+    startTop = state.ui.draftTabTop;
+    dom.draftTab.setPointerCapture?.(event.pointerId);
+  };
+  dom.draftTab.onpointermove = (event) => {
+    if (!draftDragging) return;
+    const deltaPercent = ((event.clientY - startY) / window.innerHeight) * 100;
+    if (Math.abs(deltaPercent) > 1) dragMoved = true;
+    state.ui.draftTabTop = Math.max(12, Math.min(80, startTop + deltaPercent));
+    dom.draftTab.style.top = `${state.ui.draftTabTop}%`;
+  };
+  dom.draftTab.onpointerup = (event) => {
+    dom.draftTab.releasePointerCapture?.(event.pointerId);
+    if (!dragMoved) toggleDraftDrawer();
+    draftDragging = false;
+    persistState();
+  };
+  dom.draftTab.onpointercancel = () => {
+    draftDragging = false;
+  };
+
+  dom.draftClose.onclick = () => closeDraftDrawer();
+  dom.draftForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = dom.draftInput.value.trim();
+    if (!text) {
+      dom.draftInput.focus();
+      return;
+    }
+    state.drafts.unshift({
+      id: makeId("draft"),
+      text: text.slice(0, 32),
+      createdAt: new Date().toISOString(),
+    });
+    dom.draftInput.value = "";
+    renderDraftDrawer();
+    persistState();
+  });
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  ensureUiCopy();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderDraftDrawer();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  updateLogDuration();
+}
+
+function renderNavigation() {
+  dom.pages.forEach((page) => {
+    page.classList.toggle("is-active", page.dataset.page === state.currentPage);
+  });
+  dom.navItems.forEach((item) => {
+    item.classList.toggle("is-active", item.dataset.target === state.currentPage);
+  });
+  dom.fab.hidden = state.currentPage !== "home";
+  updateOverlayState();
+}
+
+function renderNextTasks() {
+  const nextTasks = getNextTasks();
+  if (!nextTasks.length) {
+    dom.nextScroll.innerHTML = `<p class="empty-note">Nothing queued right now.</p>`;
+    return;
+  }
+
+  dom.nextScroll.innerHTML = nextTasks
+    .map((task) => {
+      const visual = getTaskVisual(task);
+      const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+      return `
+        <article class="next-card next-card-quiet" style="--next-wash:${alphaColor(visual.color, 0.08)};">
+          <div class="next-inline">
+            <div class="next-copy">
+              <h3 class="next-name">${escapeHtml(task.name)}</h3>
+              <p class="next-meta">${escapeHtml(visual.categoryName)}</p>
+            </div>
+            <button class="next-play ${isLive ? "is-live" : ""}" data-start-task="${task.id}" type="button" ${isLive ? "disabled" : ""} aria-label="Start task">
+              <span class="play-glyph" aria-hidden="true"></span>
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  dom.nextScroll.querySelectorAll("[data-start-task]").forEach((button) => {
+    if (!button.disabled) {
+      button.onclick = () => startTimerForTask(button.dataset.startTask);
+    }
+  });
+}
+
+function renderTaskGroup(groupKey, title, tasks, completed = false) {
+  const open = state.ui.groupOpen[groupKey];
+  return `
+    <section class="todo-group" data-group-key="${groupKey}">
+      <button class="group-toggle" data-toggle-group="${groupKey}" type="button">
+        <h3>${title}</h3>
+        <div class="group-dash"></div>
+        <span class="group-arrow ${open ? "is-open" : ""}" aria-hidden="true"></span>
+      </button>
+      ${
+        open
+          ? tasks.length
+            ? `<div class="task-list">${tasks.map((task) => renderTaskRow(task, completed)).join("")}</div>`
+            : `<p class="empty-note">${title === "Flexible" ? "No flexible tasks." : "This section is empty right now."}</p>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderTaskNote(task) {
+  if (state.ui.todoSortMode) {
+    if (state.ui.editingTaskNoteId === task.id || task.note) {
+      return `
+        <input
+          class="task-note-input"
+          data-task-note-input="${task.id}"
+          type="text"
+          maxlength="15"
+          value="${escapeHtml(task.note || "")}"
+          placeholder="备注"
+        />
+      `;
+    }
+    return `<button class="task-note-slot" data-note-open="${task.id}" type="button" aria-label="Add note"></button>`;
+  }
+
+  return task.note ? `<span class="task-note-textline">${escapeHtml(task.note)}</span>` : "";
+}
+
+function renderTaskRow(task, isCompleted = false) {
+  const visual = getTaskVisual(task);
+  const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+  const sortMode = state.ui.todoSortMode && !isCompleted;
+  const timeMarkup = sortMode
+    ? `<input class="task-time-edit" data-task-time="${task.id}" type="time" value="${task.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : ""}" />`
+    : `<div class="task-time-block">${task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes)}</div>`;
+
+  return `
+    <article
+      class="task-row ${isCompleted ? "is-completed" : ""} ${isLive ? "is-running" : ""} ${sortMode ? "is-sortable" : ""}"
+      data-task-row="${task.id}"
+      ${sortMode ? 'draggable="true"' : ""}
+    >
+      <label class="task-check">
+        <input type="checkbox" data-task-check="${task.id}" ${task.completed ? "checked" : ""} />
+        <span></span>
+      </label>
+      ${timeMarkup}
+      <div class="task-main">
+        <div class="task-title-row task-title-inline">
+          <h4 class="task-name">${escapeHtml(task.name)}</h4>
+          <span class="mini-pill inline-tag" style="background:${alphaColor(visual.color, 0.14)};">${escapeHtml(visual.categoryName)}</span>
+          ${task.important ? '<span class="task-star">★</span>' : ""}
+        </div>
+        <div class="task-subline">
+          <span class="task-duration">${task.durationMin || state.defaultDuration} min</span>
+          ${renderTaskNote(task)}
+        </div>
+      </div>
+      <div class="task-side">
+        ${!task.completed ? `<button class="flat-start ${isLive ? "is-live" : ""}" data-task-start="${task.id}" type="button" ${isLive ? "disabled" : ""}>Start</button>` : ""}
+        <button class="task-edit-inline" data-task-edit="${task.id}" type="button">Edit</button>
+      </div>
+    </article>
+  `;
+}
+
+function moveTaskBefore(dragId, targetId) {
+  if (!dragId || !targetId || dragId === targetId) return;
+  const from = state.tasks.findIndex((task) => task.id === dragId);
+  const to = state.tasks.findIndex((task) => task.id === targetId);
+  if (from < 0 || to < 0) return;
+  const [moved] = state.tasks.splice(from, 1);
+  const nextIndex = state.tasks.findIndex((task) => task.id === targetId);
+  state.tasks.splice(nextIndex, 0, moved);
+  reindexTaskOrder();
+}
+
+function saveTaskNote(taskId, value) {
+  const task = state.tasks.find((entry) => entry.id === taskId);
+  if (!task) return;
+  task.note = value.trim().slice(0, 15);
+  state.ui.editingTaskNoteId = null;
+  renderHome();
+  persistState();
+}
+
+function bindTaskRowLongPress() {
+  let pressTimer = null;
+  let activeTaskId = null;
+  let startPoint = null;
+
+  const clearPress = () => {
+    if (pressTimer) {
+      window.clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+    activeTaskId = null;
+    startPoint = null;
+  };
+
+  dom.todoGroups.querySelectorAll("[data-task-row]").forEach((row) => {
+    row.oncontextmenu = (event) => {
+      event.preventDefault();
+      if (state.ui.todoSortMode) return;
+      prepareTaskDraft(row.dataset.taskRow);
+    };
+
+    row.onpointerdown = (event) => {
+      if (state.ui.todoSortMode) return;
+      if (event.target.closest(".task-check") || event.target.closest("[data-task-start]") || event.target.closest("[data-task-edit]")) return;
+      activeTaskId = row.dataset.taskRow;
+      startPoint = { x: event.clientX, y: event.clientY };
+      pressTimer = window.setTimeout(() => {
+        if (activeTaskId) prepareTaskDraft(activeTaskId);
+        clearPress();
+      }, 420);
+    };
+
+    row.onpointermove = (event) => {
+      if (!startPoint) return;
+      const deltaX = Math.abs(event.clientX - startPoint.x);
+      const deltaY = Math.abs(event.clientY - startPoint.y);
+      if (deltaX > 8 || deltaY > 8) clearPress();
+    };
+
+    row.onpointerup = clearPress;
+    row.onpointercancel = clearPress;
+  });
+}
+
+function renderTodoGroups() {
+  const groups = getGroupedTasks();
+  if (dom.todoSortToggle) {
+    dom.todoSortToggle.textContent = state.ui.todoSortMode ? "Done" : "Sort";
+    dom.todoSortToggle.onclick = () => {
+      state.ui.todoSortMode = !state.ui.todoSortMode;
+      state.ui.editingTaskNoteId = null;
+      renderHome();
+      persistState();
+    };
+  }
+
+  dom.todoGroups.innerHTML = [
+    renderTaskGroup("overdue", "Overdue", groups.overdue),
+    renderTaskGroup("today", "Today", groups.today),
+    renderTaskGroup("flexible", "Flexible", groups.flexible),
+    renderTaskGroup("completed", "Completed", groups.completed, true),
+  ].join("");
+
+  dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
+    input.onchange = () => toggleTaskComplete(input.dataset.taskCheck);
+  });
+  dom.todoGroups.querySelectorAll("[data-task-start]").forEach((button) => {
+    if (!button.disabled) button.onclick = () => startTimerForTask(button.dataset.taskStart);
+  });
+  dom.todoGroups.querySelectorAll("[data-task-edit]").forEach((button) => {
+    button.onclick = () => prepareTaskDraft(button.dataset.taskEdit);
+  });
+  dom.todoGroups.querySelectorAll("[data-toggle-group]").forEach((button) => {
+    button.onclick = () => {
+      const groupKey = button.dataset.toggleGroup;
+      state.ui.groupOpen[groupKey] = !state.ui.groupOpen[groupKey];
+      renderHome();
+      persistState();
+    };
+  });
+
+  dom.todoGroups.querySelectorAll("[data-task-time]").forEach((input) => {
+    input.onchange = () => {
+      const task = state.tasks.find((entry) => entry.id === input.dataset.taskTime);
+      if (!task) return;
+      task.scheduledMinutes = parseTimeString(input.value);
+      renderHome();
+      persistState();
+    };
+  });
+
+  dom.todoGroups.querySelectorAll("[data-note-open]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.editingTaskNoteId = button.dataset.noteOpen;
+      renderHome();
+      persistState();
+    };
+  });
+
+  dom.todoGroups.querySelectorAll("[data-task-note-input]").forEach((input) => {
+    input.onclick = (event) => event.stopPropagation();
+    input.onkeydown = (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveTaskNote(input.dataset.taskNoteInput, input.value);
+      }
+      if (event.key === "Escape") {
+        state.ui.editingTaskNoteId = null;
+        renderHome();
+      }
+    };
+    input.onblur = () => saveTaskNote(input.dataset.taskNoteInput, input.value);
+  });
+
+  if (state.ui.todoSortMode) {
+    dom.todoGroups.querySelectorAll("[data-task-row]").forEach((row) => {
+      row.ondragstart = () => {
+        draggedTodoTaskId = row.dataset.taskRow;
+        row.classList.add("is-dragging");
+      };
+      row.ondragover = (event) => {
+        event.preventDefault();
+        row.classList.add("is-drop-target");
+      };
+      row.ondragleave = () => row.classList.remove("is-drop-target");
+      row.ondragend = () => {
+        draggedTodoTaskId = null;
+        row.classList.remove("is-dragging");
+        row.classList.remove("is-drop-target");
+      };
+      row.ondrop = (event) => {
+        event.preventDefault();
+        row.classList.remove("is-drop-target");
+        moveTaskBefore(draggedTodoTaskId, row.dataset.taskRow);
+        renderHome();
+        persistState();
+      };
+    });
+  }
+
+  bindTaskRowLongPress();
+}
+
+function renderTaskAdvancedControls() {
+  if (!dom.taskAdvancedPanel) return;
+  const isOpen = Boolean(state.ui.taskAdvancedOpen);
+  dom.taskAdvancedPanel.hidden = !isOpen;
+  dom.taskMoreToggle.textContent = `More settings ${isOpen ? "▴" : "▾"}`;
+
+  const repeatMode = dom.taskRepeatSelect.value || "none";
+  const showWeekdays = repeatMode === "weekly";
+  dom.taskWeekdaysField.hidden = !showWeekdays;
+
+  const weekdayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  dom.taskWeekdaysGrid.innerHTML = weekdayOptions
+    .map(
+      (day) => `
+        <button class="weekday-chip ${state.ui.taskWeekdays.includes(day) ? "is-active" : ""}" data-weekday-chip="${day}" type="button">
+          ${day}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.taskWeekdaysGrid.querySelectorAll("[data-weekday-chip]").forEach((button) => {
+    button.onclick = () => {
+      const day = button.dataset.weekdayChip;
+      if (state.ui.taskWeekdays.includes(day)) {
+        state.ui.taskWeekdays = state.ui.taskWeekdays.filter((entry) => entry !== day);
+      } else {
+        state.ui.taskWeekdays = [...state.ui.taskWeekdays, day];
+      }
+      renderTaskAdvancedControls();
+    };
+  });
+
+  const timerMode = state.ui.taskTimerMode || "up";
+  dom.taskTimerMode.innerHTML = `
+    <div class="timer-mode-stack">
+      <button class="timer-radio ${timerMode === "up" ? "is-active" : ""}" data-timer-mode="up" type="button">Count up</button>
+      <button class="timer-radio ${timerMode === "down" ? "is-active" : ""}" data-timer-mode="down" type="button">Count down</button>
+    </div>
+  `;
+  dom.taskTimerMode.querySelectorAll("[data-timer-mode]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.taskTimerMode = button.dataset.timerMode;
+      renderTaskAdvancedControls();
+    };
+  });
+}
+
+function updateTaskTimeSummary() {
+  if (!dom.taskTimeLabel || !dom.taskDateLabel) return;
+
+  const today = formatInputDate(new Date());
+  const tomorrow = formatInputDate(shiftDate(new Date(), 1));
+  const quickOptions = [
+    { id: "none", label: "No date" },
+    { id: "today", label: "Today" },
+    { id: "tomorrow", label: "Tomorrow" },
+  ];
+
+  dom.taskDateQuickGrid.innerHTML = quickOptions
+    .map(
+      (option) => `
+        <button class="quick-option ${state.ui.taskDatePreset === option.id ? "is-active" : ""}" data-date-preset="${option.id}" type="button">
+          ${option.label}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.taskDateQuickGrid.querySelectorAll("[data-date-preset]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.taskDatePreset = button.dataset.datePreset;
+      if (state.ui.taskDatePreset === "none") dom.taskDateInput.value = "";
+      if (state.ui.taskDatePreset === "today") dom.taskDateInput.value = today;
+      if (state.ui.taskDatePreset === "tomorrow") dom.taskDateInput.value = tomorrow;
+      updateTaskTimeSummary();
+    };
+  });
+
+  dom.taskDateInput.onchange = () => {
+    if (!dom.taskDateInput.value) state.ui.taskDatePreset = "none";
+    else if (dom.taskDateInput.value === today) state.ui.taskDatePreset = "today";
+    else if (dom.taskDateInput.value === tomorrow) state.ui.taskDatePreset = "tomorrow";
+    else state.ui.taskDatePreset = "none";
+    updateTaskTimeSummary();
+  };
+  dom.taskTimeInput.oninput = () => updateTaskTimeSummary();
+  getTaskDurationInputElement().oninput = () => updateTaskTimeSummary();
+
+  const timeValue = parseTimeString(dom.taskTimeInput.value);
+  const dateValue = getTaskDraftDate();
+  dom.taskTimeLabel.textContent = timeValue == null ? "Any time" : formatMinutes(timeValue);
+  dom.taskDateLabel.textContent = formatTaskDateNote(dateValue);
+
+  const dateField = document.getElementById("task-custom-date-field");
+  const timeField = document.getElementById("task-time-field");
+  const durationField = document.getElementById("task-duration-field");
+  if (dateField) dateField.hidden = false;
+  if (timeField) timeField.hidden = false;
+  if (durationField) durationField.hidden = false;
+}
+
+function getTaskDraftDate() {
+  if (state.ui.taskDatePreset === "today") return formatInputDate(new Date());
+  if (state.ui.taskDatePreset === "tomorrow") return formatInputDate(shiftDate(new Date(), 1));
+  return dom.taskDateInput.value || null;
+}
+
+function prepareTaskDraft(taskId = null) {
+  const task = taskId ? state.tasks.find((item) => item.id === taskId) : null;
+  const durationInput = getTaskDurationInputElement();
+  const today = formatInputDate(new Date());
+  const tomorrow = formatInputDate(shiftDate(new Date(), 1));
+
+  state.ui.editingTaskId = taskId;
+  state.ui.createTaskSelection = task
+    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
+    : null;
+
+  dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
+  dom.taskNameInput.value = task?.name || "";
+  if (durationInput) durationInput.value = task?.durationMin || "";
+  dom.taskImportantInput.checked = Boolean(task?.important);
+  dom.taskRepeatSelect.value = task?.repeatMode === "weekly" ? "weekly" : task?.repeatMode === "daily" ? "daily" : "none";
+  state.ui.taskWeekdays = [...(task?.weekdays || [])];
+  state.ui.taskTimerMode = task?.timerMode || "up";
+  dom.taskDateInput.value = task?.scheduledDate || "";
+  dom.taskTimeInput.value = task?.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : "";
+
+  if (!task?.scheduledDate) state.ui.taskDatePreset = "none";
+  else if (task.scheduledDate === today) state.ui.taskDatePreset = "today";
+  else if (task.scheduledDate === tomorrow) state.ui.taskDatePreset = "tomorrow";
+  else state.ui.taskDatePreset = "none";
+
+  state.ui.taskAdvancedOpen = Boolean(task && ((task.repeatMode && task.repeatMode !== "none") || task.timerMode === "down" || (task.weekdays || []).length));
+
+  updateTaskCategoryLabel();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  openSheet("task-sheet");
+}
+
+function handleTaskSubmit(event) {
+  event.preventDefault();
+  const name = dom.taskNameInput.value.trim();
+  const durationInput = getTaskDurationInputElement();
+  if (!name) {
+    dom.taskNameInput.focus();
+    return;
+  }
+
+  const repeatMode = dom.taskRepeatSelect.value || "none";
+  const draft = {
+    name,
+    scheduledDate: getTaskDraftDate(),
+    scheduledMinutes: parseTimeString(dom.taskTimeInput.value),
+    durationMin: Number(durationInput?.value) || state.defaultDuration,
+    important: dom.taskImportantInput.checked,
+    repeatMode,
+    weekdays: repeatMode === "weekly" ? [...state.ui.taskWeekdays] : [],
+    timerMode: state.ui.taskTimerMode || "up",
+    folderId: state.ui.createTaskSelection?.folderId || null,
+    categoryId: state.ui.createTaskSelection?.categoryId || null,
+    templateId: state.ui.createTaskSelection?.templateId || null,
+  };
+
+  if (state.ui.editingTaskId) {
+    const task = state.tasks.find((item) => item.id === state.ui.editingTaskId);
+    if (task) Object.assign(task, draft);
+  } else {
+    state.tasks.unshift({
+      id: makeId("task"),
+      createdAt: new Date().toISOString(),
+      completed: false,
+      completedAt: null,
+      note: "",
+      manualOrder: -1,
+      ...draft,
+    });
+    reindexTaskOrder();
+  }
+
+  closeAllSheets();
+  renderAll();
+  persistState();
+}
+
+let draggedDraftCardId = null;
+
+function bindActionCardsFinal() {
+  document.querySelectorAll("#action-sheet [data-open-sheet]").forEach((button) => {
+    if (button.dataset.finalBound === "true") return;
+    button.dataset.finalBound = "true";
+    button.onclick = () => {
+      const target = button.dataset.openSheet;
+      if (target === "task-sheet") {
+        prepareTaskDraft();
+        return;
+      }
+      if (target === "quick-sheet") {
+        dom.quickNameInput.value = "";
+        openSheet("quick-sheet");
+        return;
+      }
+      if (target === "log-sheet") {
+        dom.logTaskInput.value = "";
+        openSheet("log-sheet");
+      }
+    };
+  });
+}
+
+function ensureUiCopy() {
+  bindActionCardsFinal();
+
+  document.querySelectorAll("#action-sheet .action-card span").forEach((node) => node.remove());
+
+  const titleMap = [
+    ["#action-sheet .sheet-header h2", "Add"],
+    ["#quick-sheet .sheet-header h2", "Quick Start"],
+    ["#log-sheet .sheet-header h2", "Log Time"],
+    ["#time-sheet .sheet-header h2", "Choose when"],
+  ];
+  titleMap.forEach(([selector, text]) => {
+    const node = document.querySelector(selector);
+    if (node) node.textContent = text;
+  });
+
+  [
+    "#task-sheet .sheet-kicker",
+    "#quick-sheet .sheet-kicker",
+    "#log-sheet .sheet-kicker",
+    "#time-sheet .sheet-kicker",
+    "#draft-drawer .sheet-kicker",
+  ].forEach((selector) => {
+    const node = document.querySelector(selector);
+    if (node) node.textContent = "";
+  });
+
+  const taskHeader = document.querySelector("#task-sheet .sheet-header h2");
+  if (taskHeader) taskHeader.textContent = state.ui.editingTaskId ? "Edit Task" : "Create Task";
+
+  if (dom.taskNameInput) dom.taskNameInput.placeholder = "Task Name";
+  if (dom.quickNameInput) dom.quickNameInput.placeholder = "Task Name";
+  if (dom.logTaskInput) dom.logTaskInput.placeholder = "Task Name";
+
+  const quickSubmit = document.querySelector("#quick-sheet .primary-button");
+  if (quickSubmit) quickSubmit.textContent = "Start";
+
+  const taskNameLabel = document.querySelector("#task-sheet .task-name-line > span");
+  const categoryLabel = dom.taskCategoryButton?.querySelector("span");
+  const quickLabel = document.querySelector("#quick-sheet #quick-form > .line-field > span");
+  const logLabel = document.querySelector("#log-sheet #log-form > .line-field:first-of-type > span");
+  [taskNameLabel, categoryLabel, quickLabel, logLabel].forEach((node) => {
+    if (node) node.classList.add("sr-only");
+  });
+
+  if (dom.taskRepeatSelect) {
+    const current = dom.taskRepeatSelect.value;
+    dom.taskRepeatSelect.innerHTML = `
+      <option value="none">None</option>
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+    `;
+    dom.taskRepeatSelect.value = ["none", "daily", "weekly"].includes(current) ? current : "none";
+  }
+
+  if (dom.draftForm && !dom.draftForm.querySelector(".draft-compose-row")) {
+    const row = document.createElement("div");
+    row.className = "draft-compose-row";
+    const inputWrap = dom.draftForm.querySelector(".draft-input-wrap");
+    const saveButton = dom.draftForm.querySelector(".draft-save");
+    if (inputWrap && saveButton) {
+      row.append(inputWrap, saveButton);
+      dom.draftForm.append(row);
+    }
+  }
+
+  if (dom.draftTab) dom.draftTab.textContent = "Draft";
+  const draftTitle = document.querySelector("#draft-drawer h2");
+  if (draftTitle) draftTitle.textContent = "Draft";
+  const draftSave = dom.draftForm?.querySelector(".draft-save");
+  if (draftSave) draftSave.textContent = "Add";
+
+  const timeBack = document.getElementById("time-back-button");
+  if (timeBack) {
+    timeBack.textContent = "‹";
+    timeBack.onclick = () => openSheet("task-sheet");
+  }
+}
+
+function moveDraftBefore(dragId, targetId) {
+  if (!dragId || !targetId || dragId === targetId) return;
+  const from = state.drafts.findIndex((entry) => entry.id === dragId);
+  const to = state.drafts.findIndex((entry) => entry.id === targetId);
+  if (from < 0 || to < 0) return;
+  const [moved] = state.drafts.splice(from, 1);
+  const insertAt = state.drafts.findIndex((entry) => entry.id === targetId);
+  state.drafts.splice(insertAt, 0, moved);
+}
+
+function renderDraftDrawer() {
+  if (!dom.draftDrawer || !dom.draftTab || !dom.draftList) return;
+
+  dom.draftTab.style.top = `${state.ui.draftTabTop}%`;
+  dom.draftTab.setAttribute("aria-expanded", String(state.ui.draftOpen));
+  dom.draftDrawer.hidden = false;
+  dom.draftDrawer.classList.toggle("is-open", state.ui.draftOpen);
+
+  if (!state.drafts.length) {
+    dom.draftList.innerHTML = `<p class="empty-note draft-empty">Nothing here yet.</p>`;
+    return;
+  }
+
+  dom.draftList.innerHTML = state.drafts
+    .map(
+      (draft, index) => `
+        <button
+          class="draft-note"
+          draggable="true"
+          data-draft-note="${draft.id}"
+          type="button"
+          style="--draft-note:${formatDraftCardColor(index)};"
+        >
+          <span class="draft-note-text">${escapeHtml(draft.text)}</span>
+          <span class="draft-note-foot">
+            <span class="draft-note-tag">To-do</span>
+            <span class="draft-note-close" data-draft-delete="${draft.id}" aria-label="Delete">×</span>
+          </span>
+        </button>
+      `
+    )
+    .join("");
+
+  dom.draftList.querySelectorAll("[data-draft-delete]").forEach((button) => {
+    button.onclick = (event) => {
+      event.stopPropagation();
+      state.drafts = state.drafts.filter((entry) => entry.id !== button.dataset.draftDelete);
+      renderDraftDrawer();
+      persistState();
+    };
+  });
+
+  dom.draftList.querySelectorAll("[data-draft-note]").forEach((note) => {
+    note.onclick = () => {
+      const draft = state.drafts.find((entry) => entry.id === note.dataset.draftNote);
+      if (!draft) return;
+      prepareTaskDraft();
+      dom.taskNameInput.value = draft.text;
+      openSheet("task-sheet");
+    };
+    note.ondragstart = (event) => {
+      draggedDraftCardId = note.dataset.draftNote;
+      note.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+    };
+    note.ondragover = (event) => {
+      event.preventDefault();
+      note.classList.add("is-drop-target");
+    };
+    note.ondragleave = () => note.classList.remove("is-drop-target");
+    note.ondragend = () => {
+      draggedDraftCardId = null;
+      note.classList.remove("is-dragging");
+      note.classList.remove("is-drop-target");
+    };
+    note.ondrop = (event) => {
+      event.preventDefault();
+      note.classList.remove("is-drop-target");
+      moveDraftBefore(draggedDraftCardId, note.dataset.draftNote);
+      renderDraftDrawer();
+      persistState();
+    };
+  });
+}
+
+function bindDraftEvents() {
+  if (!dom.draftTab || dom.draftTab.dataset.finalBound === "true") return;
+  dom.draftTab.dataset.finalBound = "true";
+
+  let draftDragging = false;
+  let dragMoved = false;
+  let startY = 0;
+  let startTop = state.ui.draftTabTop;
+
+  dom.draftTab.onclick = (event) => {
+    event.preventDefault();
+  };
+
+  dom.draftTab.onpointerdown = (event) => {
+    draftDragging = true;
+    dragMoved = false;
+    startY = event.clientY;
+    startTop = state.ui.draftTabTop;
+    dom.draftTab.setPointerCapture?.(event.pointerId);
+  };
+
+  dom.draftTab.onpointermove = (event) => {
+    if (!draftDragging) return;
+    const deltaPercent = ((event.clientY - startY) / window.innerHeight) * 100;
+    if (Math.abs(deltaPercent) > 1) dragMoved = true;
+    state.ui.draftTabTop = Math.max(12, Math.min(80, startTop + deltaPercent));
+    dom.draftTab.style.top = `${state.ui.draftTabTop}%`;
+  };
+
+  dom.draftTab.onpointerup = (event) => {
+    dom.draftTab.releasePointerCapture?.(event.pointerId);
+    if (!dragMoved) toggleDraftDrawer();
+    draftDragging = false;
+    persistState();
+  };
+
+  dom.draftTab.onpointercancel = () => {
+    draftDragging = false;
+  };
+
+  if (dom.draftClose) {
+    dom.draftClose.onclick = () => closeDraftDrawer();
+  }
+
+  if (dom.draftForm && dom.draftForm.dataset.finalSubmitBound !== "true") {
+    dom.draftForm.dataset.finalSubmitBound = "true";
+    dom.draftForm.addEventListener(
+      "submit",
+      (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const text = dom.draftInput.value.trim();
+        if (!text) {
+          dom.draftInput.focus();
+          return;
+        }
+        state.drafts.unshift({
+          id: makeId("draft"),
+          text: text.slice(0, 32),
+          createdAt: new Date().toISOString(),
+        });
+        dom.draftInput.value = "";
+        renderDraftDrawer();
+        persistState();
+      },
+      true
+    );
+  }
+}
+
+function renderHomeTimerOnly() {
+  const timerState = getTimerPresentation();
+  if (!timerState) {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-strip-shell timer-strip-shell-idle">
+        <p class="timer-strip-name">Nothing running</p>
+        <div class="timer-strip-bottom">
+          <div class="timer-strip-clock">00:00</div>
+          <div class="timer-strip-actions">
+            ${buildTimerButton("new", "Start")}
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-strip-shell" style="--timer-wash:${alphaColor(timerState.color, 0.08)};">
+        <p class="timer-strip-name">${escapeHtml(timerState.name)}</p>
+        <div class="timer-strip-bottom">
+          <div class="timer-strip-clock">${timerState.elapsed}</div>
+          <div class="timer-strip-actions">
+            ${buildTimerButton(state.activeTimer.running ? "pause" : "resume", state.activeTimer.running ? "Pause" : "Resume")}
+            ${buildTimerButton("stop", "Stop")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById("timer-pause")?.addEventListener("click", toggleTimer);
+  document.getElementById("timer-resume")?.addEventListener("click", toggleTimer);
+  document.getElementById("timer-stop")?.addEventListener("click", stopTimer);
+  document.getElementById("timer-new")?.addEventListener("click", () => {
+    dom.quickNameInput.value = "";
+    openSheet("quick-sheet");
+  });
+}
+
+function renderNextTasks() {
+  const nextTasks = getNextTasks();
+  if (!nextTasks.length) {
+    dom.nextScroll.innerHTML = `<p class="empty-note">Nothing queued right now.</p>`;
+    return;
+  }
+
+  dom.nextScroll.innerHTML = nextTasks
+    .map((task) => {
+      const visual = getTaskVisual(task);
+      const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+      return `
+        <article class="next-card next-card-quiet" style="--next-wash:${alphaColor(visual.color, 0.08)};">
+          <div class="next-inline">
+            <div class="next-copy">
+              <h3 class="next-name">${escapeHtml(task.name)}</h3>
+              <p class="next-meta">${escapeHtml(visual.categoryName)}</p>
+            </div>
+            <button class="next-play ${isLive ? "is-live" : ""}" data-start-task="${task.id}" type="button" ${isLive ? "disabled" : ""} aria-label="Start task">
+              <span class="play-glyph" aria-hidden="true"></span>
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  dom.nextScroll.querySelectorAll("[data-start-task]").forEach((button) => {
+    if (!button.disabled) button.onclick = () => startTimerForTask(button.dataset.startTask);
+  });
+}
+
+function renderTaskGroup(groupKey, title, tasks, completed = false) {
+  const open = state.ui.groupOpen[groupKey];
+  return `
+    <section class="todo-group" data-group-key="${groupKey}">
+      <button class="group-toggle" data-toggle-group="${groupKey}" type="button" aria-expanded="${open ? "true" : "false"}">
+        <h3>${title}</h3>
+        <div class="group-dash"></div>
+        <span class="group-arrow ${open ? "is-open" : ""}" aria-hidden="true"></span>
+      </button>
+      ${
+        open
+          ? tasks.length
+            ? `<div class="task-list">${tasks.map((task) => renderTaskRow(task, completed)).join("")}</div>`
+            : `<p class="empty-note">${title === "Flexible" ? "No flexible tasks." : "This section is empty right now."}</p>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderTaskNote(task) {
+  if (state.ui.todoSortMode) {
+    if (state.ui.editingTaskNoteId === task.id || task.note) {
+      return `
+        <input
+          class="task-note-input"
+          data-task-note-input="${task.id}"
+          type="text"
+          maxlength="15"
+          value="${escapeHtml(task.note || "")}"
+          placeholder=""
+        />
+      `;
+    }
+    return `<button class="task-note-slot" data-note-open="${task.id}" type="button" aria-label="Add note"></button>`;
+  }
+
+  return task.note ? `<span class="task-note-textline">${escapeHtml(task.note)}</span>` : "";
+}
+
+function renderTaskRow(task, isCompleted = false) {
+  const visual = getTaskVisual(task);
+  const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+  const sortMode = state.ui.todoSortMode && !isCompleted;
+  const timeMarkup = sortMode
+    ? `<input class="task-time-edit" data-task-time="${task.id}" type="time" value="${task.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : ""}" />`
+    : `<div class="task-time-block">${task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes)}</div>`;
+
+  return `
+    <article
+      class="task-row ${isCompleted ? "is-completed" : ""} ${isLive ? "is-running" : ""} ${sortMode ? "is-sortable" : ""}"
+      data-task-row="${task.id}"
+      ${sortMode ? 'draggable="true"' : ""}
+    >
+      <label class="task-check">
+        <input type="checkbox" data-task-check="${task.id}" ${task.completed ? "checked" : ""} />
+        <span></span>
+      </label>
+      ${timeMarkup}
+      <div class="task-main">
+        <div class="task-title-row task-title-inline">
+          <h4 class="task-name">${escapeHtml(task.name)}</h4>
+          <span class="mini-pill inline-tag" style="background:${alphaColor(visual.color, 0.14)};">${escapeHtml(visual.categoryName)}</span>
+          ${task.important ? '<span class="task-star">★</span>' : ""}
+        </div>
+        <div class="task-subline">
+          <span class="task-duration">${task.durationMin || state.defaultDuration} min</span>
+          ${renderTaskNote(task)}
+        </div>
+      </div>
+      <div class="task-side">
+        ${!task.completed ? `<button class="flat-start ${isLive ? "is-live" : ""}" data-task-start="${task.id}" type="button" ${isLive ? "disabled" : ""}>Start</button>` : ""}
+        <button class="task-edit-inline" data-task-edit="${task.id}" type="button">Edit</button>
+      </div>
+    </article>
+  `;
+}
+
+function bindTaskRowLongPress() {
+  let pressTimer = null;
+  let activeTaskId = null;
+  let startPoint = null;
+
+  const clearPress = () => {
+    if (pressTimer) {
+      window.clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+    activeTaskId = null;
+    startPoint = null;
+  };
+
+  dom.todoGroups.querySelectorAll("[data-task-row]").forEach((row) => {
+    row.oncontextmenu = (event) => {
+      event.preventDefault();
+      if (state.ui.todoSortMode) return;
+      prepareTaskDraft(row.dataset.taskRow);
+    };
+
+    row.onpointerdown = (event) => {
+      if (state.ui.todoSortMode) return;
+      if (event.target.closest(".task-check") || event.target.closest("[data-task-start]") || event.target.closest("[data-task-edit]") || event.target.closest("[data-note-open]") || event.target.closest("[data-task-note-input]") || event.target.closest("[data-task-time]")) {
+        return;
+      }
+      activeTaskId = row.dataset.taskRow;
+      startPoint = { x: event.clientX, y: event.clientY };
+      pressTimer = window.setTimeout(() => {
+        if (activeTaskId) prepareTaskDraft(activeTaskId);
+        clearPress();
+      }, 460);
+    };
+
+    row.onpointermove = (event) => {
+      if (!startPoint) return;
+      const deltaX = Math.abs(event.clientX - startPoint.x);
+      const deltaY = Math.abs(event.clientY - startPoint.y);
+      if (deltaX > 14 || deltaY > 14) clearPress();
+    };
+
+    row.onpointerup = clearPress;
+    row.onpointercancel = clearPress;
+  });
+}
+
+function renderTodoGroups() {
+  const groups = getGroupedTasks();
+  if (dom.todoSortToggle) {
+    dom.todoSortToggle.textContent = state.ui.todoSortMode ? "Done" : "Sort";
+    dom.todoSortToggle.onclick = () => {
+      state.ui.todoSortMode = !state.ui.todoSortMode;
+      state.ui.editingTaskNoteId = null;
+      renderHome();
+      persistState();
+    };
+  }
+
+  dom.todoGroups.innerHTML = [
+    renderTaskGroup("overdue", "Overdue", groups.overdue),
+    renderTaskGroup("today", "Today", groups.today),
+    renderTaskGroup("flexible", "Flexible", groups.flexible),
+    renderTaskGroup("completed", "Completed", groups.completed, true),
+  ].join("");
+
+  dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
+    input.onchange = () => toggleTaskComplete(input.dataset.taskCheck);
+  });
+  dom.todoGroups.querySelectorAll("[data-task-start]").forEach((button) => {
+    if (!button.disabled) button.onclick = () => startTimerForTask(button.dataset.taskStart);
+  });
+  dom.todoGroups.querySelectorAll("[data-task-edit]").forEach((button) => {
+    button.onclick = () => prepareTaskDraft(button.dataset.taskEdit);
+  });
+  dom.todoGroups.querySelectorAll("[data-toggle-group]").forEach((button) => {
+    button.onclick = () => {
+      const groupKey = button.dataset.toggleGroup;
+      state.ui.groupOpen[groupKey] = !state.ui.groupOpen[groupKey];
+      renderHome();
+      persistState();
+    };
+  });
+
+  dom.todoGroups.querySelectorAll("[data-task-time]").forEach((input) => {
+    input.onchange = () => {
+      const task = state.tasks.find((entry) => entry.id === input.dataset.taskTime);
+      if (!task) return;
+      task.scheduledMinutes = parseTimeString(input.value);
+      renderHome();
+      persistState();
+    };
+  });
+
+  dom.todoGroups.querySelectorAll("[data-note-open]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.editingTaskNoteId = button.dataset.noteOpen;
+      renderHome();
+      persistState();
+    };
+  });
+
+  dom.todoGroups.querySelectorAll("[data-task-note-input]").forEach((input) => {
+    input.onclick = (event) => event.stopPropagation();
+    input.onkeydown = (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveTaskNote(input.dataset.taskNoteInput, input.value);
+      }
+      if (event.key === "Escape") {
+        state.ui.editingTaskNoteId = null;
+        renderHome();
+      }
+    };
+    input.onblur = () => saveTaskNote(input.dataset.taskNoteInput, input.value);
+  });
+
+  if (state.ui.todoSortMode) {
+    dom.todoGroups.querySelectorAll("[data-task-row]").forEach((row) => {
+      row.ondragstart = (event) => {
+        draggedTodoTaskId = row.dataset.taskRow;
+        row.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+      };
+      row.ondragover = (event) => {
+        event.preventDefault();
+        row.classList.add("is-drop-target");
+      };
+      row.ondragleave = () => row.classList.remove("is-drop-target");
+      row.ondragend = () => {
+        draggedTodoTaskId = null;
+        row.classList.remove("is-dragging");
+        row.classList.remove("is-drop-target");
+      };
+      row.ondrop = (event) => {
+        event.preventDefault();
+        row.classList.remove("is-drop-target");
+        moveTaskBefore(draggedTodoTaskId, row.dataset.taskRow);
+        renderHome();
+        persistState();
+      };
+    });
+  }
+
+  bindTaskRowLongPress();
+}
+
+function renderTaskAdvancedControls() {
+  if (!dom.taskAdvancedPanel) return;
+  const isOpen = Boolean(state.ui.taskAdvancedOpen);
+  dom.taskAdvancedPanel.hidden = !isOpen;
+  dom.taskMoreToggle.textContent = `More settings ${isOpen ? "▴" : "▾"}`;
+
+  const repeatMode = dom.taskRepeatSelect.value || "none";
+  const showWeekdays = repeatMode === "weekly";
+  dom.taskWeekdaysField.hidden = !showWeekdays;
+
+  const weekdayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  dom.taskWeekdaysGrid.innerHTML = weekdayOptions
+    .map(
+      (day) => `
+        <button class="weekday-chip ${state.ui.taskWeekdays.includes(day) ? "is-active" : ""}" data-weekday-chip="${day}" type="button">
+          ${day}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.taskWeekdaysGrid.querySelectorAll("[data-weekday-chip]").forEach((button) => {
+    button.onclick = () => {
+      const day = button.dataset.weekdayChip;
+      if (state.ui.taskWeekdays.includes(day)) {
+        state.ui.taskWeekdays = state.ui.taskWeekdays.filter((entry) => entry !== day);
+      } else {
+        state.ui.taskWeekdays = [...state.ui.taskWeekdays, day];
+      }
+      renderTaskAdvancedControls();
+    };
+  });
+
+  const timerMode = state.ui.taskTimerMode || "up";
+  dom.taskTimerMode.innerHTML = `
+    <div class="timer-mode-stack">
+      <button class="timer-radio ${timerMode === "up" ? "is-active" : ""}" data-timer-mode="up" type="button">Count up</button>
+      <button class="timer-radio ${timerMode === "down" ? "is-active" : ""}" data-timer-mode="down" type="button">Count down</button>
+    </div>
+  `;
+  dom.taskTimerMode.querySelectorAll("[data-timer-mode]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.taskTimerMode = button.dataset.timerMode;
+      renderTaskAdvancedControls();
+    };
+  });
+}
+
+function updateTaskTimeSummary() {
+  if (!dom.taskTimeLabel || !dom.taskDateLabel) return;
+
+  const today = formatInputDate(new Date());
+  const tomorrow = formatInputDate(shiftDate(new Date(), 1));
+  const quickOptions = [
+    { id: "none", label: "No date" },
+    { id: "today", label: "Today" },
+    { id: "tomorrow", label: "Tomorrow" },
+  ];
+
+  dom.taskDateQuickGrid.innerHTML = quickOptions
+    .map(
+      (option) => `
+        <button class="quick-option ${state.ui.taskDatePreset === option.id ? "is-active" : ""}" data-date-preset="${option.id}" type="button">
+          ${option.label}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.taskDateQuickGrid.querySelectorAll("[data-date-preset]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.taskDatePreset = button.dataset.datePreset;
+      if (state.ui.taskDatePreset === "none") dom.taskDateInput.value = "";
+      if (state.ui.taskDatePreset === "today") dom.taskDateInput.value = today;
+      if (state.ui.taskDatePreset === "tomorrow") dom.taskDateInput.value = tomorrow;
+      updateTaskTimeSummary();
+    };
+  });
+
+  dom.taskDateInput.onchange = () => {
+    if (!dom.taskDateInput.value) state.ui.taskDatePreset = "none";
+    else if (dom.taskDateInput.value === today) state.ui.taskDatePreset = "today";
+    else if (dom.taskDateInput.value === tomorrow) state.ui.taskDatePreset = "tomorrow";
+    else state.ui.taskDatePreset = "none";
+    updateTaskTimeSummary();
+  };
+  dom.taskTimeInput.oninput = () => updateTaskTimeSummary();
+  getTaskDurationInputElement().oninput = () => updateTaskTimeSummary();
+
+  const timeValue = parseTimeString(dom.taskTimeInput.value);
+  const dateValue = getTaskDraftDate();
+  dom.taskTimeLabel.textContent = timeValue == null ? "Any time" : formatMinutes(timeValue);
+  dom.taskDateLabel.textContent = formatTaskDateNote(dateValue);
+}
+
+function getTaskDraftDate() {
+  if (state.ui.taskDatePreset === "today") return formatInputDate(new Date());
+  if (state.ui.taskDatePreset === "tomorrow") return formatInputDate(shiftDate(new Date(), 1));
+  return dom.taskDateInput.value || null;
+}
+
+function prepareTaskDraft(taskId = null) {
+  const task = taskId ? state.tasks.find((item) => item.id === taskId) : null;
+  const durationInput = getTaskDurationInputElement();
+  const today = formatInputDate(new Date());
+  const tomorrow = formatInputDate(shiftDate(new Date(), 1));
+
+  state.ui.editingTaskId = taskId;
+  state.ui.createTaskSelection = task
+    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
+    : null;
+
+  dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
+  dom.taskNameInput.value = task?.name || "";
+  if (durationInput) durationInput.value = task?.durationMin || "";
+  dom.taskImportantInput.checked = Boolean(task?.important);
+  dom.taskRepeatSelect.value = task?.repeatMode === "weekly" ? "weekly" : task?.repeatMode === "daily" ? "daily" : "none";
+  state.ui.taskWeekdays = [...(task?.weekdays || [])];
+  state.ui.taskTimerMode = task?.timerMode || "up";
+  dom.taskDateInput.value = task?.scheduledDate || "";
+  dom.taskTimeInput.value = task?.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : "";
+
+  if (!task?.scheduledDate) state.ui.taskDatePreset = "none";
+  else if (task.scheduledDate === today) state.ui.taskDatePreset = "today";
+  else if (task.scheduledDate === tomorrow) state.ui.taskDatePreset = "tomorrow";
+  else state.ui.taskDatePreset = "none";
+
+  state.ui.taskAdvancedOpen = Boolean(task && ((task.repeatMode && task.repeatMode !== "none") || task.timerMode === "down" || (task.weekdays || []).length));
+
+  updateTaskCategoryLabel();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  openSheet("task-sheet");
+}
+
+function handleTaskSubmit(event) {
+  event.preventDefault();
+  const name = dom.taskNameInput.value.trim();
+  const durationInput = getTaskDurationInputElement();
+  if (!name) {
+    dom.taskNameInput.focus();
+    return;
+  }
+
+  const repeatMode = dom.taskRepeatSelect.value || "none";
+  const draft = {
+    name,
+    scheduledDate: getTaskDraftDate(),
+    scheduledMinutes: parseTimeString(dom.taskTimeInput.value),
+    durationMin: Number(durationInput?.value) || state.defaultDuration,
+    important: dom.taskImportantInput.checked,
+    repeatMode,
+    weekdays: repeatMode === "weekly" ? [...state.ui.taskWeekdays] : [],
+    timerMode: state.ui.taskTimerMode || "up",
+    folderId: state.ui.createTaskSelection?.folderId || null,
+    categoryId: state.ui.createTaskSelection?.categoryId || null,
+    templateId: state.ui.createTaskSelection?.templateId || null,
+  };
+
+  if (state.ui.editingTaskId) {
+    const task = state.tasks.find((item) => item.id === state.ui.editingTaskId);
+    if (task) Object.assign(task, draft);
+  } else {
+    state.tasks.unshift({
+      id: makeId("task"),
+      createdAt: new Date().toISOString(),
+      completed: false,
+      completedAt: null,
+      note: "",
+      manualOrder: -1,
+      ...draft,
+    });
+    reindexTaskOrder();
+  }
+
+  closeAllSheets();
+  renderAll();
+  persistState();
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  ensureUiCopy();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderDraftDrawer();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  updateLogDuration();
+}
+
 bindDraftEvents();
+ensureUiCopy();
+reindexTaskOrder();
 renderAll();
