@@ -199,6 +199,28 @@
       </section>
     </main>
 
+    <button class="draft-tab" id="draft-tab" type="button" aria-controls="draft-drawer" aria-expanded="false">
+      草稿
+    </button>
+
+    <aside class="draft-drawer" id="draft-drawer" hidden aria-label="草稿纸">
+      <div class="draft-drawer-head">
+        <div>
+          <p class="sheet-kicker">Draft</p>
+          <h2>草稿纸</h2>
+        </div>
+        <button class="sheet-close" id="draft-close" type="button" aria-label="Close draft">×</button>
+      </div>
+      <form class="draft-compose" id="draft-form">
+        <label class="draft-input-wrap" for="draft-input">
+          <span class="sr-only">Draft note</span>
+          <textarea id="draft-input" placeholder="临时想法，随手写在这里……" rows="2"></textarea>
+        </label>
+        <button class="ghost-button draft-save" type="submit">添加</button>
+      </form>
+      <div class="draft-list" id="draft-list"></div>
+    </aside>
+
     <button class="fab" id="fab-button" type="button" aria-label="Add">
       ＋
     </button>
