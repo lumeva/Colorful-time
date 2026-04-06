@@ -630,6 +630,877 @@ function renderTaskGroup(title, tasks, marker) {
     </section>
   `;
 }
+// FINAL FLAT PASS
+
+function alphaColor(hex, alpha) {
+  const normalized = String(hex || "#b8bfd1").replace("#", "").trim();
+  const full = normalized.length === 3
+    ? normalized.split("").map((part) => part + part).join("")
+    : normalized.padEnd(6, "0").slice(0, 6);
+  const value = Number.parseInt(full, 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function getTaskDurationInputElement() {
+  return document.getElementById("task-duration-detail-input");
+}
+
+function getTaskDurationFieldElement() {
+  return document.getElementById("task-duration-field");
+}
+
+function getTaskTimeFieldElement() {
+  return document.getElementById("task-time-field");
+}
+
+function getTaskCustomDateFieldElement() {
+  return document.getElementById("task-custom-date-field");
+}
+
+function getTaskDurationMinutes() {
+  const input = getTaskDurationInputElement();
+  const value = Number(input?.value);
+  return Number.isFinite(value) && value > 0 ? value : state.defaultDuration;
+}
+
+function getTaskWhenMode() {
+  if (state.ui.taskWhenMode) return state.ui.taskWhenMode;
+  const today = formatInputDate(new Date());
+  const hasTime = Boolean(dom.taskTimeInput?.value);
+  const dateValue = dom.taskDateInput?.value || "";
+  if (!dateValue && !hasTime) return "any";
+  if (!dateValue || dateValue === today) return "today";
+  return "custom";
+}
+
+function formatTaskDateLabel(dateValue) {
+  if (!dateValue) return "";
+  const today = formatInputDate(new Date());
+  if (dateValue === today) return "Today";
+  const [year, month, day] = dateValue.split("-");
+  return `${year}/${month}/${day}`;
+}
+
+function syncTaskWhenFields() {
+  const mode = getTaskWhenMode();
+  const durationField = getTaskDurationFieldElement();
+  const timeField = getTaskTimeFieldElement();
+  const dateField = getTaskCustomDateFieldElement();
+  const today = formatInputDate(new Date());
+
+  if (durationField) durationField.hidden = false;
+  if (timeField) timeField.hidden = mode === "any";
+  if (dateField) dateField.hidden = mode !== "custom";
+
+  if (mode === "any") {
+    dom.taskTimeInput.value = "";
+    dom.taskDateInput.value = "";
+  }
+
+  if (mode === "today") {
+    dom.taskDateInput.value = today;
+  }
+
+  if (mode === "custom" && !dom.taskDateInput.value) {
+    dom.taskDateInput.value = today;
+  }
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  updateLogDuration();
+
+  const importantLabel = document.querySelector(".important-row span");
+  if (importantLabel) importantLabel.textContent = "⭐ Important";
+}
+
+function renderNavigation() {
+  dom.pages.forEach((page) => {
+    page.classList.toggle("is-active", page.dataset.page === state.currentPage);
+  });
+  dom.navItems.forEach((item) => {
+    item.classList.toggle("is-active", item.dataset.target === state.currentPage);
+  });
+  dom.fab.hidden = state.currentPage !== "home";
+}
+
+function renderHome() {
+  dom.homeDate.textContent = formatHeroDate(new Date());
+  if (dom.todayRefresh) dom.todayRefresh.hidden = true;
+  renderHomeTimerOnly();
+  renderNextTasks();
+  renderTodoGroups();
+}
+
+function renderHomeTimerOnly() {
+  const timerState = getTimerPresentation();
+
+  if (!timerState) {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-strip-shell timer-strip-shell-idle">
+        <p class="timer-strip-name">Nothing running</p>
+        <div class="timer-strip-bottom">
+          <div class="timer-strip-clock">00:00</div>
+          <div class="timer-strip-actions">
+            <button class="timer-button" id="timer-new" type="button">⏵ Start</button>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    dom.timerStrip.innerHTML = `
+      <div class="timer-strip-shell" style="--timer-wash:${alphaColor(timerState.color, 0.1)}; --timer-line:${alphaColor(timerState.color, 0.18)};">
+        <p class="timer-strip-name">${escapeHtml(timerState.name)}</p>
+        <div class="timer-strip-bottom">
+          <div class="timer-strip-clock">${timerState.elapsed}</div>
+          <div class="timer-strip-actions">
+            <button class="timer-button" id="timer-toggle" type="button">${state.activeTimer.running ? "⏸ Pause" : "⏵ Resume"}</button>
+            <button class="timer-button stop" id="timer-stop" type="button">⏹ Stop</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById("timer-toggle")?.addEventListener("click", toggleTimer);
+  document.getElementById("timer-stop")?.addEventListener("click", stopTimer);
+  document.getElementById("timer-new")?.addEventListener("click", () => {
+    dom.quickNameInput.value = "";
+    openSheet("quick-sheet");
+  });
+}
+
+function renderNextTasks() {
+  const nextTasks = getNextTasks();
+  if (!nextTasks.length) {
+    dom.nextScroll.innerHTML = `<p class="empty-note">Nothing queued right now.</p>`;
+    return;
+  }
+
+  dom.nextScroll.innerHTML = nextTasks
+    .map((task) => {
+      const visual = getTaskVisual(task);
+      const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+      return `
+        <article class="next-card next-card-quiet" style="--next-wash:${alphaColor(visual.color, 0.12)}; --next-line:${alphaColor(visual.color, 0.2)};">
+          <h3 class="next-name">${escapeHtml(task.name)}</h3>
+          <p class="next-meta">${escapeHtml(visual.categoryName)}</p>
+          <button class="next-play ${isLive ? "is-live" : ""}" data-start-task="${task.id}" type="button" ${isLive ? "disabled" : ""}>⏵</button>
+        </article>
+      `;
+    })
+    .join("");
+
+  dom.nextScroll.querySelectorAll("[data-start-task]").forEach((button) => {
+    if (!button.disabled) {
+      button.onclick = () => startTimerForTask(button.dataset.startTask);
+    }
+  });
+}
+
+function renderTaskGroup(groupKey, title, tasks, completed = false) {
+  const open = state.ui.groupOpen[groupKey];
+  return `
+    <section class="todo-group">
+      <button class="group-toggle" data-toggle-group="${groupKey}" type="button">
+        <h3>${title}</h3>
+        <div class="group-dash"></div>
+        <span class="group-caret">${open ? "▾" : "▸"}</span>
+      </button>
+      ${
+        open
+          ? tasks.length
+            ? `<div class="task-list">${tasks.map((task) => renderTaskRow(task, completed)).join("")}</div>`
+            : `<p class="empty-note">${title === "Flexible" ? "No flexible tasks." : "This section is empty right now."}</p>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderTaskRow(task, isCompleted = false) {
+  const visual = getTaskVisual(task);
+  const timeText = task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes);
+  const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+  return `
+    <article class="task-row ${isCompleted ? "is-completed" : ""} ${isLive ? "is-running" : ""}" data-task-row="${task.id}">
+      <label class="task-check">
+        <input type="checkbox" data-task-check="${task.id}" ${task.completed ? "checked" : ""} />
+        <span></span>
+      </label>
+      <div class="task-time-block">${timeText}</div>
+      <div class="task-main">
+        <div class="task-title-row task-title-inline">
+          <h4 class="task-name">${escapeHtml(task.name)}</h4>
+          <span class="mini-pill inline-tag" style="background:${alphaColor(visual.color, 0.16)}; color:rgba(41,57,84,0.82);">${escapeHtml(visual.categoryName)}</span>
+          ${task.important ? '<span class="task-star">★</span>' : ""}
+        </div>
+        <div class="task-subline">
+          <span class="task-duration">${task.durationMin || state.defaultDuration} min</span>
+        </div>
+      </div>
+      <div class="task-side">
+        ${
+          !task.completed
+            ? `<button class="flat-start ${isLive ? "is-live" : ""}" data-task-start="${task.id}" type="button" ${isLive ? "disabled" : ""}>Start</button>`
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function startTimerForTask(taskId) {
+  if (state.activeTimer?.taskId && state.activeTimer.running) {
+    finalizeRunningSession();
+  }
+  const task = state.tasks.find((entry) => entry.id === taskId);
+  state.activeTimer = {
+    taskId,
+    startedAt: new Date().toISOString(),
+    pausedElapsedMs: 0,
+    running: true,
+    mode: task?.timerMode || "up",
+    durationMin: task?.durationMin || state.defaultDuration,
+  };
+  closeAllSheets();
+  renderAll();
+  persistState();
+}
+
+function renderTaskAdvancedControls() {
+  if (!dom.taskAdvancedPanel) return;
+  const isOpen = Boolean(state.ui.taskAdvancedOpen);
+  dom.taskAdvancedPanel.hidden = !isOpen;
+  if (dom.taskMoreToggle) {
+    dom.taskMoreToggle.innerHTML = `Repeat · Timer <span class="toggle-inline-arrow ${isOpen ? "is-open" : ""}">▾</span>`;
+  }
+  if (dom.taskWeekdaysField) dom.taskWeekdaysField.hidden = true;
+
+  const timerMode = state.ui.taskTimerMode || "up";
+  dom.taskTimerMode.innerHTML = `
+    <div class="timer-mode-stack">
+      <button class="timer-radio ${timerMode === "up" ? "is-active" : ""}" data-timer-mode="up" type="button">Count up</button>
+      <button class="timer-radio ${timerMode === "down" ? "is-active" : ""}" data-timer-mode="down" type="button">Count down</button>
+    </div>
+  `;
+
+  dom.taskTimerMode.querySelectorAll("[data-timer-mode]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.taskTimerMode = button.dataset.timerMode;
+      renderTaskAdvancedControls();
+    };
+  });
+
+  dom.taskAdvancedPanel.querySelectorAll(".line-field").forEach((row) => {
+    row.classList.add("plain-line");
+  });
+}
+
+function updateTaskTimeSummary() {
+  if (!dom.taskTimeLabel || !dom.taskDateLabel) return;
+
+  const quickOptions = [
+    { id: "any", label: "Any time" },
+    { id: "today", label: "Today" },
+    { id: "custom", label: "Custom" },
+  ];
+  if (!state.ui.taskWhenMode) {
+    state.ui.taskWhenMode = getTaskWhenMode();
+  }
+
+  dom.taskDateQuickGrid.innerHTML = quickOptions
+    .map(
+      (option) => `
+        <button class="quick-option ${state.ui.taskWhenMode === option.id ? "is-active" : ""}" data-date-preset="${option.id}" type="button">
+          ${option.label}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.taskDateQuickGrid.querySelectorAll("[data-date-preset]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.taskWhenMode = button.dataset.datePreset;
+      syncTaskWhenFields();
+      updateTaskTimeSummary();
+    };
+  });
+
+  dom.taskDateInput.onchange = () => {
+    state.ui.taskWhenMode = "custom";
+    syncTaskWhenFields();
+    updateTaskTimeSummary();
+  };
+
+  dom.taskTimeInput.oninput = () => {
+    updateTaskTimeSummary();
+  };
+
+  const durationInput = getTaskDurationInputElement();
+  if (durationInput) {
+    durationInput.oninput = () => updateTaskTimeSummary();
+  }
+
+  syncTaskWhenFields();
+
+  const durationText = `${getTaskDurationMinutes()} min`;
+  const timeText = dom.taskTimeInput.value ? formatMinutes(parseTimeString(dom.taskTimeInput.value)) : "Any time";
+
+  if (state.ui.taskWhenMode === "any") {
+    dom.taskTimeLabel.textContent = `Any time · ${durationText}`;
+    dom.taskDateLabel.textContent = "";
+    dom.taskDateLabel.hidden = true;
+    return;
+  }
+
+  dom.taskTimeLabel.textContent = `${timeText} · ${durationText}`;
+  dom.taskDateLabel.hidden = false;
+  dom.taskDateLabel.textContent =
+    state.ui.taskWhenMode === "today" ? "Today" : formatTaskDateLabel(dom.taskDateInput.value || formatInputDate(new Date()));
+}
+
+function clearTaskTimeDraft() {
+  state.ui.taskWhenMode = "any";
+  dom.taskDateInput.value = "";
+  dom.taskTimeInput.value = "";
+  syncTaskWhenFields();
+  updateTaskTimeSummary();
+  openSheet("task-sheet");
+}
+
+function applyTaskTimeDraft() {
+  if (state.ui.taskWhenMode === "custom" && !dom.taskDateInput.value) {
+    dom.taskDateInput.value = formatInputDate(new Date());
+  }
+  syncTaskWhenFields();
+  updateTaskTimeSummary();
+  openSheet("task-sheet");
+}
+
+function prepareTaskDraft(taskId = null) {
+  const task = taskId ? state.tasks.find((item) => item.id === taskId) : null;
+  const today = formatInputDate(new Date());
+  const durationInput = getTaskDurationInputElement();
+
+  state.ui.editingTaskId = taskId;
+  state.ui.createTaskSelection = task
+    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
+    : null;
+
+  dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
+  dom.taskNameInput.value = task?.name || "";
+  if (durationInput) {
+    durationInput.value = task?.durationMin || state.defaultDuration;
+  }
+  dom.taskImportantInput.checked = Boolean(task?.important);
+  dom.taskRepeatSelect.value = task?.repeatMode || "none";
+  state.ui.taskWeekdays = [];
+  state.ui.taskTimerMode = task?.timerMode || "up";
+  dom.taskDateInput.value = task?.scheduledDate || "";
+  dom.taskTimeInput.value = task?.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : "";
+
+  if (!task?.scheduledDate && task?.scheduledMinutes == null) {
+    state.ui.taskWhenMode = "any";
+  } else if (!task?.scheduledDate || task.scheduledDate === today) {
+    state.ui.taskWhenMode = "today";
+  } else {
+    state.ui.taskWhenMode = "custom";
+  }
+
+  state.ui.taskAdvancedOpen = Boolean(
+    task && ((task.repeatMode && task.repeatMode !== "none") || task.timerMode === "down")
+  );
+
+  updateTaskCategoryLabel();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  openSheet("task-sheet");
+}
+
+function handleTaskSubmit(event) {
+  event.preventDefault();
+  const name = dom.taskNameInput.value.trim();
+  if (!name) {
+    dom.taskNameInput.focus();
+    return;
+  }
+
+  const mode = state.ui.taskWhenMode || "any";
+  const repeatMode = dom.taskRepeatSelect.value || "none";
+  let scheduledDate = null;
+  let scheduledMinutes = null;
+
+  if (mode === "today") {
+    scheduledDate = formatInputDate(new Date());
+    scheduledMinutes = parseTimeString(dom.taskTimeInput.value);
+  } else if (mode === "custom") {
+    scheduledDate = dom.taskDateInput.value || formatInputDate(new Date());
+    scheduledMinutes = parseTimeString(dom.taskTimeInput.value);
+  }
+
+  const draft = {
+    name,
+    scheduledDate,
+    scheduledMinutes,
+    durationMin: getTaskDurationMinutes(),
+    important: dom.taskImportantInput.checked,
+    repeatMode,
+    weekdays: [],
+    timerMode: state.ui.taskTimerMode || "up",
+    folderId: state.ui.createTaskSelection?.folderId || null,
+    categoryId: state.ui.createTaskSelection?.categoryId || null,
+    templateId: state.ui.createTaskSelection?.templateId || null,
+  };
+
+  if (state.ui.editingTaskId) {
+    const task = state.tasks.find((item) => item.id === state.ui.editingTaskId);
+    if (task) Object.assign(task, draft);
+  } else {
+    state.tasks.unshift({
+      id: makeId("task"),
+      createdAt: new Date().toISOString(),
+      completed: false,
+      completedAt: null,
+      ...draft,
+    });
+  }
+
+  closeAllSheets();
+  renderAll();
+  persistState();
+}
+
+function renderStats() {
+  const range = state.ui.statsRange;
+  dom.statsTitle.textContent = range === "today" ? "Today's Color" : "Color Review";
+  dom.statsRangeNote.textContent = range === "today" ? formatHeroDate(new Date()) : "";
+  renderStatsTabs();
+  renderStatsFilters();
+  const stats = buildStatsDataset(range);
+  renderStatsWheel(stats);
+  renderStatsBreakdown(stats);
+  renderTrendPanel();
+  dom.customRangeRow.hidden = range !== "custom";
+  dom.customStartDate.value = state.ui.customRange.start;
+  dom.customEndDate.value = state.ui.customRange.end;
+}
+
+function renderStatsTabs() {
+  const ranges = [
+    { id: "today", label: "Today" },
+    { id: "week", label: "Week" },
+    { id: "month", label: "Month" },
+    { id: "custom", label: "Custom" },
+  ];
+
+  dom.statsRangeTabs.className = "range-switch";
+  dom.statsRangeTabs.innerHTML = ranges
+    .map(
+      (option) => `
+        <button class="range-tab-link ${state.ui.statsRange === option.id ? "is-active" : ""}" data-range-tab="${option.id}" type="button">
+          ${option.label}
+        </button>
+      `
+    )
+    .join("");
+
+  dom.statsRangeTabs.querySelectorAll("[data-range-tab]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.statsRange = button.dataset.rangeTab;
+      state.ui.selectedSegment = null;
+      renderStats();
+      persistState();
+    };
+  });
+
+  dom.statsModeTabs.innerHTML = `<span>View:</span><strong>Category</strong>`;
+}
+
+function renderStatsFilters() {
+  const options = [
+    { value: "all", label: "All categories" },
+    ...state.folders.map((folder) => ({ value: `folder:${folder.id}`, label: folder.name })),
+    ...getAllCategories().map((category) => ({ value: `category:${category.id}`, label: category.name })),
+  ];
+
+  dom.statsCategoryFilter.innerHTML = options
+    .map((option) => `<option value="${option.value}">${escapeHtml(option.label)}</option>`)
+    .join("");
+
+  dom.statsCategoryFilter.value = state.ui.statsCategoryFilter || "all";
+  dom.statsCategoryFilter.onchange = (event) => {
+    state.ui.statsCategoryFilter = event.target.value;
+    state.ui.selectedSegment = null;
+    renderStats();
+    persistState();
+  };
+}
+
+function buildStatsDataset(range) {
+  const sessions = getFilteredSessions(range);
+  const totalMinutes = sessions.reduce((sum, session) => sum + getSessionMinutes(session), 0);
+
+  if (range === "today") {
+    const segments = sessions.map((session, index) => {
+      const start = new Date(session.start);
+      const end = new Date(session.end);
+      const task = state.tasks.find((entry) => entry.id === session.taskId);
+      const visual = getTaskVisual(task || session);
+      return {
+        key: `clock-${index}`,
+        startMinutes: start.getHours() * 60 + start.getMinutes(),
+        endMinutes: end.getHours() * 60 + end.getMinutes(),
+        color: visual.color,
+        label: visual.label,
+        inlineLabel: task?.name || visual.label,
+        note: `${formatClock(start)} - ${formatClock(end)} · ${formatDuration(getSessionMinutes(session))}`,
+        ratio: Math.max(0, (end - start) / 86400000),
+      };
+    });
+    return {
+      type: "clock",
+      totalMinutes,
+      segments,
+      selected: segments.find((entry) => entry.key === state.ui.selectedSegment) || null,
+      breakdown: groupBreakdown(sessions),
+    };
+  }
+
+  const grouped = groupBreakdown(sessions);
+  const segments = grouped.map((item, index) => ({
+    key: `pie-${index}`,
+    ...item,
+    inlineLabel: item.label,
+    note: `${formatDuration(item.minutes)} · ${item.percent}%`,
+    ratio: item.minutes / Math.max(totalMinutes, 1),
+  }));
+
+  return {
+    type: "pie",
+    totalMinutes,
+    segments,
+    selected: segments.find((entry) => entry.key === state.ui.selectedSegment) || null,
+    breakdown: grouped,
+  };
+}
+
+function groupBreakdown(sessions) {
+  const map = new Map();
+  const filtered = sessions.filter((session) => matchesStatsCategoryFilter(session));
+
+  filtered.forEach((session) => {
+    const task = state.tasks.find((entry) => entry.id === session.taskId);
+    const visual = getTaskVisual(task || session);
+    const key = session.categoryId || "uncategorized";
+    const label = visual.categoryName;
+    if (!map.has(key)) {
+      map.set(key, { key, label, color: visual.color, minutes: 0 });
+    }
+    map.get(key).minutes += getSessionMinutes(session);
+  });
+
+  const total = [...map.values()].reduce((sum, item) => sum + item.minutes, 0) || 1;
+  return [...map.values()]
+    .sort((a, b) => b.minutes - a.minutes)
+    .map((item) => ({ ...item, percent: Math.round((item.minutes / total) * 100) }));
+}
+
+function getFilteredSessions(range) {
+  const now = new Date();
+  return state.sessions.filter((session) => {
+    const start = new Date(session.start);
+    if (!matchesStatsCategoryFilter(session)) return false;
+    if (range === "today") return isSameDay(start, now);
+    if (range === "week") return differenceInDays(now, start) < 7;
+    if (range === "month") return start.getFullYear() === now.getFullYear() && start.getMonth() === now.getMonth();
+    const customStart = state.ui.customRange.start ? new Date(`${state.ui.customRange.start}T00:00:00`) : null;
+    const customEnd = state.ui.customRange.end ? new Date(`${state.ui.customRange.end}T23:59:59`) : null;
+    if (!customStart || !customEnd) return true;
+    return start >= customStart && start <= customEnd;
+  });
+}
+
+function renderStatsWheel(stats) {
+  const chart = state.ui.statsRange === "today" ? renderClockDialSvg(stats) : renderPieSvg(stats);
+  dom.statsWheelCard.innerHTML = `
+    <div class="wheel-shell">
+      ${chart}
+      ${
+        stats.selected
+          ? `<div class="stats-floating-note"><strong>${escapeHtml(stats.selected.label)}</strong><span>${escapeHtml(stats.selected.note)}</span></div>`
+          : ""
+      }
+    </div>
+  `;
+
+  dom.statsTotalRow.innerHTML = `
+    <div class="stats-total-chip">
+      <strong>${formatDuration(stats.totalMinutes)}</strong>
+    </div>
+  `;
+
+  dom.statsLegend.innerHTML = "";
+  dom.statsWheelCard.querySelectorAll("[data-segment-key]").forEach((node) => {
+    node.onclick = (event) => {
+      event.stopPropagation();
+      state.ui.selectedSegment = state.ui.selectedSegment === node.dataset.segmentKey ? null : node.dataset.segmentKey;
+      renderStats();
+      persistState();
+    };
+  });
+
+  dom.statsWheelCard.onclick = (event) => {
+    if (!event.target.closest("[data-segment-key]") && state.ui.selectedSegment) {
+      state.ui.selectedSegment = null;
+      renderStats();
+      persistState();
+    }
+  };
+}
+
+function renderClockDialSvg(stats) {
+  const cx = 160;
+  const cy = 160;
+  const radius = 110;
+  const ticks = Array.from({ length: 12 }, (_, index) => {
+    const hour = index * 2;
+    const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+    const x1 = cx + Math.cos(angle) * (radius + 4);
+    const y1 = cy + Math.sin(angle) * (radius + 4);
+    const x2 = cx + Math.cos(angle) * (radius + 14);
+    const y2 = cy + Math.sin(angle) * (radius + 14);
+    const tx = cx + Math.cos(angle) * (radius + 28);
+    const ty = cy + Math.sin(angle) * (radius + 28);
+    return `
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(86,97,126,0.24)" stroke-width="2" />
+      <text x="${tx}" y="${ty}" fill="rgba(86,97,126,0.62)" font-size="11" text-anchor="middle" dominant-baseline="middle">${hour === 0 ? 24 : hour}</text>
+    `;
+  }).join("");
+
+  const segments = stats.segments
+    .map((segment) => {
+      const startRatio = segment.startMinutes / 1440;
+      const endRatio = segment.endMinutes / 1440;
+      return `
+        <g>
+          <path
+            d="${describePieSlice(cx, cy, radius, startRatio, endRatio)}"
+            fill="${segment.color}"
+            opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.24 : 0.96}"
+            data-segment-key="${segment.key}"
+            style="cursor:pointer"
+          ></path>
+          ${renderChartSliceLabel({
+            label: segment.inlineLabel || segment.label,
+            ratio: segment.ratio,
+            midpointRatio: (startRatio + endRatio) / 2,
+            cx,
+            cy,
+            radius: radius * 0.58,
+            threshold: 0.12,
+          })}
+        </g>
+      `;
+    })
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 320 320" aria-label="time clock">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      ${ticks}
+      ${segments}
+    </svg>
+  `;
+}
+
+function renderPieSvg(stats) {
+  const cx = 160;
+  const cy = 160;
+  const radius = 110;
+
+  if (!stats.segments.length) {
+    return `
+      <svg class="wheel-svg" viewBox="0 0 320 320" aria-label="pie chart">
+        <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      </svg>
+    `;
+  }
+
+  let currentRatio = 0;
+  const segments = stats.segments
+    .map((segment) => {
+      const start = currentRatio;
+      const end = currentRatio + segment.ratio;
+      currentRatio = end;
+      return `
+        <g>
+          <path
+            d="${describePieSlice(cx, cy, radius, start, end)}"
+            fill="${segment.color}"
+            opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.28 : 0.96}"
+            data-segment-key="${segment.key}"
+            style="cursor:pointer"
+          ></path>
+          ${renderChartSliceLabel({
+            label: segment.inlineLabel || segment.label,
+            ratio: segment.ratio,
+            midpointRatio: (start + end) / 2,
+            cx,
+            cy,
+            radius: radius * 0.56,
+            threshold: 0.18,
+          })}
+        </g>
+      `;
+    })
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 320 320" aria-label="pie chart">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      ${segments}
+    </svg>
+  `;
+}
+
+function renderChartSliceLabel({ label, ratio, midpointRatio, cx, cy, radius, threshold }) {
+  if (ratio < threshold) return "";
+  const trimmed = String(label || "").trim();
+  if (!trimmed) return "";
+  const short = escapeHtml(trimmed.length > 9 ? `${trimmed.slice(0, 9)}…` : trimmed);
+  const angle = midpointRatio * Math.PI * 2 - Math.PI / 2;
+  const x = cx + Math.cos(angle) * radius;
+  const y = cy + Math.sin(angle) * radius;
+  return `<text x="${x}" y="${y}" fill="rgba(35,52,73,0.72)" font-size="10.5" text-anchor="middle" dominant-baseline="middle">${short}</text>`;
+}
+
+function renderStatsBreakdown(stats) {
+  if (!stats.breakdown.length) {
+    dom.statsBreakdown.innerHTML = `<p class="empty-note">No records in this range.</p>`;
+    return;
+  }
+
+  dom.statsBreakdown.innerHTML = stats.breakdown
+    .map(
+      (item) => `
+        <div class="breakdown-row">
+          <span class="breakdown-dot" style="background:${item.color};"></span>
+          <span class="breakdown-name">${escapeHtml(item.label)}</span>
+          <strong>${formatDuration(item.minutes)}</strong>
+          <span class="breakdown-right">${item.percent}%</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderTrendPanel() {
+  dom.trendToggle.classList.toggle("is-open", state.ui.showTrend);
+  dom.trendToggle.innerHTML = `
+    <span>Weekly trend</span>
+    <span class="trend-arrow">▾</span>
+  `;
+
+  dom.trendPanel.hidden = !state.ui.showTrend;
+  if (!state.ui.showTrend) return;
+
+  const trend = buildWeeklyTrend();
+  dom.trendPanel.innerHTML = `
+    <div class="trend-grid">
+      ${trend
+        .map(
+          (entry) => `
+            <div class="trend-row">
+              <span class="trend-date">${entry.label}</span>
+              <div class="trend-bar"><span style="width:${entry.width}%; background:${entry.color};"></span></div>
+              <strong>${formatDuration(entry.minutes)}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderTasksTree() {
+  dom.tasksEditToggle.textContent = state.ui.tasksEditMode ? "Done" : "Edit";
+  dom.tasksTree.innerHTML = state.folders
+    .map((folder) => {
+      const content = folder.expanded
+        ? `<div class="folder-content">${folder.categories.map((category) => renderCategoryStackItem(folder, category)).join("")}</div>`
+        : "";
+
+      return `
+        <article class="folder-block">
+          <div class="folder-headline">
+            <div class="folder-name">${escapeHtml(folder.name)}</div>
+            <div class="tree-controls">
+              <button class="tree-plus-plain" data-add-child="category" data-parent-folder="${folder.id}" type="button">+</button>
+              ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="folder" data-node-id="${folder.id}" type="button">✎</button>` : ""}
+              <button class="tree-toggle ${folder.expanded ? "is-open" : ""}" data-toggle-folder="${folder.id}" type="button">${folder.expanded ? "▾" : "▸"}</button>
+            </div>
+          </div>
+          ${content}
+        </article>
+      `;
+    })
+    .join("");
+
+  bindTreeEvents();
+}
+
+function renderCategoryStackItem(folder, category) {
+  const templateMarkup = category.expanded
+    ? `
+      <div class="template-list-flat">
+        ${category.templates
+          .map(
+            (template) => `
+              <div class="template-row-flat">
+                <span>${escapeHtml(template.name)}</span>
+                <div class="template-tail">
+                  <span class="template-duration">${template.durationMin} min</span>
+                  ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="template" data-node-id="${template.id}" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">✎</button>` : ""}
+                </div>
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+    `
+    : "";
+
+  return `
+    <section class="category-stack-item" style="--tree-color:${category.color};">
+      <div class="category-line">
+        <button class="category-toggle-line" data-toggle-category="${category.id}" type="button">
+          <span class="category-color-bar"></span>
+          <span class="category-inline-caret">${category.expanded ? "▾" : "▸"}</span>
+          <span class="category-title">${escapeHtml(category.name)}</span>
+        </button>
+        <div class="tree-controls">
+          <button class="tree-plus-plain" data-add-child="template" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
+          ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button">✎</button>` : ""}
+        </div>
+      </div>
+      ${templateMarkup}
+    </section>
+  `;
+}
 
 function renderCompletedGroup(tasks) {
   const open = state.showCompletedOpen;
@@ -3637,38 +4508,31 @@ function toggleTaskComplete(taskId) {
     rerender();
   }
 }
-
 function renderHomeTimerOnly() {
   const timerState = getTimerPresentation();
   if (!timerState) {
     dom.timerStrip.innerHTML = `
-      <div class="timer-row timer-row-compact is-idle">
-        <div class="timer-left">
-          <p class="timer-name">No timer running</p>
-          <p class="timer-template">Quick Start can send one thing straight into now.</p>
+      <div class="timer-strip-shell timer-strip-shell-idle">
+        <p class="timer-strip-name">Nothing running</p>
+        <div class="timer-strip-bottom">
+          <div class="timer-strip-clock">00:00</div>
+          <div class="timer-strip-actions">
+            <button class="timer-button" id="timer-new" type="button">⏵ Start</button>
+          </div>
         </div>
-        <div class="timer-actions">
-          <button class="timer-button" id="timer-new" type="button">Start</button>
-        </div>
-        <div class="timer-progress timer-progress-wide"><span style="width:0%"></span></div>
       </div>
     `;
   } else {
     dom.timerStrip.innerHTML = `
-      <div class="timer-row timer-row-compact">
-        <div class="timer-left">
-          <p class="timer-name">${escapeHtml(timerState.name)}</p>
-          <div class="timer-inline-meta">
-            <span class="mini-pill inline-tag" style="${chipStyle(timerState.color)}">${escapeHtml(timerState.badge)}</span>
-            ${timerState.important ? '<span class="task-star">★</span>' : ""}
+      <div class="timer-strip-shell" style="--timer-wash:${alphaColor(timerState.color, 0.1)}; --timer-line:${alphaColor(timerState.color, 0.18)};">
+        <p class="timer-strip-name">${escapeHtml(timerState.name)}</p>
+        <div class="timer-strip-bottom">
+          <div class="timer-strip-clock">${timerState.elapsed}</div>
+          <div class="timer-strip-actions">
+            <button class="timer-button" id="timer-toggle" type="button">${state.activeTimer.running ? "⏸ Pause" : "⏵ Resume"}</button>
+            <button class="timer-button stop" id="timer-stop" type="button">⏹ Stop</button>
           </div>
         </div>
-        <div class="timer-clock timer-clock-compact">${timerState.elapsed}</div>
-        <div class="timer-actions">
-          <button class="timer-button" id="timer-toggle" type="button">${state.activeTimer.running ? "Pause" : "Resume"}</button>
-          <button class="timer-button stop" id="timer-stop" type="button">Stop</button>
-        </div>
-        <div class="timer-progress timer-progress-wide"><span style="width:${timerState.progress}%;"></span></div>
       </div>
     `;
   }
@@ -3684,27 +4548,19 @@ function renderHomeTimerOnly() {
 function renderNextTasks() {
   const nextTasks = getNextTasks();
   if (!nextTasks.length) {
-    dom.nextScroll.innerHTML = `<p class="empty-note">今天已经没有待开始的任务了。</p>`;
+    dom.nextScroll.innerHTML = `<p class="empty-note">Nothing queued right now.</p>`;
     return;
   }
 
   dom.nextScroll.innerHTML = nextTasks
     .map((task) => {
-      const meta = getTaskVisual(task);
+      const visual = getTaskVisual(task);
       const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
       return `
-        <article class="next-card next-card-square" style="${paperGradient(meta.color)}; --next-color:${meta.color};">
-          <div class="next-time">${task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes)}</div>
-          <div class="next-main">
-            <h3 class="next-name">${escapeHtml(task.name)}</h3>
-            <div class="next-meta-row">
-              <span class="mini-pill inline-tag" style="${chipStyle(meta.color)}">${escapeHtml(meta.categoryName)}</span>
-              ${task.important ? '<span class="task-star">★</span>' : ""}
-            </div>
-          </div>
-          <button class="flat-start ${isLive ? "is-live" : ""}" data-start-task="${task.id}" type="button" ${isLive ? "disabled" : ""}>
-            ${isLive ? "Running" : "Start"}
-          </button>
+        <article class="next-card next-card-quiet" style="--next-wash:${alphaColor(visual.color, 0.12)}; --next-line:${alphaColor(visual.color, 0.2)};">
+          <h3 class="next-name">${escapeHtml(task.name)}</h3>
+          <p class="next-meta">${escapeHtml(visual.categoryName)}</p>
+          <button class="next-play ${isLive ? "is-live" : ""}" data-start-task="${task.id}" type="button" ${isLive ? "disabled" : ""}>⏵</button>
         </article>
       `;
     })
@@ -3753,13 +4609,13 @@ function renderTaskGroup(groupKey, title, tasks, completed = false) {
       <button class="group-toggle" data-toggle-group="${groupKey}" type="button">
         <h3>${title}</h3>
         <div class="group-dash"></div>
-        <span class="group-caret ${open ? "is-open" : ""}">^</span>
+        <span class="group-caret ${open ? "is-open" : ""}"></span>
       </button>
       ${
         open
           ? tasks.length
             ? `<div class="task-list">${tasks.map((task) => renderTaskRow(task, completed)).join("")}</div>`
-            : `<p class="empty-note">${title === "Flexible" ? "没有无时间任务。" : "这一组现在是空的。"}</p>`
+            : `<p class="empty-note">${title === "Flexible" ? "No flexible tasks." : "This section is empty right now."}</p>`
           : ""
       }
     </section>
@@ -3780,7 +4636,7 @@ function renderTaskRow(task, isCompleted = false) {
       <div class="task-main">
         <div class="task-title-row task-title-inline">
           <h4 class="task-name">${escapeHtml(task.name)}</h4>
-          <span class="mini-pill inline-tag" style="${chipStyle(visual.color)}">${escapeHtml(visual.categoryName)}</span>
+          <span class="mini-pill inline-tag" style="background:${alphaColor(visual.color, 0.16)}; color:rgba(41,57,84,0.82);">${escapeHtml(visual.categoryName)}</span>
           ${task.important ? '<span class="task-star">★</span>' : ""}
         </div>
         <div class="task-subline">
@@ -3790,7 +4646,7 @@ function renderTaskRow(task, isCompleted = false) {
       <div class="task-side">
         ${
           !task.completed
-            ? `<button class="flat-start ${isLive ? "is-live" : ""}" data-task-start="${task.id}" type="button" ${isLive ? "disabled" : ""}>${isLive ? "Running" : "Start"}</button>`
+            ? `<button class="flat-start ${isLive ? "is-live" : ""}" data-task-start="${task.id}" type="button" ${isLive ? "disabled" : ""}>Start</button>`
             : ""
         }
       </div>
@@ -3843,7 +4699,6 @@ function renderStatsWheel(stats) {
   dom.statsTotalRow.innerHTML = `
     <div class="stats-total-chip">
       <strong>${formatDuration(stats.totalMinutes)}</strong>
-      <span>${escapeHtml(stats.centerLabel)}</span>
     </div>
   `;
 
@@ -3867,40 +4722,53 @@ function renderStatsWheel(stats) {
 }
 
 function renderClockDialSvg(stats) {
-  const cx = 170;
-  const cy = 170;
-  const radius = 126;
+  const cx = 160;
+  const cy = 160;
+  const radius = 110;
   const ticks = Array.from({ length: 12 }, (_, index) => {
     const hour = index * 2;
     const angle = (hour / 24) * Math.PI * 2 - Math.PI / 2;
-    const x1 = cx + Math.cos(angle) * (radius + 6);
-    const y1 = cy + Math.sin(angle) * (radius + 6);
-    const x2 = cx + Math.cos(angle) * (radius + 18);
-    const y2 = cy + Math.sin(angle) * (radius + 18);
-    const tx = cx + Math.cos(angle) * (radius + 32);
-    const ty = cy + Math.sin(angle) * (radius + 32);
+    const x1 = cx + Math.cos(angle) * (radius + 4);
+    const y1 = cy + Math.sin(angle) * (radius + 4);
+    const x2 = cx + Math.cos(angle) * (radius + 14);
+    const y2 = cy + Math.sin(angle) * (radius + 14);
+    const tx = cx + Math.cos(angle) * (radius + 28);
+    const ty = cy + Math.sin(angle) * (radius + 28);
     return `
       <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(86,97,126,0.24)" stroke-width="2" />
-      <text x="${tx}" y="${ty}" fill="rgba(86,97,126,0.64)" font-size="12" text-anchor="middle" dominant-baseline="middle">${hour === 0 ? 24 : hour}</text>
+      <text x="${tx}" y="${ty}" fill="rgba(86,97,126,0.62)" font-size="11" text-anchor="middle" dominant-baseline="middle">${hour === 0 ? 24 : hour}</text>
     `;
   }).join("");
 
   const segments = stats.segments
-    .map(
-      (segment) => `
-        <path
-          d="${describePieSlice(cx, cy, radius, segment.startMinutes / 1440, segment.endMinutes / 1440)}"
-          fill="${segment.color}"
-          opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.24 : 0.96}"
-          data-segment-key="${segment.key}"
-          style="cursor:pointer"
-        ></path>
-      `
-    )
+    .map((segment) => {
+      const startRatio = segment.startMinutes / 1440;
+      const endRatio = segment.endMinutes / 1440;
+      return `
+        <g>
+          <path
+            d="${describePieSlice(cx, cy, radius, startRatio, endRatio)}"
+            fill="${segment.color}"
+            opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.24 : 0.96}"
+            data-segment-key="${segment.key}"
+            style="cursor:pointer"
+          ></path>
+          ${renderChartSliceLabel({
+            label: segment.inlineLabel || segment.label,
+            ratio: segment.ratio,
+            midpointRatio: (startRatio + endRatio) / 2,
+            cx,
+            cy,
+            radius: radius * 0.58,
+            threshold: 0.12,
+          })}
+        </g>
+      `;
+    })
     .join("");
 
   return `
-    <svg class="wheel-svg" viewBox="0 0 340 340" aria-label="time clock">
+    <svg class="wheel-svg" viewBox="0 0 320 320" aria-label="time clock">
       <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
       ${ticks}
       ${segments}
@@ -3908,9 +4776,63 @@ function renderClockDialSvg(stats) {
   `;
 }
 
+function renderPieSvg(stats) {
+  const cx = 160;
+  const cy = 160;
+  const radius = 110;
+
+  if (!stats.segments.length) {
+    return `
+      <svg class="wheel-svg" viewBox="0 0 320 320" aria-label="pie chart">
+        <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      </svg>
+    `;
+  }
+
+  let currentRatio = 0;
+  const segments = stats.segments
+    .map((segment) => {
+      const start = currentRatio;
+      const end = currentRatio + segment.ratio;
+      currentRatio = end;
+      return `
+        <g>
+          <path
+            d="${describePieSlice(cx, cy, radius, start, end)}"
+            fill="${segment.color}"
+            opacity="${state.ui.selectedSegment && state.ui.selectedSegment !== segment.key ? 0.28 : 0.96}"
+            data-segment-key="${segment.key}"
+            style="cursor:pointer"
+          ></path>
+          ${renderChartSliceLabel({
+            label: segment.inlineLabel || segment.label,
+            ratio: segment.ratio,
+            midpointRatio: (start + end) / 2,
+            cx,
+            cy,
+            radius: radius * 0.56,
+            threshold: 0.18,
+          })}
+        </g>
+      `;
+    })
+    .join("");
+
+  return `
+    <svg class="wheel-svg" viewBox="0 0 320 320" aria-label="pie chart">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="rgba(96,106,138,0.08)" />
+      ${segments}
+    </svg>
+  `;
+}
+
 function renderTrendPanel() {
-  const label = state.ui.showTrend ? "Hide weekly trend" : "Show weekly trend";
-  dom.trendToggle.querySelector("span").textContent = label;
+  dom.trendToggle.classList.toggle("is-open", state.ui.showTrend);
+  dom.trendToggle.innerHTML = `
+    <span>Weekly trend</span>
+    <span class="trend-arrow">▾</span>
+  `;
+
   dom.trendPanel.hidden = !state.ui.showTrend;
   if (!state.ui.showTrend) return;
 
@@ -3945,17 +4867,9 @@ function renderTasksTree() {
           <div class="folder-headline">
             <div class="folder-name">${escapeHtml(folder.name)}</div>
             <div class="tree-controls">
-              <button class="tree-mini" data-add-child="category" data-parent-folder="${folder.id}" type="button">+</button>
-              ${
-                state.ui.tasksEditMode
-                  ? `
-                    <button class="tree-mini" data-edit-node="folder" data-node-id="${folder.id}" type="button">✎</button>
-                    <button class="tree-mini" data-move-folder="${folder.id}" data-direction="up" type="button">↑</button>
-                    <button class="tree-mini" data-move-folder="${folder.id}" data-direction="down" type="button">↓</button>
-                  `
-                  : ""
-              }
-              <button class="tree-toggle ${folder.expanded ? "is-open" : ""}" data-toggle-folder="${folder.id}" type="button">^</button>
+              <button class="tree-plus-plain" data-add-child="category" data-parent-folder="${folder.id}" type="button">+</button>
+              ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="folder" data-node-id="${folder.id}" type="button">✎</button>` : ""}
+              <button class="tree-toggle ${folder.expanded ? "is-open" : ""}" data-toggle-folder="${folder.id}" type="button">${folder.expanded ? "▾" : "▸"}</button>
             </div>
           </div>
           ${content}
@@ -3976,12 +4890,10 @@ function renderCategoryStackItem(folder, category) {
             (template) => `
               <div class="template-row-flat">
                 <span>${escapeHtml(template.name)}</span>
-                <span class="template-duration">${template.durationMin} min</span>
-                ${
-                  state.ui.tasksEditMode
-                    ? `<button class="tree-mini" data-edit-node="template" data-node-id="${template.id}" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">✎</button>`
-                    : ""
-                }
+                <div class="template-tail">
+                  <span class="template-duration">${template.durationMin} min</span>
+                  ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="template" data-node-id="${template.id}" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">✎</button>` : ""}
+                </div>
               </div>
             `
           )
@@ -3993,18 +4905,14 @@ function renderCategoryStackItem(folder, category) {
   return `
     <section class="category-stack-item" style="--tree-color:${category.color};">
       <div class="category-line">
-        <div class="category-anchor">
+        <button class="category-toggle-line" data-toggle-category="${category.id}" type="button">
           <span class="category-color-bar"></span>
-          <div class="category-title">${escapeHtml(category.name)}</div>
-        </div>
+          <span class="category-inline-caret">${category.expanded ? "▾" : "▸"}</span>
+          <span class="category-title">${escapeHtml(category.name)}</span>
+        </button>
         <div class="tree-controls">
-          <button class="tree-mini" data-add-child="template" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
-          ${
-            state.ui.tasksEditMode
-              ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button">✎</button>`
-              : ""
-          }
-          <button class="tree-toggle ${category.expanded ? "is-open" : ""}" data-toggle-category="${category.id}" type="button">^</button>
+          <button class="tree-plus-plain" data-add-child="template" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
+          ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button">✎</button>` : ""}
         </div>
       </div>
       ${templateMarkup}
