@@ -4996,3 +4996,188 @@ body {
 .page[data-page="tasks"] .template-row-flat {
   padding: 8px 0 8px 0;
 }
+
+.app-shell {
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+}
+
+.page[data-page="home"] .page-hero,
+.page[data-page="tasks"] .page-hero,
+.page[data-page="stats"] .page-hero,
+.page[data-page="settings"] .page-hero {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+.page[data-page="home"] .hero-heading h1,
+.page[data-page="home"] .section-head h2,
+.page[data-page="home"] .group-toggle h3,
+.page[data-page="tasks"] .hero-heading h1 {
+  padding-left: 0 !important;
+}
+
+.page[data-page="home"] .paper-sheet,
+.page[data-page="home"] .timer-strip,
+.page[data-page="stats"] .stats-sheet,
+.page[data-page="tasks"] .tree-sheet,
+.page[data-page="settings"] .settings-sheet {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.page[data-page="home"] .paper-sheet,
+.page[data-page="home"] .timer-strip {
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+
+.page[data-page="home"] .section-head,
+.page[data-page="home"] .group-toggle {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.page[data-page="home"] .task-row {
+  grid-template-columns: 18px 44px minmax(0, 1fr) 58px;
+  gap: 6px;
+  padding: 11px 0;
+}
+
+.page[data-page="home"] .task-time-block,
+.page[data-page="home"] .task-time-edit {
+  width: 44px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.page[data-page="home"] .task-main {
+  min-height: 36px;
+}
+
+.page[data-page="home"] .task-side {
+  width: 58px;
+  min-width: 58px;
+  justify-content: flex-end;
+}
+
+.page[data-page="home"] .task-side .flat-start {
+  width: 58px;
+  min-width: 58px;
+}
+
+.page[data-page="stats"] .hero-heading,
+.page[data-page="stats"] .hero-heading > div,
+.page[data-page="stats"] .hero-date,
+.page[data-page="stats"] #stats-range-note,
+.page[data-page="stats"] .stats-total-row,
+.page[data-page="stats"] .stats-view-line {
+  text-align: center !important;
+}
+
+.page[data-page="stats"] .hero-heading {
+  justify-content: center;
+}
+
+.page[data-page="stats"] .hero-heading > div {
+  width: 100%;
+}
+
+.page[data-page="stats"] .hero-heading h1 {
+  padding-left: 0 !important;
+}
+
+.page[data-page="stats"] .range-switch {
+  justify-content: center;
+}
+
+.page[data-page="stats"] .stats-wheel-wrap,
+.page[data-page="stats"] .wheel-shell {
+  justify-items: center;
+}
+
+.page[data-page="stats"] .stats-breakdown {
+  padding-right: 2px;
+}
+
+.page[data-page="stats"] .breakdown-row {
+  grid-template-columns: auto minmax(0, 1fr) 76px 34px;
+  column-gap: 8px;
+}
+
+.page[data-page="stats"] .breakdown-row > strong {
+  display: block;
+  width: 76px;
+  justify-self: end;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.page[data-page="stats"] .breakdown-right {
+  display: block;
+  width: 34px;
+  justify-self: end;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.page[data-page="stats"] .trend-row {
+  grid-template-columns: 5ch minmax(0, 1fr) 76px;
+  column-gap: 8px;
+}
+
+.page[data-page="stats"] .trend-row > strong {
+  display: block;
+  width: 76px;
+  justify-self: end;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.page[data-page="tasks"] .tree-sheet {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+.page[data-page="tasks"] .folder-headline {
+  padding-left: 0;
+}
+
+.page[data-page="tasks"] .folder-name {
+  padding-left: 0;
+}
+
+.page[data-page="tasks"] .category-line {
+  padding-left: 8px;
+}
+
+.page[data-page="tasks"] .template-list-flat {
+  margin-left: 0;
+  padding-left: 16px;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(100%, 460px);
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-top: 1px solid rgba(67, 80, 104, 0.1);
+  background: rgba(250, 248, 244, 0.96);
+  box-shadow: none;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+.nav-item {
+  min-height: 50px;
+  gap: 4px;
+}
+
+.nav-item.is-active {
+  color: var(--ink);
+}
