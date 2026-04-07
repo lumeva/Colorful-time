@@ -24,8 +24,10 @@ const THEME_OPTIONS = [
 
 const dom = {
   body: document.body,
+  appShell: document.getElementById("app-shell"),
   pages: [...document.querySelectorAll(".page")],
   navItems: [...document.querySelectorAll(".nav-item")],
+  bottomNav: document.querySelector(".bottom-nav"),
   homeDate: document.getElementById("home-date"),
   timerStrip: document.getElementById("timer-strip"),
   nextScroll: document.getElementById("next-scroll"),
@@ -114,6 +116,9 @@ boot();
 
 function boot() {
   applyPageFromUrl();
+  ensureSettingsStructure();
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
   bindEvents();
   renderAll();
   startTicker();
@@ -121,9 +126,200 @@ function boot() {
 
 function applyPageFromUrl() {
   const page = new URL(window.location.href).searchParams.get("page");
-  if (["home", "stats", "tasks", "settings"].includes(page)) {
+  if (["home", "stats", "tasks", "settings", "ai-planner"].includes(page)) {
     state.currentPage = page;
   }
+}
+
+function ensureSettingsStructure() {
+  const settingsPage = document.querySelector('.page[data-page="settings"]');
+  const settingsSheet = settingsPage?.querySelector(".settings-sheet");
+  if (!settingsSheet || settingsSheet.dataset.layout === "v2") return;
+
+  const heroDate = settingsPage.querySelector(".hero-date");
+  const heroNote = settingsPage.querySelector(".hero-note");
+  if (heroDate) heroDate.textContent = "";
+  if (heroNote) heroNote.remove();
+
+  settingsSheet.dataset.layout = "v2";
+  settingsSheet.classList.add("settings-sheet-clean");
+  settingsSheet.innerHTML = `
+    <section class="settings-group">
+      <div class="settings-group-title">App</div>
+      <div class="settings-list-block">
+        <button class="settings-install-button" id="pwa-install-button" type="button">Install app</button>
+        <p class="settings-weak-note" id="pwa-install-note">Install on this device.</p>
+      </div>
+    </section>
+
+    <section class="settings-group">
+      <div class="settings-group-title">Planning</div>
+      <div class="settings-list-block">
+        <button class="settings-row settings-row-link" id="ai-planner-link" type="button">
+          <span class="settings-row-label">✨ AI 生成日程</span>
+          <span class="settings-row-arrow" aria-hidden="true">›</span>
+        </button>
+        <label class="settings-row settings-row-toggle">
+          <span class="settings-row-label">优先最近时间任务</span>
+          <input type="checkbox" id="next-time-priority-toggle" checked />
+        </label>
+        <label class="settings-row settings-row-toggle">
+          <span class="settings-row-label">优先重要任务</span>
+          <input type="checkbox" id="next-important-priority-toggle" checked />
+        </label>
+        <button class="settings-row settings-row-link" id="default-duration-row" type="button">
+          <span class="settings-row-label">默认任务时长</span>
+          <span class="settings-row-trail">
+            <span id="default-duration-value">25 min</span>
+            <span class="settings-row-arrow" aria-hidden="true">›</span>
+          </span>
+        </button>
+        <button class="settings-row settings-row-link" id="day-start-row" type="button">
+          <span class="settings-row-label">一天开始时间</span>
+          <span class="settings-row-trail">
+            <span id="day-start-value">00:00</span>
+            <span class="settings-row-arrow" aria-hidden="true">›</span>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <section class="settings-group">
+      <div class="settings-group-title">Appearance</div>
+      <div class="settings-list-block settings-theme-block">
+        <div class="settings-subtitle">Theme</div>
+        <div class="theme-grid settings-theme-grid" id="theme-grid"></div>
+      </div>
+    </section>
+
+    <section class="settings-group">
+      <div class="settings-group-title">Preferences</div>
+      <div class="settings-list-block">
+        <label class="settings-row settings-row-toggle">
+          <span class="settings-row-label">Completed 默认展开</span>
+          <input type="checkbox" id="completed-default-toggle" />
+        </label>
+        <label class="settings-row settings-row-toggle">
+          <span class="settings-row-label">减少纸张纹理</span>
+          <input type="checkbox" id="reduce-texture-toggle" />
+        </label>
+      </div>
+    </section>
+
+    <div class="settings-hidden-controls" aria-hidden="true">
+      <input type="time" id="day-start-input" />
+      <select id="default-duration-select">
+        <option value="15">15 min</option>
+        <option value="20">20 min</option>
+        <option value="25">25 min</option>
+        <option value="30">30 min</option>
+        <option value="45">45 min</option>
+      </select>
+    </div>
+  `;
+}
+
+function ensureAiPlannerPage() {
+  if (document.querySelector('[data-page="ai-planner"]')) return;
+  const settingsPage = document.querySelector('[data-page="settings"]');
+  if (!settingsPage) return;
+
+  const aiPage = document.createElement("section");
+  aiPage.className = "page";
+  aiPage.dataset.page = "ai-planner";
+  aiPage.innerHTML = `
+    <header class="page-hero ai-page-hero">
+      <button class="sheet-back ai-page-back" id="ai-page-back" type="button" aria-label="Back">‹</button>
+      <div class="hero-heading">
+        <div><h1>AI 生成日程</h1></div>
+      </div>
+    </header>
+
+    <section class="paper-sheet ai-sheet">
+      <section class="ai-step">
+        <div class="settings-group-title">① 填写信息</div>
+        <div class="settings-list-block ai-fields">
+          <label class="ai-field">
+            <span>今天想完成什么</span>
+            <textarea id="ai-focus-input" rows="3" placeholder="例如：背单词、做一套试卷、写周总结"></textarea>
+          </label>
+          <label class="ai-field">
+            <span>已有安排 / 固定时间</span>
+            <textarea id="ai-constraints-input" rows="3" placeholder="例如：10:00 后有课，晚上 11 点前睡觉"></textarea>
+          </label>
+          <label class="ai-field">
+            <span>补充说明</span>
+            <textarea id="ai-context-input" rows="3" placeholder="例如：今天想轻一点，优先最重要的两件事"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="ai-step">
+        <div class="settings-group-title">② 生成 prompt</div>
+        <div class="settings-list-block ai-actions">
+          <button class="ghost-button ai-action-button" id="ai-generate-prompt" type="button">生成 prompt</button>
+          <textarea id="ai-prompt-output" rows="8" readonly placeholder="生成后会出现在这里"></textarea>
+        </div>
+      </section>
+
+      <section class="ai-step">
+        <div class="settings-group-title">③ 复制去 GPT</div>
+        <div class="settings-list-block ai-actions">
+          <button class="ghost-button ai-action-button" id="ai-copy-prompt" type="button">复制 prompt</button>
+        </div>
+      </section>
+
+      <section class="ai-step">
+        <div class="settings-group-title">④ 粘贴结果</div>
+        <div class="settings-list-block ai-actions">
+          <textarea id="ai-result-input" rows="8" placeholder="把 GPT 返回的计划粘贴到这里"></textarea>
+        </div>
+      </section>
+
+      <section class="ai-step">
+        <div class="settings-group-title">⑤ 预览导入</div>
+        <div class="settings-list-block ai-actions">
+          <div class="sheet-button-row ai-import-actions">
+            <button class="ghost-button ai-action-button" id="ai-preview-import" type="button">预览</button>
+            <button class="ghost-button ai-action-button" id="ai-import-plan" type="button">导入到 To-do</button>
+          </div>
+          <div class="ai-preview-list" id="ai-preview-list"></div>
+        </div>
+      </section>
+    </section>
+  `;
+
+  settingsPage.insertAdjacentElement("afterend", aiPage);
+}
+
+function refreshDynamicDomRefs() {
+  dom.pages = [...document.querySelectorAll(".page")];
+  dom.bottomNav = document.querySelector(".bottom-nav");
+  dom.themeGrid = document.getElementById("theme-grid");
+  dom.pwaInstallButton = document.getElementById("pwa-install-button");
+  dom.pwaInstallNote = document.getElementById("pwa-install-note");
+  dom.nextTimePriorityToggle = document.getElementById("next-time-priority-toggle");
+  dom.nextImportantPriorityToggle = document.getElementById("next-important-priority-toggle");
+  dom.dayStartInput = document.getElementById("day-start-input");
+  dom.defaultDurationSelect = document.getElementById("default-duration-select");
+  dom.completedDefaultToggle = document.getElementById("completed-default-toggle");
+  dom.reduceTextureToggle = document.getElementById("reduce-texture-toggle");
+  dom.aiPlannerLink = document.getElementById("ai-planner-link");
+  dom.defaultDurationRow = document.getElementById("default-duration-row");
+  dom.defaultDurationValue = document.getElementById("default-duration-value");
+  dom.dayStartRow = document.getElementById("day-start-row");
+  dom.dayStartValue = document.getElementById("day-start-value");
+  dom.aiPageBack = document.getElementById("ai-page-back");
+  dom.aiFocusInput = document.getElementById("ai-focus-input");
+  dom.aiConstraintsInput = document.getElementById("ai-constraints-input");
+  dom.aiContextInput = document.getElementById("ai-context-input");
+  dom.aiGeneratePrompt = document.getElementById("ai-generate-prompt");
+  dom.aiPromptOutput = document.getElementById("ai-prompt-output");
+  dom.aiCopyPrompt = document.getElementById("ai-copy-prompt");
+  dom.aiResultInput = document.getElementById("ai-result-input");
+  dom.aiPreviewImport = document.getElementById("ai-preview-import");
+  dom.aiImportPlan = document.getElementById("ai-import-plan");
+  dom.aiPreviewList = document.getElementById("ai-preview-list");
 }
 
 function createSeedState(baseDate = new Date()) {
@@ -3136,6 +3332,43 @@ function bindEvents() {
     persistState();
   };
   dom.pwaInstallButton.onclick = handlePwaInstall;
+  if (dom.defaultDurationRow) {
+    dom.defaultDurationRow.onclick = () => {
+      if (typeof dom.defaultDurationSelect.showPicker === "function") dom.defaultDurationSelect.showPicker();
+      else {
+        dom.defaultDurationSelect.focus();
+        dom.defaultDurationSelect.click();
+      }
+    };
+  }
+  if (dom.dayStartRow) {
+    dom.dayStartRow.onclick = () => {
+      if (typeof dom.dayStartInput.showPicker === "function") dom.dayStartInput.showPicker();
+      else {
+        dom.dayStartInput.focus();
+        dom.dayStartInput.click();
+      }
+    };
+  }
+  if (dom.aiPlannerLink) {
+    dom.aiPlannerLink.onclick = () => {
+      state.currentPage = "ai-planner";
+      closeAllSheets();
+      renderAll();
+      persistState();
+    };
+  }
+  if (dom.aiPageBack) {
+    dom.aiPageBack.onclick = () => {
+      state.currentPage = "settings";
+      renderAll();
+      persistState();
+    };
+  }
+  if (dom.aiGeneratePrompt) dom.aiGeneratePrompt.onclick = handleAiPromptGenerate;
+  if (dom.aiCopyPrompt) dom.aiCopyPrompt.onclick = handleAiCopyPrompt;
+  if (dom.aiPreviewImport) dom.aiPreviewImport.onclick = handleAiPreviewImport;
+  if (dom.aiImportPlan) dom.aiImportPlan.onclick = handleAiImportPlan;
 }
 
 function registerPwa() {
@@ -3764,12 +3997,16 @@ function handleTaskSubmit(event) {
 }
 
 function renderSettings() {
+  ensureSettingsStructure();
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
   dom.themeGrid.innerHTML = THEME_OPTIONS.map(
     (theme) => `
-      <button class="theme-card ${state.theme === theme.id ? "is-active" : ""}" data-theme-card="${theme.id}" type="button">
-        <div class="theme-preview ${theme.id}"></div>
-        <strong>${escapeHtml(theme.name)}</strong>
-        <div class="inline-note">${escapeHtml(theme.note)}</div>
+      <button class="settings-theme-option ${state.theme === theme.id ? "is-active" : ""}" data-theme-card="${theme.id}" type="button">
+        <span class="settings-theme-radio" aria-hidden="true"></span>
+        <span class="settings-theme-copy">
+          <strong>${escapeHtml(theme.name)}</strong>
+        </span>
       </button>
     `
   ).join("");
@@ -3780,20 +4017,22 @@ function renderSettings() {
   dom.reduceTextureToggle.checked = state.reduceTexture;
   dom.nextTimePriorityToggle.checked = state.nextRules.prioritizeTime;
   dom.nextImportantPriorityToggle.checked = state.nextRules.prioritizeImportant;
+  if (dom.defaultDurationValue) dom.defaultDurationValue.textContent = `${state.defaultDuration} min`;
+  if (dom.dayStartValue) dom.dayStartValue.textContent = state.dayStart || "00:00";
 
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
   if (isStandalone) {
     dom.pwaInstallButton.textContent = "Installed";
     dom.pwaInstallButton.disabled = true;
-    dom.pwaInstallNote.textContent = "This app is already running in installed mode.";
+    dom.pwaInstallNote.textContent = "Already installed on this device.";
   } else if (deferredPromptEvent) {
     dom.pwaInstallButton.textContent = "Install app";
     dom.pwaInstallButton.disabled = false;
-    dom.pwaInstallNote.textContent = "This device can install the app directly from here.";
+    dom.pwaInstallNote.textContent = "Install directly from here.";
   } else {
-    dom.pwaInstallButton.textContent = "How to install";
+    dom.pwaInstallButton.textContent = "Install app";
     dom.pwaInstallButton.disabled = false;
-    dom.pwaInstallNote.textContent = "If the prompt does not appear, use your browser menu and choose Add to Home Screen.";
+    dom.pwaInstallNote.textContent = "If no prompt appears, use your browser menu and choose Add to Home Screen.";
   }
 
   dom.themeGrid.querySelectorAll("[data-theme-card]").forEach((button) => {
@@ -3826,6 +4065,143 @@ async function handlePwaInstall() {
   }
 
   window.alert("If your browser does not show an install prompt, open the browser menu and tap Add to Home Screen.");
+}
+
+function buildAiPromptText() {
+  const todayTasks = getGroupedTasks().today.concat(getGroupedTasks().flexible).filter((task) => !task.completed);
+  const taskLines = todayTasks
+    .slice(0, 10)
+    .map((task) => {
+      const visual = getTaskVisual(task);
+      const time = task.scheduledMinutes == null ? "Any time" : formatMinutes(task.scheduledMinutes);
+      return `- ${time} | ${task.name} | ${visual.categoryName} | ${task.durationMin || state.defaultDuration} min`;
+    })
+    .join("\n");
+
+  return [
+    "Please help me create a clean day plan.",
+    "",
+    "User input:",
+    dom.aiFocusInput?.value.trim() || "-",
+    "",
+    "Fixed times / constraints:",
+    dom.aiConstraintsInput?.value.trim() || "-",
+    "",
+    "Extra notes:",
+    dom.aiContextInput?.value.trim() || "-",
+    "",
+    "Current tasks:",
+    taskLines || "- None",
+    "",
+    "Output format:",
+    "- One task per line",
+    "- Prefer HH:MM Task Name - 25 min",
+    "- Keep it concise",
+  ].join("\n");
+}
+
+function handleAiPromptGenerate() {
+  if (!dom.aiPromptOutput) return;
+  dom.aiPromptOutput.value = buildAiPromptText();
+}
+
+async function handleAiCopyPrompt() {
+  if (!dom.aiPromptOutput?.value) handleAiPromptGenerate();
+  const value = dom.aiPromptOutput?.value || "";
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    dom.aiCopyPrompt.textContent = "已复制";
+    window.setTimeout(() => {
+      if (dom.aiCopyPrompt) dom.aiCopyPrompt.textContent = "复制 prompt";
+    }, 1200);
+  } catch {
+    window.alert("Copy failed. Please copy the prompt manually.");
+  }
+}
+
+function parseAiPlanText(text) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      let cleaned = line.replace(/^[-*•\d.\)\s、]+/, "").trim();
+      let time = "";
+      let durationMin = state.defaultDuration;
+
+      const timeMatch = cleaned.match(/^(\d{1,2}:\d{2})\s*/);
+      if (timeMatch) {
+        time = timeMatch[1];
+        cleaned = cleaned.slice(timeMatch[0].length).trim();
+      }
+
+      const durationMatch = cleaned.match(/(?:-|—|–|\(|（)?\s*(\d{1,3})\s*min(?:ute)?s?\)?$/i);
+      if (durationMatch) {
+        durationMin = Number(durationMatch[1]) || state.defaultDuration;
+        cleaned = cleaned.slice(0, durationMatch.index).trim();
+      }
+
+      cleaned = cleaned.replace(/\s*[-—–:：]\s*$/, "").trim();
+
+      return {
+        name: cleaned || "Untitled",
+        time,
+        durationMin,
+      };
+    });
+}
+
+function renderAiPreview(items) {
+  if (!dom.aiPreviewList) return;
+  if (!items.length) {
+    dom.aiPreviewList.innerHTML = `<p class="empty-note">还没有可导入的内容。</p>`;
+    return;
+  }
+  dom.aiPreviewList.innerHTML = items
+    .map(
+      (item) => `
+        <div class="ai-preview-row">
+          <span class="ai-preview-name">${escapeHtml(item.name)}</span>
+          <span class="ai-preview-meta">${escapeHtml(item.time || "Any time")} · ${item.durationMin} min</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function handleAiPreviewImport() {
+  state.ui.aiPreviewItems = parseAiPlanText(dom.aiResultInput?.value || "").filter((item) => item.name);
+  renderAiPreview(state.ui.aiPreviewItems);
+}
+
+function handleAiImportPlan() {
+  const previewItems = Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : [];
+  if (!previewItems.length) {
+    handleAiPreviewImport();
+  }
+  const items = Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : [];
+  if (!items.length) return;
+
+  items
+    .slice()
+    .reverse()
+    .forEach((item) => {
+      state.tasks.unshift(
+        createTask({
+          name: item.name,
+          time: item.time,
+          durationMin: item.durationMin,
+        })
+      );
+    });
+
+  state.ui.aiPreviewItems = [];
+  if (dom.aiResultInput) dom.aiResultInput.value = "";
+  renderAiPreview([]);
+  state.currentPage = "home";
+  renderAll();
+  persistState();
 }
 
 function renderStats() {
@@ -5143,6 +5519,7 @@ function renderNavigation() {
   dom.navItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.target === state.currentPage);
   });
+  if (dom.bottomNav) dom.bottomNav.hidden = state.currentPage === "ai-planner";
   dom.fab.hidden = state.currentPage !== "home";
   updateOverlayState();
 }
@@ -5986,6 +6363,7 @@ function renderAll() {
   renderStats();
   renderTasksTree();
   renderSettings();
+  renderAiPreview(Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : []);
   renderDraftDrawer();
   renderQuickSuggestions();
   renderLogSuggestions();
