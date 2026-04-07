@@ -5655,7 +5655,9 @@ function renderTrendPanel() {
 }
 
 function renderTasksTree() {
-  dom.tasksEditToggle.textContent = state.ui.tasksEditMode ? "Done" : "Edit";
+  dom.tasksEditToggle.innerHTML = `<span aria-hidden="true">✎</span><span class="sr-only">${state.ui.tasksEditMode ? "Done editing" : "Edit tasks"}</span>`;
+  dom.tasksEditToggle.setAttribute("aria-label", state.ui.tasksEditMode ? "Done editing" : "Edit tasks");
+  dom.tasksEditToggle.classList.toggle("is-active", Boolean(state.ui.tasksEditMode));
   dom.tasksTree.innerHTML = state.folders
     .map((folder) => {
       const content = folder.expanded
