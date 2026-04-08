@@ -5751,3 +5751,194 @@ body {
   font-size: 0.78rem;
   white-space: nowrap;
 }
+
+body.has-custom-background::before {
+  background-image:
+    linear-gradient(rgba(250, 248, 244, 0.72), rgba(250, 248, 244, 0.72)),
+    var(--custom-paper-image),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.55), transparent 46%);
+  background-size: cover, cover, auto;
+  background-position: center, center, center;
+}
+
+.settings-hidden-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-row.is-disabled {
+  opacity: 0.78;
+}
+
+.page[data-page="ai-planner"] .page-hero {
+  margin-bottom: 20px;
+}
+
+.ai-cycle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ai-cycle-card {
+  border: 1px dashed rgba(0, 0, 0, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 14px 12px;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.ai-cycle-card strong {
+  font-size: 0.92rem;
+  font-family: var(--font-round);
+}
+
+.ai-cycle-card span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.ai-cycle-card.is-active {
+  border-color: rgba(67, 80, 104, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.ai-workflow-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.ai-step-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px dashed rgba(0, 0, 0, 0.08);
+  font-size: 0.78rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.ai-questionnaire {
+  padding: 0;
+}
+
+.ai-field {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.ai-field + .ai-field {
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.ai-field-label {
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-family: var(--font-round);
+}
+
+.ai-input {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(67, 80, 104, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font: inherit;
+  padding: 12px 14px;
+  box-shadow: none;
+}
+
+.ai-textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.ai-choice-grid,
+.ai-three-grid,
+.ai-two-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-choice-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ai-three-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ai-two-grid,
+.ai-domain-row,
+.ai-mit-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ai-choice-chip,
+.ai-choice-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(67, 80, 104, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+}
+
+.ai-choice-stack,
+.ai-three-stack,
+.ai-domain-stack,
+.ai-meter-stack,
+.ai-mit-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-range-row,
+.ai-range-block {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-range {
+  width: 100%;
+}
+
+.ai-range-value {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-duration-input {
+  max-width: 110px;
+}
+
+.ai-actions > textarea {
+  min-height: 180px;
+}
+
+@media (max-width: 420px) {
+  .ai-cycle-grid,
+  .ai-three-grid,
+  .ai-two-grid,
+  .ai-domain-row,
+  .ai-mit-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

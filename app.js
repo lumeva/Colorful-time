@@ -16,11 +16,95 @@ const THEME_OPTIONS = [
     note: "奶油纸、细线、贴纸感。",
   },
   {
-    id: "adventure",
-    name: "Adventure",
+    id: "custom",
+    name: "Custom",
     note: "更轻快、更手绘，给后面的动漫感留入口。",
   },
 ];
+
+const AI_CYCLES = [
+  { id: "overall", label: "总体规划", note: "季度 / 年度 · 价值观 + 目标锚定" },
+  { id: "weekly", label: "月 / 周规划", note: "4周 / 7天 · 项目推进 + 复盘" },
+  { id: "daily", label: "今日 / 明日", note: "24小时 · MIT + 能量管理" },
+];
+
+const AI_CYCLES_V2 = [
+  { id: "overall", label: "总体规划", note: "季度 / 年度 · 价值观 + 目标锚定" },
+  { id: "weekly", label: "月 / 周规划", note: "4周 / 7天 · 项目推进 + 复盘" },
+  { id: "daily", label: "今日 / 明日", note: "24小时 · MIT + 能量管理" },
+];
+
+const AI_WORKFLOW_STEPS = ["选择时间周期", "填写问卷", "生成 Prompt", "复制给 AI", "粘贴结果", "预览导入"];
+const AI_MBTI_OPTIONS = ["不知道", "INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP", "ISTJ", "ISFJ", "ESTJ", "ESFJ", "ISTP", "ISFP", "ESTP", "ESFP"];
+const AI_CHRONOTYPE_OPTIONS = ["清晨", "上午", "下午", "傍晚", "夜间"];
+const AI_WORKSTYLE_OPTIONS = [
+  { id: "A", label: "长时间专注一件事直到完成" },
+  { id: "B", label: "在多个任务间切换保持新鲜感" },
+  { id: "C", label: "固定时间块 + 番茄钟节奏" },
+];
+const AI_PROCRASTINATION_OPTIONS = ["任务模糊", "怕做错", "太无聊", "太有压力", "不知从哪开始"];
+const AI_VALUE_OPTIONS = ["事业成就", "身体健康", "亲密关系", "个人成长", "财务自由", "创意表达", "社会贡献"];
+
+function createDefaultAiState() {
+  const today = new Date();
+  return {
+    cycle: "overall",
+    promptText: "",
+    resultText: "",
+    overall: {
+      period: "quarter",
+      mbti: "不知道",
+      chronotype: "",
+      workStyle: "",
+      procrastination: [],
+      value1: "",
+      value2: "",
+      value3: "",
+      lifeStage: "",
+      challenge: "",
+      domain1Name: "事业成就",
+      domain1Goal: "",
+      domain2Name: "身体健康",
+      domain2Goal: "",
+      domain3Name: "",
+      domain3Goal: "",
+    },
+    weekly: {
+      period: "week",
+      start: formatInputDate(today),
+      end: formatInputDate(shiftDate(today, 6)),
+      win: "",
+      missed: "",
+      reason: "",
+      core1: "",
+      core2: "",
+      core3: "",
+      energy: "3",
+      special: "",
+      commitments: "",
+      obstacle: "",
+      response: "",
+    },
+    daily: {
+      horizon: "today",
+      date: formatInputDate(today),
+      body: "3",
+      mood: "3",
+      focus: "3",
+      mit1: "",
+      mit1Duration: "25",
+      mit2: "",
+      mit2Duration: "25",
+      mit3: "",
+      mit3Duration: "25",
+      otherTasks: "",
+      windows: "",
+      quickTask: "",
+      distraction: "",
+      strategy: "",
+    },
+  };
+}
 
 const dom = {
   body: document.body,
@@ -215,6 +299,7 @@ function ensureSettingsStructure() {
         <option value="30">30 min</option>
         <option value="45">45 min</option>
       </select>
+      <input type="checkbox" id="reduce-texture-toggle" />
     </div>
   `;
 }
@@ -320,6 +405,1070 @@ function refreshDynamicDomRefs() {
   dom.aiPreviewImport = document.getElementById("ai-preview-import");
   dom.aiImportPlan = document.getElementById("ai-import-plan");
   dom.aiPreviewList = document.getElementById("ai-preview-list");
+}
+
+function getAiPathValue(path) {
+  return path.split(".").reduce((acc, key) => acc?.[key], state.ai);
+}
+
+function setAiPathValue(path, value) {
+  const parts = path.split(".");
+  let target = state.ai;
+  while (parts.length > 1) {
+    const key = parts.shift();
+    target[key] = target[key] || {};
+    target = target[key];
+  }
+  target[parts[0]] = value;
+}
+
+function getChronotypePeak(label) {
+  const map = { 清晨: "06:00-10:00", 上午: "09:00-12:00", 下午: "13:00-16:00", 傍晚: "17:00-19:00", 夜间: "20:00-23:00" };
+  return map[label] || "未填写";
+}
+
+function getAiProfileSnapshot() {
+  const overall = state.ai.overall || {};
+  const values = [overall.value1, overall.value2, overall.value3].filter(Boolean);
+  return {
+    mbti: overall.mbti || "不知道",
+    chronotype: overall.chronotype || "未填写",
+    workStyle: overall.workStyle || "未填写",
+    procrastination: Array.isArray(overall.procrastination) && overall.procrastination.length ? overall.procrastination.join(" / ") : "未填写",
+    values: values.length ? values : ["未填写"],
+  };
+}
+
+function renderAiPlanner() {
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
+  if (!dom.aiCycleGrid || !dom.aiQuestionnaire) return;
+
+  const cycle = state.ai.cycle || "overall";
+  dom.aiCycleGrid.innerHTML = AI_CYCLES_V2
+    .map((item) => `<button class="ai-cycle-card ${cycle === item.id ? "is-active" : ""}" data-ai-cycle="${item.id}" type="button"><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.note)}</span></button>`)
+    .join("");
+  dom.aiWorkflowStrip.innerHTML = AI_WORKFLOW_STEPS.map((step) => `<span class="ai-step-chip">${escapeHtml(step)}</span>`).join("");
+  dom.aiQuestionnaire.innerHTML = buildAiQuestionnaire(cycle);
+
+  dom.aiCycleGrid.querySelectorAll("[data-ai-cycle]").forEach((button) => {
+    button.onclick = () => {
+      state.ai.cycle = button.dataset.aiCycle;
+      state.ui.aiPreviewItems = [];
+      renderAiPlanner();
+      persistState();
+    };
+  });
+
+  bindAiQuestionnaireFields();
+
+  if (dom.aiPromptOutput) dom.aiPromptOutput.value = state.ai.promptText || "";
+  if (dom.aiResultInput) {
+    dom.aiResultInput.value = state.ai.resultText || "";
+    dom.aiResultInput.oninput = (event) => {
+      state.ai.resultText = event.target.value;
+      persistState();
+    };
+  }
+  if (dom.aiGeneratePrompt) dom.aiGeneratePrompt.onclick = handleAiPromptGenerate;
+  if (dom.aiCopyPrompt) dom.aiCopyPrompt.onclick = handleAiCopyPrompt;
+  if (dom.aiPreviewImport) dom.aiPreviewImport.onclick = handleAiPreviewImport;
+  if (dom.aiImportPlan) dom.aiImportPlan.onclick = handleAiImportPlan;
+  if (dom.aiPageBack) {
+    dom.aiPageBack.onclick = () => {
+      state.currentPage = "settings";
+      renderAll();
+      persistState();
+    };
+  }
+
+  renderAiPreview(Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : []);
+}
+
+function buildAiQuestionnaire(cycle) {
+  if (cycle === "overall") {
+    return `
+      <div class="ai-field"><label class="ai-field-label" for="ai-overall-period">时间周期</label><select class="ai-input" id="ai-overall-period" data-ai-field="overall.period"><option value="quarter">季度</option><option value="year">年度</option></select></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-overall-mbti">Q1 · 人格类型</label><select class="ai-input" id="ai-overall-mbti" data-ai-field="overall.mbti">${AI_MBTI_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select></div>
+      <div class="ai-field"><div class="ai-field-label">Q2 · 时型偏好</div><div class="ai-choice-grid">${AI_CHRONOTYPE_OPTIONS.map((option) => `<label class="ai-choice-chip"><input type="radio" name="ai-overall-chronotype" data-ai-field="overall.chronotype" value="${option}" /><span>${option}</span></label>`).join("")}</div></div>
+      <div class="ai-field"><div class="ai-field-label">Q3 · 工作风格</div><div class="ai-choice-stack">${AI_WORKSTYLE_OPTIONS.map((option) => `<label class="ai-choice-line"><input type="radio" name="ai-overall-workstyle" data-ai-field="overall.workStyle" value="${option.label}" /><span>${option.id}. ${option.label}</span></label>`).join("")}</div></div>
+      <div class="ai-field"><div class="ai-field-label">Q4 · 拖延触发器</div><div class="ai-choice-stack">${AI_PROCRASTINATION_OPTIONS.map((option) => `<label class="ai-choice-line"><input type="checkbox" data-ai-list="overall.procrastination" value="${option}" /><span>${option}</span></label>`).join("")}</div></div>
+      <div class="ai-field"><div class="ai-field-label">Q5 · 核心价值观排序</div><div class="ai-three-grid"><select class="ai-input" data-ai-field="overall.value1"><option value="">优先级 1</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select><select class="ai-input" data-ai-field="overall.value2"><option value="">优先级 2</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select><select class="ai-input" data-ai-field="overall.value3"><option value="">优先级 3</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select></div></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-overall-stage">当前阶段背景</label><textarea class="ai-input ai-textarea" id="ai-overall-stage" rows="3" data-ai-field="overall.lifeStage" placeholder="例如：学生 / 准备求职 / 创业初期"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-overall-challenge">主要挑战</label><textarea class="ai-input ai-textarea" id="ai-overall-challenge" rows="3" data-ai-field="overall.challenge" placeholder="例如：任务太多、节奏不稳、身体状态起伏"></textarea></div>
+      <div class="ai-field"><div class="ai-field-label">目标领域</div><div class="ai-domain-stack"><div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain1Name" placeholder="领域 1" /><input class="ai-input" data-ai-field="overall.domain1Goal" placeholder="目标方向" /></div><div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain2Name" placeholder="领域 2" /><input class="ai-input" data-ai-field="overall.domain2Goal" placeholder="目标方向" /></div><div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain3Name" placeholder="领域 3（可选）" /><input class="ai-input" data-ai-field="overall.domain3Goal" placeholder="目标方向（可选）" /></div></div></div>
+    `;
+  }
+
+  if (cycle === "weekly") {
+    return `
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-period">规划周期</label><select class="ai-input" id="ai-weekly-period" data-ai-field="weekly.period"><option value="week">周</option><option value="month">月</option></select></div>
+      <div class="ai-field"><div class="ai-field-label">时间范围</div><div class="ai-two-grid"><input class="ai-input" type="date" data-ai-field="weekly.start" /><input class="ai-input" type="date" data-ai-field="weekly.end" /></div></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-win">Q1 · 上期复盘：做得超预期</label><textarea class="ai-input ai-textarea" id="ai-weekly-win" rows="3" data-ai-field="weekly.win"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-missed">Q1 · 上期复盘：没做到但本来想做的</label><textarea class="ai-input ai-textarea" id="ai-weekly-missed" rows="3" data-ai-field="weekly.missed"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-reason">原因分析（我认为）</label><textarea class="ai-input ai-textarea" id="ai-weekly-reason" rows="3" data-ai-field="weekly.reason"></textarea></div>
+      <div class="ai-field"><div class="ai-field-label">Q2 · 核心任务（3 件）</div><div class="ai-three-stack"><input class="ai-input" data-ai-field="weekly.core1" placeholder="核心任务 1" /><input class="ai-input" data-ai-field="weekly.core2" placeholder="核心任务 2" /><input class="ai-input" data-ai-field="weekly.core3" placeholder="核心任务 3" /></div></div>
+      <div class="ai-field"><div class="ai-field-label">Q3 · 精力预判</div><div class="ai-range-row"><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="weekly.energy" /><span class="ai-range-value" data-ai-display="weekly.energy"></span></div><textarea class="ai-input ai-textarea" rows="3" data-ai-field="weekly.special" placeholder="旅行 / 重要会议 / 家庭事件等特殊情况"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-commitments">Q4 · 固定承诺</label><textarea class="ai-input ai-textarea" id="ai-weekly-commitments" rows="3" data-ai-field="weekly.commitments" placeholder="会议、约定、deadline 等"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-obstacle">Q5 · 潜在障碍</label><textarea class="ai-input ai-textarea" id="ai-weekly-obstacle" rows="3" data-ai-field="weekly.obstacle"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-response">提前应对</label><textarea class="ai-input ai-textarea" id="ai-weekly-response" rows="3" data-ai-field="weekly.response"></textarea></div>
+    `;
+  }
+
+  return `
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-horizon">规划对象</label><select class="ai-input" id="ai-daily-horizon" data-ai-field="daily.horizon"><option value="today">今日</option><option value="tomorrow">明日</option></select></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-date">日期</label><input class="ai-input" id="ai-daily-date" type="date" data-ai-field="daily.date" /></div>
+    <div class="ai-field"><div class="ai-field-label">Q1 · 当前能量状态</div><div class="ai-meter-stack"><label class="ai-range-block"><span>身体</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.body" /><span class="ai-range-value" data-ai-display="daily.body"></span></label><label class="ai-range-block"><span>情绪</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.mood" /><span class="ai-range-value" data-ai-display="daily.mood"></span></label><label class="ai-range-block"><span>专注力</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.focus" /><span class="ai-range-value" data-ai-display="daily.focus"></span></label></div></div>
+    <div class="ai-field"><div class="ai-field-label">Q2 · 三个 MIT</div><div class="ai-mit-stack">${[1, 2, 3].map((index) => `<div class="ai-mit-row"><input class="ai-input" data-ai-field="daily.mit${index}" placeholder="MIT ${index}" /><input class="ai-input ai-duration-input" type="number" min="5" step="5" data-ai-field="daily.mit${index}Duration" placeholder="分钟" /></div>`).join("")}</div><textarea class="ai-input ai-textarea" rows="3" data-ai-field="daily.otherTasks" placeholder="待处理但非紧急"></textarea></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-windows">Q3 · 时间窗口</label><textarea class="ai-input ai-textarea" id="ai-daily-windows" rows="3" data-ai-field="daily.windows" placeholder="例如：09:00-11:00（2h） · 15:00-16:30（1.5h）"></textarea></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-quick">Q4 · 快速启动任务</label><input class="ai-input" id="ai-daily-quick" data-ai-field="daily.quickTask" placeholder="5 分钟内可完成的小事（可选）" /></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-distraction">Q5 · 干扰预测</label><textarea class="ai-input ai-textarea" id="ai-daily-distraction" rows="3" data-ai-field="daily.distraction" placeholder="今天最可能打断你的是什么？"></textarea><textarea class="ai-input ai-textarea" rows="3" data-ai-field="daily.strategy" placeholder="你打算如何处理？"></textarea></div>
+  `;
+}
+
+function bindAiQuestionnaireFields() {
+  if (!dom.aiQuestionnaire) return;
+  dom.aiQuestionnaire.querySelectorAll("[data-ai-field]").forEach((input) => {
+    const path = input.dataset.aiField;
+    const value = getAiPathValue(path);
+    if (input.type === "radio") {
+      input.checked = value === input.value;
+      input.onchange = () => {
+        if (!input.checked) return;
+        setAiPathValue(path, input.value);
+        persistState();
+      };
+      return;
+    }
+    input.value = value ?? "";
+    input.oninput = () => {
+      setAiPathValue(path, input.value);
+      syncAiRangeDisplays();
+      persistState();
+    };
+    input.onchange = input.oninput;
+  });
+
+  dom.aiQuestionnaire.querySelectorAll("[data-ai-list]").forEach((input) => {
+    const path = input.dataset.aiList;
+    const list = getAiPathValue(path) || [];
+    input.checked = list.includes(input.value);
+    input.onchange = () => {
+      const current = new Set(getAiPathValue(path) || []);
+      if (input.checked) current.add(input.value);
+      else current.delete(input.value);
+      setAiPathValue(path, [...current]);
+      persistState();
+    };
+  });
+  syncAiRangeDisplays();
+}
+
+function syncAiRangeDisplays() {
+  document.querySelectorAll("[data-ai-display]").forEach((node) => {
+    const value = getAiPathValue(node.dataset.aiDisplay);
+    node.textContent = value ? `${value}/5` : "";
+  });
+}
+
+function renderSettings() {
+  ensureSettingsStructure();
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
+
+  dom.themeGrid.innerHTML = [
+    { id: "paper", name: "Simple Paper" },
+    { id: "custom", name: "Custom" },
+  ]
+    .map((theme) => `<button class="settings-theme-option ${state.theme === theme.id ? "is-active" : ""}" data-theme-card="${theme.id}" type="button"><span class="settings-theme-radio" aria-hidden="true"></span><span class="settings-theme-copy"><strong>${escapeHtml(theme.name)}</strong></span></button>`)
+    .join("");
+
+  if (dom.defaultDurationSelect) dom.defaultDurationSelect.value = String(state.defaultDuration);
+  if (dom.dayStartInput) dom.dayStartInput.value = state.dayStart || "00:00";
+  if (dom.completedDefaultToggle) dom.completedDefaultToggle.checked = Boolean(state.ui.groupOpen?.completed);
+  if (dom.nextTimePriorityToggle) dom.nextTimePriorityToggle.checked = Boolean(state.nextRules.prioritizeTime);
+  if (dom.nextImportantPriorityToggle) dom.nextImportantPriorityToggle.checked = Boolean(state.nextRules.prioritizeImportant);
+  if (dom.defaultDurationValue) dom.defaultDurationValue.textContent = `${state.defaultDuration} min`;
+  if (dom.dayStartValue) dom.dayStartValue.textContent = state.dayStart || "00:00";
+  if (dom.customBackgroundValue) dom.customBackgroundValue.textContent = state.customBackgroundImage ? "已上传" : "未上传";
+
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isStandalone) {
+    dom.pwaInstallButton.textContent = "Installed";
+    dom.pwaInstallButton.disabled = true;
+    dom.pwaInstallNote.textContent = "Already installed on this device.";
+  } else if (deferredPromptEvent) {
+    dom.pwaInstallButton.textContent = "Install app";
+    dom.pwaInstallButton.disabled = false;
+    dom.pwaInstallNote.textContent = "Install directly from here.";
+  } else {
+    dom.pwaInstallButton.textContent = "Install app";
+    dom.pwaInstallButton.disabled = false;
+    dom.pwaInstallNote.textContent = "If no prompt appears, use your browser menu and choose Add to Home Screen.";
+  }
+
+  dom.themeGrid.querySelectorAll("[data-theme-card]").forEach((button) => {
+    button.onclick = () => {
+      state.theme = button.dataset.themeCard;
+      applyTheme();
+      renderSettings();
+      persistState();
+    };
+  });
+
+  if (dom.aiPlannerLink) dom.aiPlannerLink.onclick = () => { state.currentPage = "ai-planner"; renderAll(); persistState(); };
+  if (dom.defaultDurationRow) {
+    dom.defaultDurationRow.onclick = () => {
+      const raw = window.prompt("默认任务时长（分钟）", String(state.defaultDuration));
+      if (raw == null) return;
+      const minutes = Number(raw);
+      if (!Number.isFinite(minutes) || minutes <= 0) return;
+      state.defaultDuration = Math.min(240, Math.max(5, Math.round(minutes)));
+      renderSettings();
+      persistState();
+    };
+  }
+  if (dom.dayStartRow) {
+    dom.dayStartRow.onclick = () => {
+      const raw = window.prompt("一天开始时间（HH:MM）", state.dayStart || "00:00");
+      if (raw == null) return;
+      const value = raw.trim();
+      if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(value)) return;
+      state.dayStart = value;
+      renderSettings();
+      persistState();
+    };
+  }
+  if (dom.completedDefaultToggle) {
+    dom.completedDefaultToggle.onchange = (event) => {
+      const checked = Boolean(event.target.checked);
+      state.showCompletedOpen = checked;
+      state.ui.groupOpen.completed = checked;
+      renderHome();
+      renderSettings();
+      persistState();
+    };
+  }
+  if (dom.nextTimePriorityToggle) dom.nextTimePriorityToggle.onchange = (event) => { state.nextRules.prioritizeTime = Boolean(event.target.checked); renderHome(); persistState(); };
+  if (dom.nextImportantPriorityToggle) dom.nextImportantPriorityToggle.onchange = (event) => { state.nextRules.prioritizeImportant = Boolean(event.target.checked); renderHome(); persistState(); };
+  if (dom.customBackgroundRow) dom.customBackgroundRow.onclick = () => dom.customBackgroundInput?.click();
+  if (dom.customBackgroundInput) dom.customBackgroundInput.onchange = handleCustomBackgroundUpload;
+}
+
+function buildAiPromptText() {
+  const cycle = state.ai.cycle || "overall";
+  const profile = getAiProfileSnapshot();
+  if (cycle === "overall") {
+    const form = state.ai.overall;
+    const domains = [[form.domain1Name, form.domain1Goal], [form.domain2Name, form.domain2Goal], [form.domain3Name, form.domain3Goal]]
+      .filter(([name, goal]) => name || goal)
+      .map(([name, goal]) => `   ${name || "领域"}：${goal || "未填写"}`)
+      .join("\n");
+    return ["总体规划 Prompt", `${form.period === "year" ? "年度" : "季度"}`, "", "[用户画像]", `我是一个 ${form.mbti || "不知道"} 类型的人，时型偏向 ${form.chronotype || "未填写"}，核心价值观优先级为：${[form.value1, form.value2, form.value3].filter(Boolean).join(" > ") || "未填写"}。`, "", "[当前阶段背景]", `我目前处于 ${form.lifeStage || "未填写"}，主要挑战是 ${form.challenge || "未填写"}。`, "", "[目标设定请求]", `请帮我制定一个 ${form.period === "year" ? "年度" : "季度"} 的目标规划，要求：`, "1. 为以下生活域各设定 1 个 Objective 和 2-3 个 Key Results：", domains || "   事业成就：未填写", "2. 识别目标间的潜在冲突，提出优先级建议", `3. 考虑我的 ${form.mbti || "未知"} 特质，调整计划的结构方式`, "4. 输出格式：OKR 表格 + 季度里程碑路线图", "", "[输出约束]", "请确保每个 KR 是可量化的，目标总数不超过 3 个领域，并标注与核心价值观的对齐度。"].join("\n");
+  }
+  if (cycle === "weekly") {
+    const form = state.ai.weekly;
+    return ["月 / 周规划 Prompt", `${form.period === "month" ? "月度" : "周度"}`, "", "[用户画像快照]", `${profile.mbti} · ${profile.chronotype} · 主要拖延触发：${profile.procrastination}`, "", "[上期复盘]", `超预期完成：${form.win || "未填写"}`, `未完成事项：${form.missed || "未填写"}`, `原因分析（我认为）：${form.reason || "未填写"}`, "", "[本期规划请求]", `时间范围：${form.start || "未填写"} 至 ${form.end || "未填写"}`, "", "核心任务（不可忽略）：", `① ${form.core1 || "未填写"}`, `② ${form.core2 || "未填写"}`, `③ ${form.core3 || "未填写"}`, "", `固定承诺：${form.commitments || "未填写"}`, `精力预判：${form.energy || "3"}/5，特殊情况：${form.special || "无"}`, "", "[规划要求]", "1. 按艾森豪威尔矩阵对所有任务分类", `2. 将深度工作任务安排在我的认知高峰时段（${getChronotypePeak(profile.chronotype)}）`, `3. 针对我的拖延触发器「${profile.procrastination}」设计实施意图（if-then 计划）`, "4. 每天预留 20% 缓冲时间", "5. 输出：周甘特图 + 每日主题 + 应对障碍的 if-then 清单", "", `潜在障碍：${form.obstacle || "未填写"}`, `提前应对：${form.response || "未填写"}`].join("\n");
+  }
+  const form = state.ai.daily;
+  const body = Number(form.body || 3);
+  const mood = Number(form.mood || 3);
+  const focus = Number(form.focus || 3);
+  const average = ((body + mood + focus) / 3).toFixed(1);
+  const modeAdvice = Number(average) >= 4 ? "安排深度工作在第一时间块" : Number(average) >= 2 ? "MIT 排第一，其余安排行政 / 沟通类" : "只做快速启动任务，其余推迟";
+  return ["今日 / 明日规划 Prompt", "每日", "", "[今日状态]", `日期：${form.date || "未填写"} · 身体精力：${body}/5 · 情绪状态：${mood}/5 · 专注力：${focus}/5`, "", "[今日任务池]", "MIT（最重要）：", `① ${form.mit1 || "未填写"}（预计耗时 ${form.mit1Duration || state.defaultDuration} 分钟）`, `② ${form.mit2 || "未填写"}（预计耗时 ${form.mit2Duration || state.defaultDuration} 分钟）`, `③ ${form.mit3 || "未填写"}（预计耗时 ${form.mit3Duration || state.defaultDuration} 分钟）`, "", `待处理但非紧急：${form.otherTasks || "无"}`, "", "[时间与环境]", `专注时间窗口：${form.windows || "未填写"}`, `可能的干扰源：${form.distraction || "未填写"}，应对策略：${form.strategy || "未填写"}`, `快速启动任务：${form.quickTask || "无"}`, "", "[规划要求]", `1. 根据精力状态（${average}/5）判断今天适合的工作模式：${modeAdvice}`, `2. 将 MIT1 安排在认知高峰时段 ${getChronotypePeak(profile.chronotype)}`, "3. 设计今日的完成标准（什么情况算今天成功）", "4. 输出：小时级时间块安排 + 三个 MIT 的 if-then 实施意图"].join("\n");
+}
+
+function handleAiPromptGenerate() {
+  state.ai.promptText = buildAiPromptText();
+  if (dom.aiPromptOutput) dom.aiPromptOutput.value = state.ai.promptText;
+  persistState();
+}
+
+async function handleAiCopyPrompt() {
+  if (!state.ai.promptText) handleAiPromptGenerate();
+  const value = state.ai.promptText || "";
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    if (dom.aiCopyPrompt) {
+      dom.aiCopyPrompt.textContent = "已复制";
+      window.setTimeout(() => {
+        if (dom.aiCopyPrompt) dom.aiCopyPrompt.textContent = "复制 Prompt";
+      }, 1200);
+    }
+  } catch {
+    window.alert("复制失败，请手动复制。");
+  }
+}
+
+function parseAiPlanText(text) {
+  return String(text || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    let cleaned = line.replace(/^[-*•\d\.\)\s]+/, "").trim();
+    let time = "";
+    let durationMin = state.defaultDuration;
+    const timeMatch = cleaned.match(/^(\d{1,2}:\d{2})/);
+    if (timeMatch) {
+      time = timeMatch[1];
+      cleaned = cleaned.slice(timeMatch[0].length).trim();
+    }
+    const durationMatch = cleaned.match(/(\d{1,3})\s*min(?:ute)?s?$/i);
+    if (durationMatch) {
+      durationMin = Number(durationMatch[1]) || state.defaultDuration;
+      cleaned = cleaned.slice(0, durationMatch.index).trim();
+    }
+    cleaned = cleaned.replace(/[-–—:：]\s*$/, "").trim();
+    return { name: cleaned || "Untitled", time, durationMin };
+  });
+}
+
+function renderAiPreview(items) {
+  if (!dom.aiPreviewList) return;
+  if (!items.length) {
+    dom.aiPreviewList.innerHTML = `<p class="empty-note">还没有可导入的内容。</p>`;
+    return;
+  }
+  const cycle = state.ai.cycle || "overall";
+  const importDate = cycle === "daily" ? state.ai.daily.date : cycle === "weekly" ? state.ai.weekly.start : "";
+  dom.aiPreviewList.innerHTML = items.map((item) => `<div class="ai-preview-row"><span class="ai-preview-name">${escapeHtml(item.name)}</span><span class="ai-preview-meta">${escapeHtml(importDate || item.time || "Any time")} · ${item.durationMin} min</span></div>`).join("");
+}
+
+function handleAiPreviewImport() {
+  state.ui.aiPreviewItems = parseAiPlanText(state.ai.resultText || "").filter((item) => item.name);
+  renderAiPreview(state.ui.aiPreviewItems);
+  persistState();
+}
+
+function handleAiImportPlan() {
+  if (!Array.isArray(state.ui.aiPreviewItems) || !state.ui.aiPreviewItems.length) handleAiPreviewImport();
+  const items = Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : [];
+  if (!items.length) return;
+  const cycle = state.ai.cycle || "overall";
+  const importDate = cycle === "daily" ? state.ai.daily.date || formatInputDate(new Date()) : cycle === "weekly" ? state.ai.weekly.start || formatInputDate(new Date()) : null;
+  items.slice().reverse().forEach((item) => {
+    const task = createTask({ name: item.name, time: item.time, durationMin: item.durationMin });
+    task.scheduledDate = importDate;
+    state.tasks.unshift(task);
+  });
+  state.ui.aiPreviewItems = [];
+  state.ai.resultText = "";
+  if (dom.aiResultInput) dom.aiResultInput.value = "";
+  renderAiPreview([]);
+  state.currentPage = "home";
+  renderAll();
+  persistState();
+}
+
+function handleCustomBackgroundUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.customBackgroundImage = String(reader.result || "");
+    state.theme = "custom";
+    applyTheme();
+    renderSettings();
+    persistState();
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  ensureUiCopy();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderAiPlanner();
+  renderDraftDrawer();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  updateLogDuration();
+}
+
+function getAiPathValue(path) {
+  return path.split(".").reduce((acc, key) => acc?.[key], state.ai);
+}
+
+function setAiPathValue(path, value) {
+  const parts = path.split(".");
+  let target = state.ai;
+  while (parts.length > 1) {
+    const key = parts.shift();
+    target[key] = target[key] || {};
+    target = target[key];
+  }
+  target[parts[0]] = value;
+}
+
+function getChronotypePeak(label) {
+  const map = {
+    清晨: "06:00-10:00",
+    上午: "09:00-12:00",
+    下午: "13:00-16:00",
+    傍晚: "17:00-19:00",
+    夜间: "20:00-23:00",
+  };
+  return map[label] || "未填写";
+}
+
+function getAiProfileSnapshot() {
+  const overall = state.ai.overall || {};
+  const values = [overall.value1, overall.value2, overall.value3].filter(Boolean);
+  return {
+    mbti: overall.mbti || "不知道",
+    chronotype: overall.chronotype || "未填写",
+    workStyle: overall.workStyle || "未填写",
+    procrastination: Array.isArray(overall.procrastination) && overall.procrastination.length ? overall.procrastination.join(" / ") : "未填写",
+    values: values.length ? values : ["未填写"],
+  };
+}
+
+function renderAiPlanner() {
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
+  if (!dom.aiCycleGrid || !dom.aiQuestionnaire) return;
+
+  const cycle = state.ai.cycle || "overall";
+  dom.aiCycleGrid.innerHTML = AI_CYCLES_V2
+    .map(
+      (item) => `
+        <button class="ai-cycle-card ${cycle === item.id ? "is-active" : ""}" data-ai-cycle="${item.id}" type="button">
+          <strong>${escapeHtml(item.label)}</strong>
+          <span>${escapeHtml(item.note)}</span>
+        </button>
+      `
+    )
+    .join("");
+
+  dom.aiWorkflowStrip.innerHTML = AI_WORKFLOW_STEPS.map((step) => `<span class="ai-step-chip">${escapeHtml(step)}</span>`).join("");
+  dom.aiQuestionnaire.innerHTML = buildAiQuestionnaire(cycle);
+
+  dom.aiCycleGrid.querySelectorAll("[data-ai-cycle]").forEach((button) => {
+    button.onclick = () => {
+      state.ai.cycle = button.dataset.aiCycle;
+      state.ui.aiPreviewItems = [];
+      renderAiPlanner();
+      persistState();
+    };
+  });
+
+  bindAiQuestionnaireFields();
+
+  if (dom.aiPromptOutput) dom.aiPromptOutput.value = state.ai.promptText || "";
+  if (dom.aiResultInput) {
+    dom.aiResultInput.value = state.ai.resultText || "";
+    dom.aiResultInput.oninput = (event) => {
+      state.ai.resultText = event.target.value;
+      persistState();
+    };
+  }
+  if (dom.aiGeneratePrompt) dom.aiGeneratePrompt.onclick = handleAiPromptGenerate;
+  if (dom.aiCopyPrompt) dom.aiCopyPrompt.onclick = handleAiCopyPrompt;
+  if (dom.aiPreviewImport) dom.aiPreviewImport.onclick = handleAiPreviewImport;
+  if (dom.aiImportPlan) dom.aiImportPlan.onclick = handleAiImportPlan;
+  if (dom.aiPageBack) {
+    dom.aiPageBack.onclick = () => {
+      state.currentPage = "settings";
+      renderAll();
+      persistState();
+    };
+  }
+
+  renderAiPreview(Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : []);
+}
+
+function buildAiQuestionnaire(cycle) {
+  if (cycle === "overall") {
+    return `
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-period">时间周期</label>
+        <select class="ai-input" id="ai-overall-period" data-ai-field="overall.period">
+          <option value="quarter">季度</option>
+          <option value="year">年度</option>
+        </select>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-mbti">Q1 · 人格类型</label>
+        <select class="ai-input" id="ai-overall-mbti" data-ai-field="overall.mbti">
+          ${AI_MBTI_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
+        </select>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q2 · 时型偏好</div>
+        <div class="ai-choice-grid">
+          ${AI_CHRONOTYPE_OPTIONS.map((option) => `
+            <label class="ai-choice-chip">
+              <input type="radio" name="ai-overall-chronotype" data-ai-field="overall.chronotype" value="${option}" />
+              <span>${option}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q3 · 工作风格</div>
+        <div class="ai-choice-stack">
+          ${AI_WORKSTYLE_OPTIONS.map((option) => `
+            <label class="ai-choice-line">
+              <input type="radio" name="ai-overall-workstyle" data-ai-field="overall.workStyle" value="${option.label}" />
+              <span>${option.id}. ${option.label}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q4 · 拖延触发器</div>
+        <div class="ai-choice-stack">
+          ${AI_PROCRASTINATION_OPTIONS.map((option) => `
+            <label class="ai-choice-line">
+              <input type="checkbox" data-ai-list="overall.procrastination" value="${option}" />
+              <span>${option}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q5 · 核心价值观排序</div>
+        <div class="ai-three-grid">
+          <select class="ai-input" data-ai-field="overall.value1"><option value="">优先级 1</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+          <select class="ai-input" data-ai-field="overall.value2"><option value="">优先级 2</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+          <select class="ai-input" data-ai-field="overall.value3"><option value="">优先级 3</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+        </div>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-stage">当前阶段背景</label>
+        <textarea class="ai-input ai-textarea" id="ai-overall-stage" rows="3" data-ai-field="overall.lifeStage" placeholder="例如：学生 / 准备求职 / 创业初期"></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-challenge">主要挑战</label>
+        <textarea class="ai-input ai-textarea" id="ai-overall-challenge" rows="3" data-ai-field="overall.challenge" placeholder="例如：任务太多、节奏不稳、身体状态起伏"></textarea>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">目标领域</div>
+        <div class="ai-domain-stack">
+          <div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain1Name" placeholder="领域 1" /><input class="ai-input" data-ai-field="overall.domain1Goal" placeholder="目标方向" /></div>
+          <div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain2Name" placeholder="领域 2" /><input class="ai-input" data-ai-field="overall.domain2Goal" placeholder="目标方向" /></div>
+          <div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain3Name" placeholder="领域 3（可选）" /><input class="ai-input" data-ai-field="overall.domain3Goal" placeholder="目标方向（可选）" /></div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (cycle === "weekly") {
+    return `
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-weekly-period">规划周期</label>
+        <select class="ai-input" id="ai-weekly-period" data-ai-field="weekly.period">
+          <option value="week">周</option>
+          <option value="month">月</option>
+        </select>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">时间范围</div>
+        <div class="ai-two-grid">
+          <input class="ai-input" type="date" data-ai-field="weekly.start" />
+          <input class="ai-input" type="date" data-ai-field="weekly.end" />
+        </div>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-weekly-win">Q1 · 上期复盘：做得超预期</label>
+        <textarea class="ai-input ai-textarea" id="ai-weekly-win" rows="3" data-ai-field="weekly.win"></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-weekly-missed">Q1 · 上期复盘：没做到但本来想做的</label>
+        <textarea class="ai-input ai-textarea" id="ai-weekly-missed" rows="3" data-ai-field="weekly.missed"></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-weekly-reason">原因分析（我认为）</label>
+        <textarea class="ai-input ai-textarea" id="ai-weekly-reason" rows="3" data-ai-field="weekly.reason"></textarea>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q2 · 核心任务（3 件）</div>
+        <div class="ai-three-stack">
+          <input class="ai-input" data-ai-field="weekly.core1" placeholder="核心任务 1" />
+          <input class="ai-input" data-ai-field="weekly.core2" placeholder="核心任务 2" />
+          <input class="ai-input" data-ai-field="weekly.core3" placeholder="核心任务 3" />
+        </div>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q3 · 精力预判</div>
+        <div class="ai-range-row">
+          <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="weekly.energy" />
+          <span class="ai-range-value" data-ai-display="weekly.energy"></span>
+        </div>
+        <textarea class="ai-input ai-textarea" rows="3" data-ai-field="weekly.special" placeholder="旅行 / 重要会议 / 家庭事件等特殊情况"></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-weekly-commitments">Q4 · 固定承诺</label>
+        <textarea class="ai-input ai-textarea" id="ai-weekly-commitments" rows="3" data-ai-field="weekly.commitments" placeholder="会议、约定、deadline 等"></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-weekly-obstacle">Q5 · 潜在障碍</label>
+        <textarea class="ai-input ai-textarea" id="ai-weekly-obstacle" rows="3" data-ai-field="weekly.obstacle"></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-weekly-response">提前应对</label>
+        <textarea class="ai-input ai-textarea" id="ai-weekly-response" rows="3" data-ai-field="weekly.response"></textarea>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="ai-field">
+      <label class="ai-field-label" for="ai-daily-horizon">规划对象</label>
+      <select class="ai-input" id="ai-daily-horizon" data-ai-field="daily.horizon">
+        <option value="today">今日</option>
+        <option value="tomorrow">明日</option>
+      </select>
+    </div>
+    <div class="ai-field">
+      <label class="ai-field-label" for="ai-daily-date">日期</label>
+      <input class="ai-input" id="ai-daily-date" type="date" data-ai-field="daily.date" />
+    </div>
+    <div class="ai-field">
+      <div class="ai-field-label">Q1 · 当前能量状态</div>
+      <div class="ai-meter-stack">
+        <label class="ai-range-block"><span>身体</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.body" /><span class="ai-range-value" data-ai-display="daily.body"></span></label>
+        <label class="ai-range-block"><span>情绪</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.mood" /><span class="ai-range-value" data-ai-display="daily.mood"></span></label>
+        <label class="ai-range-block"><span>专注力</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.focus" /><span class="ai-range-value" data-ai-display="daily.focus"></span></label>
+      </div>
+    </div>
+    <div class="ai-field">
+      <div class="ai-field-label">Q2 · 三个 MIT</div>
+      <div class="ai-mit-stack">
+        ${[1, 2, 3].map((index) => `<div class="ai-mit-row"><input class="ai-input" data-ai-field="daily.mit${index}" placeholder="MIT ${index}" /><input class="ai-input ai-duration-input" type="number" min="5" step="5" data-ai-field="daily.mit${index}Duration" placeholder="分钟" /></div>`).join("")}
+      </div>
+      <textarea class="ai-input ai-textarea" rows="3" data-ai-field="daily.otherTasks" placeholder="待处理但非紧急"></textarea>
+    </div>
+    <div class="ai-field">
+      <label class="ai-field-label" for="ai-daily-windows">Q3 · 时间窗口</label>
+      <textarea class="ai-input ai-textarea" id="ai-daily-windows" rows="3" data-ai-field="daily.windows" placeholder="例如：09:00-11:00（2h） · 15:00-16:30（1.5h）"></textarea>
+    </div>
+    <div class="ai-field">
+      <label class="ai-field-label" for="ai-daily-quick">Q4 · 快速启动任务</label>
+      <input class="ai-input" id="ai-daily-quick" data-ai-field="daily.quickTask" placeholder="5 分钟内可完成的小事（可选）" />
+    </div>
+    <div class="ai-field">
+      <label class="ai-field-label" for="ai-daily-distraction">Q5 · 干扰预测</label>
+      <textarea class="ai-input ai-textarea" id="ai-daily-distraction" rows="3" data-ai-field="daily.distraction" placeholder="今天最可能打断你的是什么？"></textarea>
+      <textarea class="ai-input ai-textarea" rows="3" data-ai-field="daily.strategy" placeholder="你打算如何处理？"></textarea>
+    </div>
+  `;
+}
+
+function bindAiQuestionnaireFields() {
+  if (!dom.aiQuestionnaire) return;
+
+  dom.aiQuestionnaire.querySelectorAll("[data-ai-field]").forEach((input) => {
+    const path = input.dataset.aiField;
+    const value = getAiPathValue(path);
+    if (input.type === "radio") {
+      input.checked = value === input.value;
+      input.onchange = () => {
+        if (!input.checked) return;
+        setAiPathValue(path, input.value);
+        persistState();
+      };
+      return;
+    }
+
+    input.value = value ?? "";
+    input.oninput = () => {
+      setAiPathValue(path, input.value);
+      syncAiRangeDisplays();
+      persistState();
+    };
+    input.onchange = input.oninput;
+  });
+
+  dom.aiQuestionnaire.querySelectorAll("[data-ai-list]").forEach((input) => {
+    const path = input.dataset.aiList;
+    const list = getAiPathValue(path) || [];
+    input.checked = list.includes(input.value);
+    input.onchange = () => {
+      const current = new Set(getAiPathValue(path) || []);
+      if (input.checked) current.add(input.value);
+      else current.delete(input.value);
+      setAiPathValue(path, [...current]);
+      persistState();
+    };
+  });
+
+  syncAiRangeDisplays();
+}
+
+function syncAiRangeDisplays() {
+  document.querySelectorAll("[data-ai-display]").forEach((node) => {
+    const value = getAiPathValue(node.dataset.aiDisplay);
+    node.textContent = value ? `${value}/5` : "";
+  });
+}
+
+function renderSettings() {
+  ensureSettingsStructure();
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
+
+  dom.themeGrid.innerHTML = [
+    { id: "paper", name: "Simple Paper" },
+    { id: "custom", name: "Custom" },
+  ]
+    .map(
+      (theme) => `
+        <button class="settings-theme-option ${state.theme === theme.id ? "is-active" : ""}" data-theme-card="${theme.id}" type="button">
+          <span class="settings-theme-radio" aria-hidden="true"></span>
+          <span class="settings-theme-copy"><strong>${escapeHtml(theme.name)}</strong></span>
+        </button>
+      `
+    )
+    .join("");
+
+  if (dom.defaultDurationSelect) dom.defaultDurationSelect.value = String(state.defaultDuration);
+  if (dom.dayStartInput) dom.dayStartInput.value = state.dayStart || "00:00";
+  if (dom.completedDefaultToggle) dom.completedDefaultToggle.checked = Boolean(state.ui.groupOpen?.completed);
+  if (dom.nextTimePriorityToggle) dom.nextTimePriorityToggle.checked = Boolean(state.nextRules.prioritizeTime);
+  if (dom.nextImportantPriorityToggle) dom.nextImportantPriorityToggle.checked = Boolean(state.nextRules.prioritizeImportant);
+  if (dom.defaultDurationValue) dom.defaultDurationValue.textContent = `${state.defaultDuration} min`;
+  if (dom.dayStartValue) dom.dayStartValue.textContent = state.dayStart || "00:00";
+  if (dom.customBackgroundValue) dom.customBackgroundValue.textContent = state.customBackgroundImage ? "已上传" : "未上传";
+  if (dom.customBackgroundRow) dom.customBackgroundRow.classList.toggle("is-disabled", state.theme !== "custom");
+
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isStandalone) {
+    dom.pwaInstallButton.textContent = "Installed";
+    dom.pwaInstallButton.disabled = true;
+    dom.pwaInstallNote.textContent = "Already installed on this device.";
+  } else if (deferredPromptEvent) {
+    dom.pwaInstallButton.textContent = "Install app";
+    dom.pwaInstallButton.disabled = false;
+    dom.pwaInstallNote.textContent = "Install directly from here.";
+  } else {
+    dom.pwaInstallButton.textContent = "Install app";
+    dom.pwaInstallButton.disabled = false;
+    dom.pwaInstallNote.textContent = "If no prompt appears, use your browser menu and choose Add to Home Screen.";
+  }
+
+  dom.themeGrid.querySelectorAll("[data-theme-card]").forEach((button) => {
+    button.onclick = () => {
+      state.theme = button.dataset.themeCard;
+      applyTheme();
+      renderSettings();
+      persistState();
+    };
+  });
+
+  if (dom.aiPlannerLink) {
+    dom.aiPlannerLink.onclick = () => {
+      state.currentPage = "ai-planner";
+      renderAll();
+      persistState();
+    };
+  }
+  if (dom.defaultDurationRow) {
+    dom.defaultDurationRow.onclick = () => {
+      const raw = window.prompt("默认任务时长（分钟）", String(state.defaultDuration));
+      if (raw == null) return;
+      const minutes = Number(raw);
+      if (!Number.isFinite(minutes) || minutes <= 0) return;
+      state.defaultDuration = Math.min(240, Math.max(5, Math.round(minutes)));
+      renderSettings();
+      persistState();
+    };
+  }
+  if (dom.dayStartRow) {
+    dom.dayStartRow.onclick = () => {
+      const raw = window.prompt("一天开始时间（HH:MM）", state.dayStart || "00:00");
+      if (raw == null) return;
+      const value = raw.trim();
+      if (!/^([01]\\d|2[0-3]):([0-5]\\d)$/.test(value)) return;
+      state.dayStart = value;
+      renderSettings();
+      persistState();
+    };
+  }
+  if (dom.completedDefaultToggle) {
+    dom.completedDefaultToggle.onchange = (event) => {
+      const checked = Boolean(event.target.checked);
+      state.showCompletedOpen = checked;
+      state.ui.groupOpen.completed = checked;
+      renderHome();
+      renderSettings();
+      persistState();
+    };
+  }
+  if (dom.nextTimePriorityToggle) {
+    dom.nextTimePriorityToggle.onchange = (event) => {
+      state.nextRules.prioritizeTime = Boolean(event.target.checked);
+      renderHome();
+      persistState();
+    };
+  }
+  if (dom.nextImportantPriorityToggle) {
+    dom.nextImportantPriorityToggle.onchange = (event) => {
+      state.nextRules.prioritizeImportant = Boolean(event.target.checked);
+      renderHome();
+      persistState();
+    };
+  }
+  if (dom.customBackgroundRow) dom.customBackgroundRow.onclick = () => dom.customBackgroundInput?.click();
+  if (dom.customBackgroundInput) dom.customBackgroundInput.onchange = handleCustomBackgroundUpload;
+}
+
+function buildAiPromptText() {
+  const cycle = state.ai.cycle || "overall";
+  const profile = getAiProfileSnapshot();
+
+  if (cycle === "overall") {
+    const form = state.ai.overall;
+    const domains = [
+      [form.domain1Name, form.domain1Goal],
+      [form.domain2Name, form.domain2Goal],
+      [form.domain3Name, form.domain3Goal],
+    ]
+      .filter(([name, goal]) => name || goal)
+      .map(([name, goal]) => `   ${name || "领域"}：${goal || "未填写"}`)
+      .join("\n");
+
+    return [
+      "总体规划 Prompt",
+      `${form.period === "year" ? "年度" : "季度"}`,
+      "",
+      "[用户画像]",
+      `我是一个 ${form.mbti || "不知道"} 类型的人，时型偏向 ${form.chronotype || "未填写"}，核心价值观优先级为：${[form.value1, form.value2, form.value3].filter(Boolean).join(" > ") || "未填写"}。`,
+      "",
+      "[当前阶段背景]",
+      `我目前处于 ${form.lifeStage || "未填写"}，主要挑战是 ${form.challenge || "未填写"}。`,
+      "",
+      "[目标设定请求]",
+      `请帮我制定一个 ${form.period === "year" ? "年度" : "季度"} 的目标规划，要求：`,
+      "1. 为以下生活域各设定 1 个 Objective 和 2-3 个 Key Results：",
+      domains || "   事业成就：未填写",
+      "2. 识别目标间的潜在冲突，提出优先级建议",
+      `3. 考虑我的 ${form.mbti || "未知"} 特质，调整计划的结构方式`,
+      "4. 输出格式：OKR 表格 + 季度里程碑路线图",
+      "",
+      "[输出约束]",
+      "请确保每个 KR 是可量化的，目标总数不超过 3 个领域，并标注与核心价值观的对齐度。",
+    ].join("\n");
+  }
+
+  if (cycle === "weekly") {
+    const form = state.ai.weekly;
+    return [
+      "月 / 周规划 Prompt",
+      `${form.period === "month" ? "月度" : "周度"}`,
+      "",
+      "[用户画像快照]",
+      `${profile.mbti} · ${profile.chronotype} · 主要拖延触发：${profile.procrastination}`,
+      "",
+      "[上期复盘]",
+      `超预期完成：${form.win || "未填写"}`,
+      `未完成事项：${form.missed || "未填写"}`,
+      `原因分析（我认为）：${form.reason || "未填写"}`,
+      "",
+      "[本期规划请求]",
+      `时间范围：${form.start || "未填写"} 至 ${form.end || "未填写"}`,
+      "",
+      "核心任务（不可忽略）：",
+      `① ${form.core1 || "未填写"}`,
+      `② ${form.core2 || "未填写"}`,
+      `③ ${form.core3 || "未填写"}`,
+      "",
+      `固定承诺：${form.commitments || "未填写"}`,
+      `精力预判：${form.energy || "3"}/5，特殊情况：${form.special || "无"}`,
+      "",
+      "[规划要求]",
+      "1. 按艾森豪威尔矩阵对所有任务分类",
+      `2. 将深度工作任务安排在我的认知高峰时段（${getChronotypePeak(profile.chronotype)}）`,
+      `3. 针对我的拖延触发器「${profile.procrastination}」设计实施意图（if-then 计划）`,
+      "4. 每天预留 20% 缓冲时间",
+      "5. 输出：周甘特图 + 每日主题 + 应对障碍的 if-then 清单",
+      "",
+      `潜在障碍：${form.obstacle || "未填写"}`,
+      `提前应对：${form.response || "未填写"}`,
+    ].join("\n");
+  }
+
+  const form = state.ai.daily;
+  const body = Number(form.body || 3);
+  const mood = Number(form.mood || 3);
+  const focus = Number(form.focus || 3);
+  const average = ((body + mood + focus) / 3).toFixed(1);
+  const modeAdvice = Number(average) >= 4 ? "安排深度工作在第一时间块" : Number(average) >= 2 ? "MIT 排第一，其余安排行政 / 沟通类" : "只做快速启动任务，其余推迟";
+
+  return [
+    "今日 / 明日规划 Prompt",
+    "每日",
+    "",
+    "[今日状态]",
+    `日期：${form.date || "未填写"} · 身体精力：${body}/5 · 情绪状态：${mood}/5 · 专注力：${focus}/5`,
+    "",
+    "[今日任务池]",
+    "MIT（最重要）：",
+    `① ${form.mit1 || "未填写"}（预计耗时 ${form.mit1Duration || state.defaultDuration} 分钟）`,
+    `② ${form.mit2 || "未填写"}（预计耗时 ${form.mit2Duration || state.defaultDuration} 分钟）`,
+    `③ ${form.mit3 || "未填写"}（预计耗时 ${form.mit3Duration || state.defaultDuration} 分钟）`,
+    "",
+    `待处理但非紧急：${form.otherTasks || "无"}`,
+    "",
+    "[时间与环境]",
+    `专注时间窗口：${form.windows || "未填写"}`,
+    `可能的干扰源：${form.distraction || "未填写"}，应对策略：${form.strategy || "未填写"}`,
+    `快速启动任务：${form.quickTask || "无"}`,
+    "",
+    "[规划要求]",
+    `1. 根据精力状态（${average}/5）判断今天适合的工作模式：${modeAdvice}`,
+    `2. 将 MIT1 安排在认知高峰时段 ${getChronotypePeak(profile.chronotype)}`,
+    "3. 设计今日的完成标准（什么情况算今天成功）",
+    "4. 输出：小时级时间块安排 + 三个 MIT 的 if-then 实施意图",
+  ].join("\n");
+}
+
+function handleAiPromptGenerate() {
+  state.ai.promptText = buildAiPromptText();
+  if (dom.aiPromptOutput) dom.aiPromptOutput.value = state.ai.promptText;
+  persistState();
+}
+
+async function handleAiCopyPrompt() {
+  if (!state.ai.promptText) handleAiPromptGenerate();
+  const value = state.ai.promptText || "";
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    if (dom.aiCopyPrompt) {
+      dom.aiCopyPrompt.textContent = "已复制";
+      window.setTimeout(() => {
+        if (dom.aiCopyPrompt) dom.aiCopyPrompt.textContent = "复制 Prompt";
+      }, 1200);
+    }
+  } catch {
+    window.alert("复制失败，请手动复制。");
+  }
+}
+
+function parseAiPlanText(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      let cleaned = line.replace(/^[-*•\d\.\)\s]+/, "").trim();
+      let time = "";
+      let durationMin = state.defaultDuration;
+
+      const timeMatch = cleaned.match(/^(\d{1,2}:\d{2})/);
+      if (timeMatch) {
+        time = timeMatch[1];
+        cleaned = cleaned.slice(timeMatch[0].length).trim();
+      }
+
+      const durationMatch = cleaned.match(/(\d{1,3})\s*min(?:ute)?s?$/i);
+      if (durationMatch) {
+        durationMin = Number(durationMatch[1]) || state.defaultDuration;
+        cleaned = cleaned.slice(0, durationMatch.index).trim();
+      }
+
+      cleaned = cleaned.replace(/[-–—:：]\s*$/, "").trim();
+      return {
+        name: cleaned || "Untitled",
+        time,
+        durationMin,
+      };
+    });
+}
+
+function renderAiPreview(items) {
+  if (!dom.aiPreviewList) return;
+  if (!items.length) {
+    dom.aiPreviewList.innerHTML = `<p class="empty-note">还没有可导入的内容。</p>`;
+    return;
+  }
+  const cycle = state.ai.cycle || "overall";
+  const importDate = cycle === "daily" ? state.ai.daily.date : cycle === "weekly" ? state.ai.weekly.start : "";
+  dom.aiPreviewList.innerHTML = items
+    .map(
+      (item) => `
+        <div class="ai-preview-row">
+          <span class="ai-preview-name">${escapeHtml(item.name)}</span>
+          <span class="ai-preview-meta">${escapeHtml(importDate || item.time || "Any time")} · ${item.durationMin} min</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function handleAiPreviewImport() {
+  state.ui.aiPreviewItems = parseAiPlanText(state.ai.resultText || "").filter((item) => item.name);
+  renderAiPreview(state.ui.aiPreviewItems);
+  persistState();
+}
+
+function handleAiImportPlan() {
+  if (!Array.isArray(state.ui.aiPreviewItems) || !state.ui.aiPreviewItems.length) handleAiPreviewImport();
+  const items = Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : [];
+  if (!items.length) return;
+
+  const cycle = state.ai.cycle || "overall";
+  const importDate = cycle === "daily" ? state.ai.daily.date || formatInputDate(new Date()) : cycle === "weekly" ? state.ai.weekly.start || formatInputDate(new Date()) : null;
+
+  items
+    .slice()
+    .reverse()
+    .forEach((item) => {
+      const task = createTask({
+        name: item.name,
+        time: item.time,
+        durationMin: item.durationMin,
+      });
+      task.scheduledDate = importDate;
+      state.tasks.unshift(task);
+    });
+
+  state.ui.aiPreviewItems = [];
+  state.ai.resultText = "";
+  if (dom.aiResultInput) dom.aiResultInput.value = "";
+  renderAiPreview([]);
+  state.currentPage = "home";
+  renderAll();
+  persistState();
+}
+
+function handleCustomBackgroundUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.customBackgroundImage = String(reader.result || "");
+    state.theme = "custom";
+    applyTheme();
+    renderSettings();
+    persistState();
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  ensureUiCopy();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderAiPlanner();
+  renderDraftDrawer();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  updateLogDuration();
 }
 
 function createSeedState(baseDate = new Date()) {
@@ -6706,6 +7855,591 @@ function renderTaskAdvancedControls() {
   });
 }
 
+function renderSettings() {
+  ensureSettingsStructure();
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
+
+  dom.themeGrid.innerHTML = [
+    { id: "paper", name: "Simple Paper" },
+    { id: "custom", name: "Custom" },
+  ]
+    .map((theme) => `<button class="settings-theme-option ${state.theme === theme.id ? "is-active" : ""}" data-theme-card="${theme.id}" type="button"><span class="settings-theme-radio" aria-hidden="true"></span><span class="settings-theme-copy"><strong>${escapeHtml(theme.name)}</strong></span></button>`)
+    .join("");
+
+  if (dom.defaultDurationSelect) dom.defaultDurationSelect.value = String(state.defaultDuration);
+  if (dom.dayStartInput) dom.dayStartInput.value = state.dayStart || "00:00";
+  if (dom.completedDefaultToggle) dom.completedDefaultToggle.checked = Boolean(state.ui.groupOpen?.completed);
+  if (dom.nextTimePriorityToggle) dom.nextTimePriorityToggle.checked = Boolean(state.nextRules.prioritizeTime);
+  if (dom.nextImportantPriorityToggle) dom.nextImportantPriorityToggle.checked = Boolean(state.nextRules.prioritizeImportant);
+  if (dom.defaultDurationValue) dom.defaultDurationValue.textContent = `${state.defaultDuration} min`;
+  if (dom.dayStartValue) dom.dayStartValue.textContent = state.dayStart || "00:00";
+  if (dom.customBackgroundValue) dom.customBackgroundValue.textContent = state.customBackgroundImage ? "已上传" : "未上传";
+
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isStandalone) {
+    dom.pwaInstallButton.textContent = "Installed";
+    dom.pwaInstallButton.disabled = true;
+    dom.pwaInstallNote.textContent = "Already installed on this device.";
+  } else if (deferredPromptEvent) {
+    dom.pwaInstallButton.textContent = "Install app";
+    dom.pwaInstallButton.disabled = false;
+    dom.pwaInstallNote.textContent = "Install directly from here.";
+  } else {
+    dom.pwaInstallButton.textContent = "Install app";
+    dom.pwaInstallButton.disabled = false;
+    dom.pwaInstallNote.textContent = "If no prompt appears, use your browser menu and choose Add to Home Screen.";
+  }
+
+  dom.themeGrid.querySelectorAll("[data-theme-card]").forEach((button) => {
+    button.onclick = () => {
+      state.theme = button.dataset.themeCard;
+      applyTheme();
+      renderSettings();
+      persistState();
+    };
+  });
+
+  if (dom.aiPlannerLink) dom.aiPlannerLink.onclick = () => { state.currentPage = "ai-planner"; renderAll(); persistState(); };
+  if (dom.defaultDurationRow) dom.defaultDurationRow.onclick = () => {
+    const raw = window.prompt("默认任务时长（分钟）", String(state.defaultDuration));
+    if (raw == null) return;
+    const minutes = Number(raw);
+    if (!Number.isFinite(minutes) || minutes <= 0) return;
+    state.defaultDuration = Math.min(240, Math.max(5, Math.round(minutes)));
+    renderSettings();
+    persistState();
+  };
+  if (dom.dayStartRow) dom.dayStartRow.onclick = () => {
+    const raw = window.prompt("一天开始时间（HH:MM）", state.dayStart || "00:00");
+    if (raw == null) return;
+    const value = raw.trim();
+    if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(value)) return;
+    state.dayStart = value;
+    renderSettings();
+    persistState();
+  };
+  if (dom.completedDefaultToggle) dom.completedDefaultToggle.onchange = (event) => {
+    const checked = Boolean(event.target.checked);
+    state.showCompletedOpen = checked;
+    state.ui.groupOpen.completed = checked;
+    renderHome();
+    renderSettings();
+    persistState();
+  };
+  if (dom.nextTimePriorityToggle) dom.nextTimePriorityToggle.onchange = (event) => { state.nextRules.prioritizeTime = Boolean(event.target.checked); renderHome(); persistState(); };
+  if (dom.nextImportantPriorityToggle) dom.nextImportantPriorityToggle.onchange = (event) => { state.nextRules.prioritizeImportant = Boolean(event.target.checked); renderHome(); persistState(); };
+  if (dom.customBackgroundRow) dom.customBackgroundRow.onclick = () => dom.customBackgroundInput?.click();
+  if (dom.customBackgroundInput) dom.customBackgroundInput.onchange = handleCustomBackgroundUpload;
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  ensureUiCopy();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderAiPlanner();
+  renderDraftDrawer();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  updateLogDuration();
+}
+
+function upgradeState(current) {
+  const next = current || createSeedState();
+  const today = new Date();
+  const aiDefaults = createDefaultAiState();
+
+  next.ui = next.ui || {};
+  next.ui.groupOpen = {
+    overdue: next.ui.groupOpen?.overdue ?? true,
+    today: next.ui.groupOpen?.today ?? true,
+    flexible: next.ui.groupOpen?.flexible ?? true,
+    completed: next.ui.groupOpen?.completed ?? Boolean(next.showCompletedOpen),
+  };
+  next.ui.taskAdvancedOpen = next.ui.taskAdvancedOpen ?? false;
+  next.ui.taskWeekdays = next.ui.taskWeekdays || [];
+  next.ui.taskTimerMode = next.ui.taskTimerMode || "up";
+  next.ui.taskDatePreset = next.ui.taskDatePreset || "none";
+  next.ui.aiPreviewItems = Array.isArray(next.ui.aiPreviewItems) ? next.ui.aiPreviewItems : [];
+  next.ui.customRange = next.ui.customRange || {
+    start: formatInputDate(shiftDate(today, -6)),
+    end: formatInputDate(today),
+  };
+
+  next.nextRules = {
+    prioritizeTime: next.nextRules?.prioritizeTime ?? true,
+    prioritizeImportant: next.nextRules?.prioritizeImportant ?? true,
+  };
+  next.theme = next.theme === "custom" ? "custom" : next.theme || "paper";
+  next.customBackgroundImage = next.customBackgroundImage || "";
+  next.dayStart = next.dayStart || "00:00";
+  next.defaultDuration = Number(next.defaultDuration) || 25;
+  next.showCompletedOpen = Boolean(next.ui.groupOpen.completed);
+  next.ai = { ...aiDefaults, ...(next.ai || {}) };
+  next.ai.overall = { ...aiDefaults.overall, ...(next.ai.overall || {}) };
+  next.ai.weekly = { ...aiDefaults.weekly, ...(next.ai.weekly || {}) };
+  next.ai.daily = { ...aiDefaults.daily, ...(next.ai.daily || {}) };
+  next.ai.overall.procrastination = Array.isArray(next.ai.overall.procrastination) ? next.ai.overall.procrastination : [];
+  next.ai.promptText = next.ai.promptText || "";
+  next.ai.resultText = next.ai.resultText || "";
+
+  next.tasks = (next.tasks || []).map((task) => ({
+    repeatMode: task.repeatMode || "none",
+    weekdays: task.weekdays || [],
+    timerMode: task.timerMode || "up",
+    scheduledDate: task.scheduledDate || null,
+    ...task,
+  }));
+
+  if (next.activeTimer?.taskId) {
+    const activeTask = next.tasks.find((task) => task.id === next.activeTimer.taskId);
+    next.activeTimer.mode = next.activeTimer.mode || activeTask?.timerMode || "up";
+    next.activeTimer.durationMin = next.activeTimer.durationMin || activeTask?.durationMin || next.defaultDuration;
+  }
+
+  return next;
+}
+
+function boot() {
+  applyPageFromUrl();
+  ensureSettingsStructure();
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
+  bindEvents();
+  registerPwa();
+  renderAll();
+  startTicker();
+}
+
+function applyTheme() {
+  const currentTheme = state.theme === "custom" ? "custom" : "paper";
+  dom.body.dataset.theme = currentTheme;
+  if (currentTheme === "custom" && state.customBackgroundImage) {
+    dom.body.style.setProperty("--custom-paper-image", `url("${state.customBackgroundImage}")`);
+    dom.body.classList.add("has-custom-background");
+  } else {
+    dom.body.style.removeProperty("--custom-paper-image");
+    dom.body.classList.remove("has-custom-background");
+  }
+  applyBodyFlags();
+}
+
+function applyBodyFlags() {
+  dom.body.classList.toggle("reduce-texture", Boolean(state.reduceTexture));
+}
+
+function ensureSettingsStructure() {
+  const settingsPage = document.querySelector('.page[data-page="settings"]');
+  const settingsSheet = settingsPage?.querySelector(".settings-sheet");
+  if (!settingsSheet) return;
+
+  const heroDate = settingsPage.querySelector(".hero-date");
+  const heroNote = settingsPage.querySelector(".hero-note");
+  if (heroDate) heroDate.textContent = "";
+  if (heroNote) heroNote.remove();
+
+  settingsSheet.dataset.layout = "v3";
+  settingsSheet.classList.add("settings-sheet-clean");
+  settingsSheet.innerHTML = `
+    <section class="settings-group">
+      <div class="settings-group-title">App</div>
+      <div class="settings-list-block">
+        <button class="settings-install-button" id="pwa-install-button" type="button">Install app</button>
+        <p class="settings-weak-note" id="pwa-install-note">Install directly from here.</p>
+      </div>
+    </section>
+    <section class="settings-group">
+      <div class="settings-group-title">Planning</div>
+      <div class="settings-list-block">
+        <button class="settings-row settings-row-link" id="ai-planner-link" type="button">
+          <span class="settings-row-label">✨ AI 生成日程</span>
+          <span class="settings-row-arrow" aria-hidden="true">›</span>
+        </button>
+        <label class="settings-row settings-row-toggle"><span class="settings-row-label">优先最近时间任务</span><input type="checkbox" id="next-time-priority-toggle" /></label>
+        <label class="settings-row settings-row-toggle"><span class="settings-row-label">优先重要任务</span><input type="checkbox" id="next-important-priority-toggle" /></label>
+        <button class="settings-row settings-row-link" id="default-duration-row" type="button">
+          <span class="settings-row-label">默认任务时长</span>
+          <span class="settings-row-trail"><span id="default-duration-value">25 min</span><span class="settings-row-arrow" aria-hidden="true">›</span></span>
+        </button>
+        <button class="settings-row settings-row-link" id="day-start-row" type="button">
+          <span class="settings-row-label">一天开始时间</span>
+          <span class="settings-row-trail"><span id="day-start-value">00:00</span><span class="settings-row-arrow" aria-hidden="true">›</span></span>
+        </button>
+      </div>
+    </section>
+    <section class="settings-group">
+      <div class="settings-group-title">Appearance</div>
+      <div class="settings-list-block settings-theme-block">
+        <div class="settings-subtitle">Theme</div>
+        <div class="settings-theme-grid" id="theme-grid"></div>
+        <button class="settings-row settings-row-link" id="custom-background-row" type="button">
+          <span class="settings-row-label">背景图片</span>
+          <span class="settings-row-trail"><span id="custom-background-value">未上传</span><span class="settings-row-arrow" aria-hidden="true">›</span></span>
+        </button>
+        <input class="settings-hidden-file" id="custom-background-input" type="file" accept="image/*" />
+      </div>
+    </section>
+    <section class="settings-group">
+      <div class="settings-group-title">Preferences</div>
+      <div class="settings-list-block">
+        <label class="settings-row settings-row-toggle"><span class="settings-row-label">Completed 默认展开</span><input type="checkbox" id="completed-default-toggle" /></label>
+      </div>
+    </section>
+    <div class="settings-hidden-controls" aria-hidden="true">
+      <input type="time" id="day-start-input" />
+      <select id="default-duration-select">
+        <option value="15">15 min</option>
+        <option value="20">20 min</option>
+        <option value="25">25 min</option>
+        <option value="30">30 min</option>
+        <option value="45">45 min</option>
+      </select>
+      <input type="checkbox" id="reduce-texture-toggle" />
+    </div>
+  `;
+}
+
+function ensureAiPlannerPage() {
+  let aiPage = document.querySelector('[data-page="ai-planner"]');
+  const settingsPage = document.querySelector('[data-page="settings"]');
+  if (!settingsPage) return;
+  if (!aiPage) {
+    aiPage = document.createElement("section");
+    aiPage.className = "page";
+    aiPage.dataset.page = "ai-planner";
+    settingsPage.insertAdjacentElement("afterend", aiPage);
+  }
+
+  aiPage.innerHTML = `
+    <header class="page-hero ai-page-hero">
+      <button class="sheet-back ai-page-back" id="ai-page-back" type="button" aria-label="Back">‹</button>
+      <div class="hero-heading"><div><h1>AI 生成日程</h1></div></div>
+    </header>
+    <section class="paper-sheet ai-sheet">
+      <section class="ai-step"><div class="settings-group-title">三层规划体系</div><div class="ai-cycle-grid" id="ai-cycle-grid"></div></section>
+      <section class="ai-step"><div class="settings-group-title">完整工作流</div><div class="settings-list-block ai-workflow-strip" id="ai-workflow-strip"></div></section>
+      <section class="ai-step"><div class="settings-group-title">填写问卷</div><div class="settings-list-block ai-questionnaire" id="ai-questionnaire"></div></section>
+      <section class="ai-step"><div class="settings-group-title">生成 Prompt</div><div class="settings-list-block ai-actions"><button class="ghost-button ai-action-button" id="ai-generate-prompt" type="button">生成 Prompt</button><textarea id="ai-prompt-output" rows="12" readonly placeholder="生成后的 Prompt 会出现在这里"></textarea></div></section>
+      <section class="ai-step"><div class="settings-group-title">复制给 AI · 粘贴结果</div><div class="settings-list-block ai-actions"><button class="ghost-button ai-action-button" id="ai-copy-prompt" type="button">复制 Prompt</button><textarea id="ai-result-input" rows="10" placeholder="把 AI 返回的结构化计划粘贴到这里"></textarea></div></section>
+      <section class="ai-step"><div class="settings-group-title">预览导入</div><div class="settings-list-block ai-actions"><div class="sheet-button-row ai-import-actions"><button class="ghost-button ai-action-button" id="ai-preview-import" type="button">预览</button><button class="ghost-button ai-action-button" id="ai-import-plan" type="button">导入到 To-do</button></div><div class="ai-preview-list" id="ai-preview-list"></div></div></section>
+    </section>
+  `;
+}
+
+function refreshDynamicDomRefs() {
+  dom.pages = [...document.querySelectorAll(".page")];
+  dom.bottomNav = document.querySelector(".bottom-nav");
+  dom.themeGrid = document.getElementById("theme-grid");
+  dom.pwaInstallButton = document.getElementById("pwa-install-button");
+  dom.pwaInstallNote = document.getElementById("pwa-install-note");
+  dom.nextTimePriorityToggle = document.getElementById("next-time-priority-toggle");
+  dom.nextImportantPriorityToggle = document.getElementById("next-important-priority-toggle");
+  dom.dayStartInput = document.getElementById("day-start-input");
+  dom.defaultDurationSelect = document.getElementById("default-duration-select");
+  dom.completedDefaultToggle = document.getElementById("completed-default-toggle");
+  dom.reduceTextureToggle = document.getElementById("reduce-texture-toggle");
+  dom.customBackgroundRow = document.getElementById("custom-background-row");
+  dom.customBackgroundInput = document.getElementById("custom-background-input");
+  dom.customBackgroundValue = document.getElementById("custom-background-value");
+  dom.aiPlannerLink = document.getElementById("ai-planner-link");
+  dom.defaultDurationRow = document.getElementById("default-duration-row");
+  dom.defaultDurationValue = document.getElementById("default-duration-value");
+  dom.dayStartRow = document.getElementById("day-start-row");
+  dom.dayStartValue = document.getElementById("day-start-value");
+  dom.aiPageBack = document.getElementById("ai-page-back");
+  dom.aiCycleGrid = document.getElementById("ai-cycle-grid");
+  dom.aiWorkflowStrip = document.getElementById("ai-workflow-strip");
+  dom.aiQuestionnaire = document.getElementById("ai-questionnaire");
+  dom.aiGeneratePrompt = document.getElementById("ai-generate-prompt");
+  dom.aiPromptOutput = document.getElementById("ai-prompt-output");
+  dom.aiCopyPrompt = document.getElementById("ai-copy-prompt");
+  dom.aiResultInput = document.getElementById("ai-result-input");
+  dom.aiPreviewImport = document.getElementById("ai-preview-import");
+  dom.aiImportPlan = document.getElementById("ai-import-plan");
+  dom.aiPreviewList = document.getElementById("ai-preview-list");
+}
+
+function upgradeState(current) {
+  const next = current || createSeedState();
+  const today = new Date();
+  const aiDefaults = createDefaultAiState();
+
+  next.ui = next.ui || {};
+  next.ui.groupOpen = {
+    overdue: next.ui.groupOpen?.overdue ?? true,
+    today: next.ui.groupOpen?.today ?? true,
+    flexible: next.ui.groupOpen?.flexible ?? true,
+    completed: next.ui.groupOpen?.completed ?? Boolean(next.showCompletedOpen),
+  };
+  next.ui.taskAdvancedOpen = next.ui.taskAdvancedOpen ?? false;
+  next.ui.taskWeekdays = next.ui.taskWeekdays || [];
+  next.ui.taskTimerMode = next.ui.taskTimerMode || "up";
+  next.ui.taskDatePreset = next.ui.taskDatePreset || "none";
+  next.ui.aiPreviewItems = Array.isArray(next.ui.aiPreviewItems) ? next.ui.aiPreviewItems : [];
+  next.ui.customRange = next.ui.customRange || {
+    start: formatInputDate(shiftDate(today, -6)),
+    end: formatInputDate(today),
+  };
+
+  next.nextRules = {
+    prioritizeTime: next.nextRules?.prioritizeTime ?? true,
+    prioritizeImportant: next.nextRules?.prioritizeImportant ?? true,
+  };
+  next.theme = next.theme === "custom" ? "custom" : next.theme || "paper";
+  next.customBackgroundImage = next.customBackgroundImage || "";
+  next.dayStart = next.dayStart || "00:00";
+  next.defaultDuration = Number(next.defaultDuration) || 25;
+  next.showCompletedOpen = Boolean(next.ui.groupOpen.completed);
+  next.ai = { ...aiDefaults, ...(next.ai || {}) };
+  next.ai.overall = { ...aiDefaults.overall, ...(next.ai.overall || {}) };
+  next.ai.weekly = { ...aiDefaults.weekly, ...(next.ai.weekly || {}) };
+  next.ai.daily = { ...aiDefaults.daily, ...(next.ai.daily || {}) };
+  next.ai.overall.procrastination = Array.isArray(next.ai.overall.procrastination) ? next.ai.overall.procrastination : [];
+  next.ai.promptText = next.ai.promptText || "";
+  next.ai.resultText = next.ai.resultText || "";
+
+  next.tasks = (next.tasks || []).map((task) => ({
+    repeatMode: task.repeatMode || "none",
+    weekdays: task.weekdays || [],
+    timerMode: task.timerMode || "up",
+    scheduledDate: task.scheduledDate || null,
+    ...task,
+  }));
+
+  if (next.activeTimer?.taskId) {
+    const activeTask = next.tasks.find((task) => task.id === next.activeTimer.taskId);
+    next.activeTimer.mode = next.activeTimer.mode || activeTask?.timerMode || "up";
+    next.activeTimer.durationMin = next.activeTimer.durationMin || activeTask?.durationMin || next.defaultDuration;
+  }
+
+  return next;
+}
+
+function boot() {
+  applyPageFromUrl();
+  ensureSettingsStructure();
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
+  bindEvents();
+  registerPwa();
+  renderAll();
+  startTicker();
+}
+
+function applyTheme() {
+  const currentTheme = state.theme === "custom" ? "custom" : "paper";
+  dom.body.dataset.theme = currentTheme;
+  if (currentTheme === "custom" && state.customBackgroundImage) {
+    dom.body.style.setProperty("--custom-paper-image", `url("${state.customBackgroundImage}")`);
+    dom.body.classList.add("has-custom-background");
+  } else {
+    dom.body.style.removeProperty("--custom-paper-image");
+    dom.body.classList.remove("has-custom-background");
+  }
+  applyBodyFlags();
+}
+
+function applyBodyFlags() {
+  dom.body.classList.toggle("reduce-texture", Boolean(state.reduceTexture));
+}
+
+function ensureSettingsStructure() {
+  const settingsPage = document.querySelector('.page[data-page="settings"]');
+  const settingsSheet = settingsPage?.querySelector(".settings-sheet");
+  if (!settingsSheet) return;
+
+  const heroDate = settingsPage.querySelector(".hero-date");
+  const heroNote = settingsPage.querySelector(".hero-note");
+  if (heroDate) heroDate.textContent = "";
+  if (heroNote) heroNote.remove();
+
+  settingsSheet.dataset.layout = "v3";
+  settingsSheet.classList.add("settings-sheet-clean");
+  settingsSheet.innerHTML = `
+    <section class="settings-group">
+      <div class="settings-group-title">App</div>
+      <div class="settings-list-block">
+        <button class="settings-install-button" id="pwa-install-button" type="button">Install app</button>
+        <p class="settings-weak-note" id="pwa-install-note">Install directly from here.</p>
+      </div>
+    </section>
+
+    <section class="settings-group">
+      <div class="settings-group-title">Planning</div>
+      <div class="settings-list-block">
+        <button class="settings-row settings-row-link" id="ai-planner-link" type="button">
+          <span class="settings-row-label">✨ AI 生成日程</span>
+          <span class="settings-row-arrow" aria-hidden="true">›</span>
+        </button>
+        <label class="settings-row settings-row-toggle">
+          <span class="settings-row-label">优先最近时间任务</span>
+          <input type="checkbox" id="next-time-priority-toggle" />
+        </label>
+        <label class="settings-row settings-row-toggle">
+          <span class="settings-row-label">优先重要任务</span>
+          <input type="checkbox" id="next-important-priority-toggle" />
+        </label>
+        <button class="settings-row settings-row-link" id="default-duration-row" type="button">
+          <span class="settings-row-label">默认任务时长</span>
+          <span class="settings-row-trail">
+            <span id="default-duration-value">25 min</span>
+            <span class="settings-row-arrow" aria-hidden="true">›</span>
+          </span>
+        </button>
+        <button class="settings-row settings-row-link" id="day-start-row" type="button">
+          <span class="settings-row-label">一天开始时间</span>
+          <span class="settings-row-trail">
+            <span id="day-start-value">00:00</span>
+            <span class="settings-row-arrow" aria-hidden="true">›</span>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <section class="settings-group">
+      <div class="settings-group-title">Appearance</div>
+      <div class="settings-list-block settings-theme-block">
+        <div class="settings-subtitle">Theme</div>
+        <div class="settings-theme-grid" id="theme-grid"></div>
+        <button class="settings-row settings-row-link" id="custom-background-row" type="button">
+          <span class="settings-row-label">背景图片</span>
+          <span class="settings-row-trail">
+            <span id="custom-background-value">未上传</span>
+            <span class="settings-row-arrow" aria-hidden="true">›</span>
+          </span>
+        </button>
+        <input class="settings-hidden-file" id="custom-background-input" type="file" accept="image/*" />
+      </div>
+    </section>
+
+    <section class="settings-group">
+      <div class="settings-group-title">Preferences</div>
+      <div class="settings-list-block">
+        <label class="settings-row settings-row-toggle">
+          <span class="settings-row-label">Completed 默认展开</span>
+          <input type="checkbox" id="completed-default-toggle" />
+        </label>
+      </div>
+    </section>
+
+    <div class="settings-hidden-controls" aria-hidden="true">
+      <input type="time" id="day-start-input" />
+      <select id="default-duration-select">
+        <option value="15">15 min</option>
+        <option value="20">20 min</option>
+        <option value="25">25 min</option>
+        <option value="30">30 min</option>
+        <option value="45">45 min</option>
+      </select>
+    </div>
+  `;
+}
+
+function ensureAiPlannerPage() {
+  let aiPage = document.querySelector('[data-page="ai-planner"]');
+  const settingsPage = document.querySelector('[data-page="settings"]');
+  if (!settingsPage) return;
+  if (!aiPage) {
+    aiPage = document.createElement("section");
+    aiPage.className = "page";
+    aiPage.dataset.page = "ai-planner";
+    settingsPage.insertAdjacentElement("afterend", aiPage);
+  }
+
+  aiPage.innerHTML = `
+    <header class="page-hero ai-page-hero">
+      <button class="sheet-back ai-page-back" id="ai-page-back" type="button" aria-label="Back">‹</button>
+      <div class="hero-heading">
+        <div><h1>AI 生成日程</h1></div>
+      </div>
+    </header>
+
+    <section class="paper-sheet ai-sheet">
+      <section class="ai-step">
+        <div class="settings-group-title">三层规划体系</div>
+        <div class="ai-cycle-grid" id="ai-cycle-grid"></div>
+      </section>
+
+      <section class="ai-step">
+        <div class="settings-group-title">完整工作流</div>
+        <div class="settings-list-block ai-workflow-strip" id="ai-workflow-strip"></div>
+      </section>
+
+      <section class="ai-step">
+        <div class="settings-group-title">填写问卷</div>
+        <div class="settings-list-block ai-questionnaire" id="ai-questionnaire"></div>
+      </section>
+
+      <section class="ai-step">
+        <div class="settings-group-title">生成 Prompt</div>
+        <div class="settings-list-block ai-actions">
+          <button class="ghost-button ai-action-button" id="ai-generate-prompt" type="button">生成 Prompt</button>
+          <textarea id="ai-prompt-output" rows="12" readonly placeholder="生成后的 Prompt 会出现在这里"></textarea>
+        </div>
+      </section>
+
+      <section class="ai-step">
+        <div class="settings-group-title">复制给 AI · 粘贴结果</div>
+        <div class="settings-list-block ai-actions">
+          <button class="ghost-button ai-action-button" id="ai-copy-prompt" type="button">复制 Prompt</button>
+          <textarea id="ai-result-input" rows="10" placeholder="把 AI 返回的结构化计划粘贴到这里"></textarea>
+        </div>
+      </section>
+
+      <section class="ai-step">
+        <div class="settings-group-title">预览导入</div>
+        <div class="settings-list-block ai-actions">
+          <div class="sheet-button-row ai-import-actions">
+            <button class="ghost-button ai-action-button" id="ai-preview-import" type="button">预览</button>
+            <button class="ghost-button ai-action-button" id="ai-import-plan" type="button">导入到 To-do</button>
+          </div>
+          <div class="ai-preview-list" id="ai-preview-list"></div>
+        </div>
+      </section>
+    </section>
+  `;
+}
+
+function refreshDynamicDomRefs() {
+  dom.pages = [...document.querySelectorAll(".page")];
+  dom.bottomNav = document.querySelector(".bottom-nav");
+  dom.themeGrid = document.getElementById("theme-grid");
+  dom.pwaInstallButton = document.getElementById("pwa-install-button");
+  dom.pwaInstallNote = document.getElementById("pwa-install-note");
+  dom.nextTimePriorityToggle = document.getElementById("next-time-priority-toggle");
+  dom.nextImportantPriorityToggle = document.getElementById("next-important-priority-toggle");
+  dom.dayStartInput = document.getElementById("day-start-input");
+  dom.defaultDurationSelect = document.getElementById("default-duration-select");
+  dom.completedDefaultToggle = document.getElementById("completed-default-toggle");
+  dom.reduceTextureToggle = document.getElementById("reduce-texture-toggle");
+  dom.customBackgroundRow = document.getElementById("custom-background-row");
+  dom.customBackgroundInput = document.getElementById("custom-background-input");
+  dom.customBackgroundValue = document.getElementById("custom-background-value");
+  dom.aiPlannerLink = document.getElementById("ai-planner-link");
+  dom.defaultDurationRow = document.getElementById("default-duration-row");
+  dom.defaultDurationValue = document.getElementById("default-duration-value");
+  dom.dayStartRow = document.getElementById("day-start-row");
+  dom.dayStartValue = document.getElementById("day-start-value");
+  dom.aiPageBack = document.getElementById("ai-page-back");
+  dom.aiCycleGrid = document.getElementById("ai-cycle-grid");
+  dom.aiWorkflowStrip = document.getElementById("ai-workflow-strip");
+  dom.aiQuestionnaire = document.getElementById("ai-questionnaire");
+  dom.aiGeneratePrompt = document.getElementById("ai-generate-prompt");
+  dom.aiPromptOutput = document.getElementById("ai-prompt-output");
+  dom.aiCopyPrompt = document.getElementById("ai-copy-prompt");
+  dom.aiResultInput = document.getElementById("ai-result-input");
+  dom.aiPreviewImport = document.getElementById("ai-preview-import");
+  dom.aiImportPlan = document.getElementById("ai-import-plan");
+  dom.aiPreviewList = document.getElementById("ai-preview-list");
+}
+
 function updateTaskTimeSummary() {
   if (!dom.taskTimeLabel || !dom.taskDateLabel) return;
 
@@ -7633,6 +9367,7 @@ function renderAll() {
   renderStats();
   renderTasksTree();
   renderSettings();
+  renderAiPlanner();
   renderDraftDrawer();
   renderQuickSuggestions();
   renderLogSuggestions();
