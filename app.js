@@ -4467,26 +4467,34 @@ function bindEvents() {
     state.defaultDuration = Number(event.target.value);
     persistState();
   };
-  dom.completedDefaultToggle.onchange = (event) => {
-    state.ui.groupOpen.completed = event.target.checked;
-    renderHome();
-    persistState();
-  };
-  dom.reduceTextureToggle.onchange = (event) => {
-    state.reduceTexture = event.target.checked;
-    applyBodyFlags();
-    persistState();
-  };
-  dom.nextTimePriorityToggle.onchange = (event) => {
-    state.nextRules.prioritizeTime = event.target.checked;
-    renderHome();
-    persistState();
-  };
-  dom.nextImportantPriorityToggle.onchange = (event) => {
-    state.nextRules.prioritizeImportant = event.target.checked;
-    renderHome();
-    persistState();
-  };
+  if (dom.completedDefaultToggle) {
+    dom.completedDefaultToggle.onchange = (event) => {
+      state.ui.groupOpen.completed = event.target.checked;
+      renderHome();
+      persistState();
+    };
+  }
+  if (dom.reduceTextureToggle) {
+    dom.reduceTextureToggle.onchange = (event) => {
+      state.reduceTexture = event.target.checked;
+      applyBodyFlags();
+      persistState();
+    };
+  }
+  if (dom.nextTimePriorityToggle) {
+    dom.nextTimePriorityToggle.onchange = (event) => {
+      state.nextRules.prioritizeTime = event.target.checked;
+      renderHome();
+      persistState();
+    };
+  }
+  if (dom.nextImportantPriorityToggle) {
+    dom.nextImportantPriorityToggle.onchange = (event) => {
+      state.nextRules.prioritizeImportant = event.target.checked;
+      renderHome();
+      persistState();
+    };
+  }
   dom.customStartDate.onchange = (event) => {
     state.ui.customRange.start = event.target.value;
     renderStats();
