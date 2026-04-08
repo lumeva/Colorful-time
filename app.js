@@ -4190,7 +4190,10 @@ function loadState() {
     const seed = createSeedState();
     const isStaleSchema = parsed.schemaVersion !== STATE_SCHEMA_VERSION;
     const hasCoreCollections = Array.isArray(parsed.folders) && Array.isArray(parsed.tasks) && Array.isArray(parsed.sessions);
-    if (isStaleSchema || !hasCoreCollections) {
+    const looksLikeBrokenSnapshot =
+      hasCoreCollections &&
+      (!parsed.folders.length || !parsed.tasks.length || !parsed.sessions.length);
+    if (isStaleSchema || !hasCoreCollections || looksLikeBrokenSnapshot) {
       return {
         ...seed,
         theme: parsed.theme || seed.theme,
