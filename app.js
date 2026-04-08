@@ -1,4 +1,5 @@
 const STORAGE_KEY = "colorful-time-state-v1";
+const STATE_SCHEMA_VERSION = 2;
 
 const CATEGORY_COLORS = [
   "#6ea8ff",
@@ -1636,6 +1637,7 @@ function createSeedState(baseDate = new Date()) {
   ];
 
   return {
+    schemaVersion: STATE_SCHEMA_VERSION,
     currentPage: "home",
     theme: "paper",
     dayStart: "00:00",
@@ -4177,7 +4179,7 @@ function buildLookupFromFolders(folders) {
 }
 
 function persistState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, schemaVersion: STATE_SCHEMA_VERSION }));
 }
 
 function loadState() {
@@ -4186,6 +4188,18 @@ function loadState() {
   try {
     const parsed = JSON.parse(raw);
     const seed = createSeedState();
+    const isStaleSchema = parsed.schemaVersion !== STATE_SCHEMA_VERSION;
+    const hasCoreCollections = Array.isArray(parsed.folders) && Array.isArray(parsed.tasks) && Array.isArray(parsed.sessions);
+    if (isStaleSchema || !hasCoreCollections) {
+      return {
+        ...seed,
+        theme: parsed.theme || seed.theme,
+        dayStart: parsed.dayStart || seed.dayStart,
+        defaultDuration: Number(parsed.defaultDuration) || seed.defaultDuration,
+        nextRules: { ...seed.nextRules, ...(parsed.nextRules || {}) },
+        customBackgroundImage: parsed.customBackgroundImage || "",
+      };
+    }
     return {
       ...seed,
       ...parsed,
@@ -9868,7 +9882,13 @@ function renderTaskAdvancedControls() {
   const repeatMode = dom.taskRepeatSelect.value || "none";
   const showWeekdays = repeatMode === "weekly";
   dom.taskWeekdaysField.hidden = !showWeekdays;
-  dom.taskWeekdaysField.style.display = showWeekdays ? "" : "none";
+  if (showWeekdays) {
+    dom.taskWeekdaysField.removeAttribute("hidden");
+    dom.taskWeekdaysField.style.display = "grid";
+  } else {
+    dom.taskWeekdaysField.setAttribute("hidden", "");
+    dom.taskWeekdaysField.style.display = "none";
+  }
 
   const weekdayOptions = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   dom.taskWeekdaysGrid.innerHTML = weekdayOptions

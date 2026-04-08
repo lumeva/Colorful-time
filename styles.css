@@ -2986,7 +2986,7 @@ body {
   border-bottom: 0;
 }
 
-#task-weekdays-field {
+#task-weekdays-field[hidden] {
   display: none !important;
 }
 
