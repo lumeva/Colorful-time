@@ -6026,3 +6026,21 @@ body.has-custom-background::before {
 .ai-page-hero .hero-heading h1 {
   margin: 0;
 }
+
+.settings-install-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.filter-cascade-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.filter-cascade-stack .filter-pill {
+  width: 100%;
+}
+
+.filter-cascade-stack .filter-pill select {
+  width: 100%;
+}
