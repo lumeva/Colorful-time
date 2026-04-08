@@ -5942,3 +5942,62 @@ body.has-custom-background::before {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.settings-install-row {
+  font-weight: 700;
+}
+
+.settings-install-row + .settings-install-row {
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.ai-sheet-compact {
+  display: grid;
+  gap: 20px;
+}
+
+.ai-sheet-compact .ai-step {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-cycle-select-block {
+  gap: 8px;
+}
+
+.ai-cycle-select-pill {
+  min-height: 52px;
+}
+
+.ai-cycle-select-pill select {
+  width: 100%;
+}
+
+.ai-page-hero {
+  grid-template-columns: 28px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: center;
+}
+
+.ai-page-back {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.page[data-page="ai-planner"] .settings-group-title {
+  margin-left: 0;
+}
+
+.page[data-page="stats"] .breakdown-row {
+  grid-template-columns: 16px minmax(0, 1fr) max-content;
+}
+
+.page[data-page="stats"] .breakdown-time {
+  justify-self: end;
+  font-variant-numeric: tabular-nums;
+}
