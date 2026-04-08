@@ -6001,3 +6001,28 @@ body.has-custom-background::before {
   justify-self: end;
   font-variant-numeric: tabular-nums;
 }
+
+.filter-row.filter-row-single {
+  display: grid;
+  gap: 10px;
+}
+
+.filter-row.filter-row-single .filter-pill {
+  width: 100%;
+}
+
+.filter-row.filter-row-single .filter-pill select {
+  width: 100%;
+}
+
+.ai-sheet-compact .settings-list-block {
+  box-shadow: none;
+}
+
+.ai-page-hero .hero-heading {
+  align-items: center;
+}
+
+.ai-page-hero .hero-heading h1 {
+  margin: 0;
+}
