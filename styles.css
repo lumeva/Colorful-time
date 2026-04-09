@@ -8693,6 +8693,252 @@ body.theme-minimalist .page[data-page="tasks"] .category-stack-item {
 
 body.theme-minimalist .page[data-page="tasks"] .template-list-flat {
   margin-left: 0 !important;
-  padding-left: 16px !important;
+  padding-left: 32px !important;
   gap: 10px !important;
+}
+
+/* Minimalist stats + sheet cleanup pass */
+body.theme-minimalist .page[data-page="stats"] .breakdown-row.breakdown-sticker {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100% !important;
+  padding: 10px 12px !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  border-left: 1px solid rgba(0, 0, 0, 0.05) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .breakdown-row.breakdown-sticker:nth-child(odd),
+body.theme-minimalist .page[data-page="stats"] .breakdown-row.breakdown-sticker:nth-child(even) {
+  transform: none !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .breakdown-primary {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .breakdown-dot {
+  display: inline-block !important;
+  width: 8px !important;
+  height: 8px !important;
+  flex: 0 0 8px !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  background: var(--sticker-color, rgba(0, 0, 0, 0.22)) !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .breakdown-time,
+body.theme-minimalist .page[data-page="stats"] .breakdown-row.breakdown-sticker > strong {
+  margin-left: auto !important;
+  text-align: right !important;
+  justify-self: end !important;
+  white-space: nowrap !important;
+}
+
+body.theme-minimalist .sheet-panel,
+body.theme-minimalist .sheet-panel .line-field,
+body.theme-minimalist .sheet-panel .picker-row,
+body.theme-minimalist .sheet-panel .toggle-row,
+body.theme-minimalist .sheet-panel .collapse-button,
+body.theme-minimalist .sheet-panel .quick-chip,
+body.theme-minimalist .sheet-panel .quick-option,
+body.theme-minimalist .sheet-panel .mini-pill,
+body.theme-minimalist .sheet-panel .category-breadcrumb button,
+body.theme-minimalist .sheet-panel .theme-card,
+body.theme-minimalist .sheet-panel .settings-row {
+  background: #ffffff !important;
+  border: 1px solid #dddddd !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.theme-minimalist .sheet-panel .line-field,
+body.theme-minimalist .sheet-panel .picker-row,
+body.theme-minimalist .sheet-panel .toggle-row {
+  padding: 10px 12px !important;
+}
+
+body.theme-minimalist .sheet-panel .line-field::before,
+body.theme-minimalist .sheet-panel .line-field::after,
+body.theme-minimalist .sheet-panel .picker-row::before,
+body.theme-minimalist .sheet-panel .picker-row::after,
+body.theme-minimalist .sheet-panel .toggle-row::before,
+body.theme-minimalist .sheet-panel .toggle-row::after,
+body.theme-minimalist .sheet-panel .collapse-button::before,
+body.theme-minimalist .sheet-panel .collapse-button::after {
+  content: none !important;
+  display: none !important;
+}
+
+body.theme-minimalist .sheet-panel :is(
+  .line-field input,
+  .line-field select,
+  .line-field textarea,
+  .sheet-form input[type="text"],
+  .sheet-form input[type="time"],
+  .sheet-form input[type="number"],
+  .sheet-form input[type="date"],
+  .sheet-form textarea,
+  .sheet-form select
+) {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: #333333 !important;
+  padding: 0 !important;
+}
+
+body.theme-minimalist .sheet-panel .important-row span {
+  padding-left: 0 !important;
+  gap: 6px !important;
+  min-height: 0 !important;
+  font-size: 0 !important;
+  color: transparent !important;
+}
+
+body.theme-minimalist .sheet-panel .important-row span::before {
+  content: "☆ Important" !important;
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  color: #555555 !important;
+  font-size: 0.95rem !important;
+  font-weight: 400 !important;
+  box-shadow: none !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+body.theme-minimalist .sheet-panel .important-row span::after {
+  content: none !important;
+  display: none !important;
+}
+
+body.theme-minimalist #tree-editor-sheet .color-picker {
+  gap: 12px !important;
+}
+
+body.theme-minimalist #tree-editor-sheet .color-swatch {
+  border-radius: 50% !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: border-color 0.16s ease, outline-color 0.16s ease !important;
+}
+
+body.theme-minimalist #tree-editor-sheet .color-swatch::before,
+body.theme-minimalist #tree-editor-sheet .color-swatch::after {
+  content: none !important;
+  display: none !important;
+}
+
+body.theme-minimalist #tree-editor-sheet .color-swatch:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+body.theme-minimalist #tree-editor-sheet .color-swatch.is-selected {
+  border: 2px solid rgba(51, 51, 51, 0.82) !important;
+  outline: 2px solid transparent !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Minimalist new-category swatch cleanup */
+body.theme-minimalist #tree-editor-sheet .color-swatch,
+body.theme-minimalist #tree-editor-sheet .color-swatch:hover,
+body.theme-minimalist #tree-editor-sheet .color-swatch:focus-visible {
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+body.theme-minimalist #tree-editor-sheet .color-swatch::before,
+body.theme-minimalist #tree-editor-sheet .color-swatch::after {
+  content: none !important;
+  display: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+body.theme-minimalist #tree-editor-sheet .color-swatch.is-selected,
+body.theme-minimalist #tree-editor-sheet .color-swatch[aria-pressed="true"] {
+  border: 2px solid rgba(51, 51, 51, 0.82) !important;
+  outline: 2px solid transparent !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+/* Settings arrow + spacing cleanup */
+.settings-row.settings-row-link > .settings-row-arrow {
+  margin-left: auto !important;
+}
+
+.settings-row-arrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 12px;
+  height: 12px;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  color: currentColor !important;
+}
+
+.settings-row-arrow::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+}
+
+.settings-group-appearance .settings-upload-wrap {
+  padding-top: 8px;
+  margin-bottom: 12px;
+}
+
+.settings-group-appearance .settings-upload-wrap + .settings-row {
+  margin-top: 0 !important;
+}
+
+/* Home timer/task state cleanup */
+.page[data-page="home"] .timer-strip,
+.page[data-page="home"] .timer-strip-shell {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.page[data-page="home"] .task-row.is-running .flat-start,
+.page[data-page="home"] .flat-start.is-live,
+.page[data-page="home"] .flat-start:disabled {
+  background: #e0e0e0 !important;
+  border-color: rgba(0, 0, 0, 0.14) !important;
+  color: #444444 !important;
 }

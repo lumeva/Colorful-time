@@ -1,4 +1,4 @@
-const CACHE_NAME = "colorful-time-v9";
+const CACHE_NAME = "colorful-time-v10";
 const APP_ASSETS = [
   "./",
   "./index.html",

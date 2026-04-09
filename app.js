@@ -13902,6 +13902,14 @@ if (!window.__settingsCandyTune) {
             <span class="settings-row-label">鏄剧ず鑳屾櫙妯嚎绾圭悊</span>
             <input type="checkbox" id="reduce-texture-toggle" />
           </label>
+          <label class="settings-row settings-row-toggle" data-icon="馃搹" data-tilt="c">
+            <span class="settings-row-label">Show paper lines</span>
+            <input type="checkbox" id="reduce-texture-toggle" />
+          </label>
+          <label class="settings-row settings-row-toggle" data-icon="馃搹" data-tilt="c">
+            <span class="settings-row-label">Show paper lines</span>
+            <input type="checkbox" id="reduce-texture-toggle" />
+          </label>
           <input class="settings-hidden-file" id="custom-background-input" type="file" accept="image/*" />
         </div>
       </section>
@@ -14354,4 +14362,156 @@ if (!window.__settingsAdventureMinimalPass) {
   ensureSettingsStructure();
   refreshDynamicDomRefs();
   renderSettings();
+}
+
+if (!window.__homeTimerAndStatusLogicPass) {
+  window.__homeTimerAndStatusLogicPass = true;
+
+  isTaskVisibleOnHome = function (task, today) {
+    return !task.completed && (!task.scheduledDate || task.scheduledDate <= today);
+  };
+
+  isTaskOverdue = function (task, today) {
+    if (!isTaskVisibleOnHome(task, today)) return false;
+    return Boolean(task.scheduledDate) && task.scheduledDate < today;
+  };
+
+  isTaskForToday = function (task, today) {
+    if (task.completed) return false;
+    if (task.scheduledDate && task.scheduledDate !== today) return false;
+    if (task.scheduledDate === today) return true;
+    return task.scheduledMinutes != null;
+  };
+
+  isTaskFlexible = function (task, today) {
+    if (task.completed) return false;
+    if (task.scheduledDate && task.scheduledDate !== today) return false;
+    return task.scheduledMinutes == null && (!task.scheduledDate || task.scheduledDate === today);
+  };
+
+  getGroupedTasks = function () {
+    const today = formatInputDate(new Date());
+    const incomplete = state.tasks.filter((task) => !task.completed);
+    const completed = state.tasks.filter((task) => task.completed);
+
+    return {
+      overdue: incomplete.filter((task) => isTaskOverdue(task, today)).sort(sortTasksForHome),
+      today: incomplete.filter((task) => isTaskForToday(task, today)).sort(sortTasksForHome),
+      flexible: incomplete.filter((task) => isTaskFlexible(task, today)).sort(sortTasksForHome),
+      completed: completed.sort((a, b) => new Date(b.completedAt || 0) - new Date(a.completedAt || 0)),
+    };
+  };
+
+  finalizeRunningSession = function () {
+    const active = state.activeTimer;
+    if (!active?.taskId) return;
+
+    const task = state.tasks.find((entry) => entry.id === active.taskId);
+    if (!task) return;
+
+    const elapsedMs = getElapsedMs(active);
+    if (elapsedMs < 1000) return;
+
+    const endMs = active.running
+      ? Date.now()
+      : new Date(active.startedAt).getTime() + (active.pausedElapsedMs || 0);
+    const startMs = endMs - elapsedMs;
+
+    state.sessions.unshift({
+      id: makeId("session"),
+      taskId: task.id,
+      taskName: task.name,
+      folderId: task.folderId || null,
+      categoryId: task.categoryId || null,
+      templateId: task.templateId || null,
+      start: new Date(startMs).toISOString(),
+      end: new Date(endMs).toISOString(),
+    });
+  };
+
+  startTimerForTask = function (taskId) {
+    const task = state.tasks.find((entry) => entry.id === taskId);
+    if (!task) return;
+
+    if (state.activeTimer?.taskId) {
+      finalizeRunningSession();
+    }
+
+    state.activeTimer = {
+      taskId,
+      startedAt: new Date().toISOString(),
+      pausedElapsedMs: 0,
+      running: true,
+      mode: task.timerMode || "up",
+      durationMin: task.durationMin || state.defaultDuration,
+    };
+
+    closeAllSheets();
+    renderHome();
+    renderStats();
+    persistState();
+  };
+
+  toggleTimer = function () {
+    if (!state.activeTimer) return;
+
+    if (state.activeTimer.running) {
+      state.activeTimer.pausedElapsedMs = getElapsedMs(state.activeTimer);
+      state.activeTimer.running = false;
+    } else {
+      state.activeTimer.startedAt = new Date(Date.now() - (state.activeTimer.pausedElapsedMs || 0)).toISOString();
+      state.activeTimer.running = true;
+    }
+
+    renderHome();
+    persistState();
+  };
+
+  stopTimer = function () {
+    if (!state.activeTimer?.taskId) return;
+
+    finalizeRunningSession();
+    state.activeTimer = null;
+    renderAll();
+    persistState();
+  };
+
+  renderHomeTimerOnly = function () {
+    const timerState = getTimerPresentation();
+
+    if (!timerState) {
+      dom.timerStrip.innerHTML = `
+        <div class="timer-strip-shell timer-strip-shell-idle">
+          <p class="timer-strip-name">Nothing running</p>
+          <div class="timer-strip-bottom">
+            <div class="timer-strip-clock">00:00</div>
+            <div class="timer-strip-actions">
+              <button class="timer-button new" id="timer-new" type="button">Start</button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      const timerStateClass = state.activeTimer?.running ? "is-running" : "is-paused";
+      dom.timerStrip.innerHTML = `
+        <div class="timer-strip-shell ${timerStateClass}" style="--timer-wash:${alphaColor(timerState.color, 0.14)}; --timer-line:${alphaColor(timerState.color, 0.22)};">
+          <p class="timer-strip-name">${escapeHtml(timerState.name)}</p>
+          <div class="timer-strip-bottom">
+            <div class="timer-strip-clock">${timerState.elapsed}</div>
+            <div class="timer-strip-actions">
+              <button class="timer-button ${state.activeTimer.running ? "pause" : "resume"}" id="timer-toggle" type="button">${state.activeTimer.running ? "Pause" : "Resume"}</button>
+              <button class="timer-button stop" id="timer-stop" type="button">Stop</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    document.getElementById("timer-toggle")?.addEventListener("click", toggleTimer);
+    document.getElementById("timer-stop")?.addEventListener("click", stopTimer);
+    document.getElementById("timer-new")?.addEventListener("click", () => {
+      dom.quickNameInput.value = "";
+      openSheet("quick-sheet");
+    });
+  };
 }
