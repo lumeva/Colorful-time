@@ -331,17 +331,34 @@
       </form>
     </section>
 
-    <section class="sheet-panel" id="time-sheet" hidden aria-label="Time and date">
+    <section class="sheet-panel time-picker-sheet" id="time-sheet" hidden aria-label="Time and date">
       <div class="sheet-handle"></div>
       <div class="sheet-header">
         <div>
           <p class="sheet-kicker">Time & Date</p>
-          <h2>Choose when</h2>
+          <h2 id="task-time-sheet-title">设定时间</h2>
         </div>
         <button class="sheet-close" data-close-sheet type="button">×</button>
       </div>
       <div class="sheet-form when-sheet-form">
-        <div class="line-field plain-group">
+        <div class="time-picker-preview" id="task-time-preview">Any time</div>
+        <div class="time-wheel-wrap" id="task-time-wheel-wrap">
+          <div class="time-wheel-card">
+            <div class="time-wheel-label">Hour</div>
+            <div class="time-wheel-list" id="task-time-hour-wheel" aria-label="Hour picker"></div>
+          </div>
+          <div class="time-wheel-divider">:</div>
+          <div class="time-wheel-card">
+            <div class="time-wheel-label">Minute</div>
+            <div class="time-wheel-list" id="task-time-minute-wheel" aria-label="Minute picker"></div>
+          </div>
+        </div>
+        <div class="time-step-row" id="task-time-step-row">
+          <button class="ghost-button time-step-button" data-time-step="15" type="button">+15m</button>
+          <button class="ghost-button time-step-button" data-time-step="30" type="button">+30m</button>
+          <button class="ghost-button time-step-button" data-time-step="60" type="button">+1h</button>
+        </div>
+        <div class="line-field plain-group" id="task-date-quick-field">
           <span>When</span>
           <div class="quick-option-grid" id="task-date-quick-grid"></div>
         </div>
@@ -349,10 +366,7 @@
           <span>Date</span>
           <input type="date" id="task-date-input" />
         </label>
-        <label class="line-field" id="task-time-field">
-          <span>Time</span>
-          <input type="time" id="task-time-input" name="taskTime" />
-        </label>
+        <input type="hidden" id="task-time-input" name="taskTime" />
         <label class="line-field" id="task-duration-field">
           <span>Duration</span>
           <input

@@ -166,6 +166,11 @@ const dom = {
   taskTimeLabel: document.getElementById("task-time-label"),
   taskDateLabel: document.getElementById("task-date-label"),
   taskTimeInput: document.getElementById("task-time-input"),
+  taskTimeSheetTitle: document.getElementById("task-time-sheet-title"),
+  taskTimePreview: document.getElementById("task-time-preview"),
+  taskTimeHourWheel: document.getElementById("task-time-hour-wheel"),
+  taskTimeMinuteWheel: document.getElementById("task-time-minute-wheel"),
+  taskTimeStepRow: document.getElementById("task-time-step-row"),
   taskDurationInput: document.getElementById("task-duration-input"),
   taskImportantInput: document.getElementById("task-important-input"),
   taskMoreToggle: document.getElementById("task-more-toggle"),
@@ -4288,6 +4293,147 @@ function parseTimeString(value) {
   return hour * 60 + minute;
 }
 
+let taskTimeSheetContext = { mode: "draft", taskId: null };
+let taskTimeWheelIgnoreScroll = false;
+
+function getTaskTimePickerMinutes() {
+  return parseTimeString(dom.taskTimeInput?.value || "");
+}
+
+function getTaskTimePickerBaseMinutes() {
+  const current = getTaskTimePickerMinutes();
+  if (current != null) return current;
+  return getClockMinutesNow();
+}
+
+function getClockMinutesNow() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function setTaskTimePickerMinutes(minutes) {
+  if (!dom.taskTimeInput) return;
+  if (minutes == null || Number.isNaN(Number(minutes))) {
+    dom.taskTimeInput.value = "";
+  } else {
+    const normalized = ((Number(minutes) % 1440) + 1440) % 1440;
+    dom.taskTimeInput.value = formatInputTime(normalized);
+  }
+}
+
+function getWheelNearestValue(list, selector) {
+  const buttons = [...list.querySelectorAll(selector)];
+  if (!buttons.length) return 0;
+  const listRect = list.getBoundingClientRect();
+  const center = listRect.top + listRect.height / 2;
+  let closest = buttons[0];
+  let distance = Number.POSITIVE_INFINITY;
+  buttons.forEach((button) => {
+    const rect = button.getBoundingClientRect();
+    const currentDistance = Math.abs(rect.top + rect.height / 2 - center);
+    if (currentDistance < distance) {
+      closest = button;
+      distance = currentDistance;
+    }
+  });
+  return Number(closest.dataset.value || 0);
+}
+
+function scrollTaskTimeWheelToSelection(list, selector) {
+  const target = list?.querySelector(selector);
+  if (!list || !target) return;
+  taskTimeWheelIgnoreScroll = true;
+  target.scrollIntoView({ block: "center", behavior: "smooth" });
+  window.setTimeout(() => {
+    taskTimeWheelIgnoreScroll = false;
+  }, 180);
+}
+
+function syncTaskTimeWheelSelection(scrollToSelection = false) {
+  const selected = getTaskTimePickerMinutes();
+  const hour = selected == null ? null : Math.floor(selected / 60);
+  const minute = selected == null ? null : selected % 60;
+
+  if (dom.taskTimePreview) {
+    dom.taskTimePreview.textContent = selected == null ? "Any time" : formatMinutes(selected);
+  }
+
+  dom.taskTimeHourWheel?.querySelectorAll("[data-hour-item]").forEach((button) => {
+    button.classList.toggle("is-active", hour != null && Number(button.dataset.value) === hour);
+  });
+  dom.taskTimeMinuteWheel?.querySelectorAll("[data-minute-item]").forEach((button) => {
+    button.classList.toggle("is-active", minute != null && Number(button.dataset.value) === minute);
+  });
+
+  if (scrollToSelection && selected != null) {
+    scrollTaskTimeWheelToSelection(dom.taskTimeHourWheel, `[data-hour-item][data-value="${hour}"]`);
+    scrollTaskTimeWheelToSelection(dom.taskTimeMinuteWheel, `[data-minute-item][data-value="${minute}"]`);
+  }
+}
+
+function applyTaskTimeFromWheel(type, value, options = {}) {
+  const base = getTaskTimePickerBaseMinutes();
+  const hour = Math.floor(base / 60);
+  const minute = base % 60;
+  const nextMinutes = type === "hour" ? Number(value) * 60 + minute : hour * 60 + Number(value);
+  setTaskTimePickerMinutes(nextMinutes);
+  syncTaskTimeWheelSelection(options.scroll !== false);
+  updateTaskTimeSummary();
+}
+
+function buildTaskTimeWheelPicker() {
+  if (dom.taskTimeHourWheel && !dom.taskTimeHourWheel.dataset.ready) {
+    dom.taskTimeHourWheel.innerHTML = Array.from({ length: 24 }, (_, hour) => `<button class="time-wheel-item" data-hour-item data-value="${hour}" type="button">${String(hour).padStart(2, "0")}</button>`).join("");
+    dom.taskTimeHourWheel.dataset.ready = "true";
+    dom.taskTimeHourWheel.querySelectorAll("[data-hour-item]").forEach((button) => {
+      button.onclick = () => applyTaskTimeFromWheel("hour", button.dataset.value);
+    });
+    dom.taskTimeHourWheel.addEventListener("scroll", () => {
+      window.clearTimeout(dom.taskTimeHourWheel._wheelTimer);
+      dom.taskTimeHourWheel._wheelTimer = window.setTimeout(() => {
+        if (taskTimeWheelIgnoreScroll) return;
+        applyTaskTimeFromWheel("hour", getWheelNearestValue(dom.taskTimeHourWheel, "[data-hour-item]"), { scroll: false });
+      }, 70);
+    });
+  }
+
+  if (dom.taskTimeMinuteWheel && !dom.taskTimeMinuteWheel.dataset.ready) {
+    dom.taskTimeMinuteWheel.innerHTML = Array.from({ length: 60 }, (_, minute) => `<button class="time-wheel-item" data-minute-item data-value="${minute}" type="button">${String(minute).padStart(2, "0")}</button>`).join("");
+    dom.taskTimeMinuteWheel.dataset.ready = "true";
+    dom.taskTimeMinuteWheel.querySelectorAll("[data-minute-item]").forEach((button) => {
+      button.onclick = () => applyTaskTimeFromWheel("minute", button.dataset.value);
+    });
+    dom.taskTimeMinuteWheel.addEventListener("scroll", () => {
+      window.clearTimeout(dom.taskTimeMinuteWheel._wheelTimer);
+      dom.taskTimeMinuteWheel._wheelTimer = window.setTimeout(() => {
+        if (taskTimeWheelIgnoreScroll) return;
+        applyTaskTimeFromWheel("minute", getWheelNearestValue(dom.taskTimeMinuteWheel, "[data-minute-item]"), { scroll: false });
+      }, 70);
+    });
+  }
+
+  dom.taskTimeStepRow?.querySelectorAll("[data-time-step]").forEach((button) => {
+    if (button.dataset.bound === "true") return;
+    button.dataset.bound = "true";
+    button.onclick = () => {
+      const base = getTaskTimePickerBaseMinutes();
+      setTaskTimePickerMinutes(base + Number(button.dataset.timeStep || 0));
+      syncTaskTimeWheelSelection(true);
+      updateTaskTimeSummary();
+    };
+  });
+}
+
+function openTaskTimeSheet(mode = "draft", taskId = null) {
+  taskTimeSheetContext = { mode, taskId };
+  const task = mode === "task" ? state.tasks.find((entry) => entry.id === taskId) : null;
+  setTaskTimePickerMinutes(mode === "task" ? task?.scheduledMinutes ?? getClockMinutesNow() : parseTimeString(dom.taskTimeInput.value) ?? getClockMinutesNow());
+  buildTaskTimeWheelPicker();
+  syncTaskTimeWheelSelection(true);
+  updateTaskTimeSummary();
+  openSheet("time-sheet");
+}
+
 function formatDuration(minutes) {
   if (!minutes) return "0m";
   const hour = Math.floor(minutes / 60);
@@ -8262,9 +8408,11 @@ function renderTaskRow(task, isCompleted = false) {
   const visual = getTaskVisual(task);
   const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
   const sortMode = state.ui.todoSortMode && !isCompleted;
-  const timeMarkup = sortMode
-    ? `<input class="task-time-edit" data-task-time="${task.id}" type="time" value="${task.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : ""}" />`
-    : `<div class="task-time-block">${task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes)}</div>`;
+  const timeMarkup = `
+    <button class="task-time-inline-button ${task.scheduledMinutes == null ? "is-empty" : ""}" data-task-time-open="${task.id}" type="button" aria-label="Set time">
+      ${task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes)}
+    </button>
+  `;
 
   return `
     <article
@@ -11605,7 +11753,7 @@ function ensureUiCopy() {
     ["#action-sheet .sheet-header h2", "Add"],
     ["#quick-sheet .sheet-header h2", "Quick Start"],
     ["#log-sheet .sheet-header h2", "Log Time"],
-    ["#time-sheet .sheet-header h2", "Choose when"],
+    ["#time-sheet .sheet-header h2", "设定时间"],
   ];
   titleMap.forEach(([selector, text]) => {
     const node = document.querySelector(selector);
@@ -12253,13 +12401,29 @@ function updateTaskTimeSummary() {
     else state.ui.taskDatePreset = "none";
     updateTaskTimeSummary();
   };
-  dom.taskTimeInput.oninput = () => updateTaskTimeSummary();
   getTaskDurationInputElement().oninput = () => updateTaskTimeSummary();
 
   const timeValue = parseTimeString(dom.taskTimeInput.value);
   const dateValue = getTaskDraftDate();
   dom.taskTimeLabel.textContent = timeValue == null ? "Any time" : formatMinutes(timeValue);
   dom.taskDateLabel.textContent = formatTaskDateNote(dateValue);
+
+  if (dom.taskTimeSheetTitle) {
+    dom.taskTimeSheetTitle.textContent = "设定时间";
+  }
+
+  const inlineContext = taskTimeSheetContext.mode === "task";
+  const quickField = document.getElementById("task-date-quick-field");
+  const dateField = document.getElementById("task-custom-date-field");
+  const durationField = document.getElementById("task-duration-field");
+  if (quickField) quickField.hidden = inlineContext;
+  if (dateField) dateField.hidden = inlineContext;
+  if (durationField) durationField.hidden = inlineContext;
+
+  if (state.ui.openSheet === "time-sheet") {
+    buildTaskTimeWheelPicker();
+    syncTaskTimeWheelSelection(true);
+  }
 }
 
 function getTaskDraftDate() {
@@ -12296,6 +12460,7 @@ function prepareTaskDraft(taskId = null) {
 
   state.ui.taskAdvancedOpen = Boolean(task && ((task.repeatMode && task.repeatMode !== "none") || task.timerMode === "down" || (task.weekdays || []).length));
 
+  taskTimeSheetContext = { mode: "draft", taskId: null };
   updateTaskCategoryLabel();
   renderTaskAdvancedControls();
   updateTaskTimeSummary();
@@ -12439,15 +12604,25 @@ function ensureUiCopy() {
     };
   }
 
-  if (dom.taskTimeButton) dom.taskTimeButton.onclick = () => openSheet("time-sheet");
+  if (dom.taskTimeButton) dom.taskTimeButton.onclick = () => openTaskTimeSheet("draft");
 
   if (dom.taskTimeClear) {
     dom.taskTimeClear.onclick = () => {
-      dom.taskDateInput.value = "";
       dom.taskTimeInput.value = "";
-      getTaskDurationInputElement().value = "";
-      state.ui.taskDatePreset = "none";
+      if (taskTimeSheetContext.mode === "draft") {
+        dom.taskDateInput.value = "";
+        getTaskDurationInputElement().value = "";
+        state.ui.taskDatePreset = "none";
+      }
       updateTaskTimeSummary();
+      if (taskTimeSheetContext.mode === "task") {
+        const task = state.tasks.find((entry) => entry.id === taskTimeSheetContext.taskId);
+        if (task) task.scheduledMinutes = null;
+        closeAllSheets(false);
+        renderHome();
+        persistState();
+        return;
+      }
       openSheet("task-sheet");
     };
   }
@@ -12455,6 +12630,14 @@ function ensureUiCopy() {
   if (dom.taskTimeApply) {
     dom.taskTimeApply.onclick = () => {
       updateTaskTimeSummary();
+      if (taskTimeSheetContext.mode === "task") {
+        const task = state.tasks.find((entry) => entry.id === taskTimeSheetContext.taskId);
+        if (task) task.scheduledMinutes = parseTimeString(dom.taskTimeInput.value);
+        closeAllSheets(false);
+        renderHome();
+        persistState();
+        return;
+      }
       openSheet("task-sheet");
     };
   }
@@ -12725,7 +12908,7 @@ function bindTaskRowLongPress() {
         event.target.closest("[data-task-start]") ||
         event.target.closest("[data-note-open]") ||
         event.target.closest("[data-task-note-input]") ||
-        event.target.closest("[data-task-time]")
+        event.target.closest("[data-task-time-open]")
       ) {
         return;
       }
@@ -12785,14 +12968,8 @@ function renderTodoGroups() {
     };
   });
 
-  dom.todoGroups.querySelectorAll("[data-task-time]").forEach((input) => {
-    input.onchange = () => {
-      const task = state.tasks.find((entry) => entry.id === input.dataset.taskTime);
-      if (!task) return;
-      task.scheduledMinutes = parseTimeString(input.value);
-      renderHome();
-      persistState();
-    };
+  dom.todoGroups.querySelectorAll("[data-task-time-open]").forEach((button) => {
+    button.onclick = () => openTaskTimeSheet("task", button.dataset.taskTimeOpen);
   });
 
   dom.todoGroups.querySelectorAll("[data-note-open]").forEach((button) => {
