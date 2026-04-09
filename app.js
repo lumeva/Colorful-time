@@ -2,12 +2,16 @@ const STORAGE_KEY = "colorful-time-state-v1";
 const STATE_SCHEMA_VERSION = 2;
 
 const CATEGORY_COLORS = [
-  "#6ea8ff",
-  "#8bda9f",
-  "#ffbe65",
-  "#ff9d8d",
-  "#b193ff",
-  "#5ec7c0",
+  "#A2D2FF",
+  "#FFD6A5",
+  "#FFADAD",
+  "#CAFFBF",
+  "#BDB2FF",
+  "#FFD6A5",
+  "#FF5D5D",
+  "#E4F1EE",
+  "#9BD1A3",
+  "#A06CD5",
 ];
 
 const THEME_OPTIONS = [
@@ -6724,7 +6728,7 @@ function renderHomeTimerOnly() {
     `;
   } else {
     dom.timerStrip.innerHTML = `
-      <div class="timer-strip-shell" style="--timer-wash:${alphaColor(timerState.color, 0.08)};">
+      <div class="timer-strip-shell ${state.activeTimer.running ? "is-running" : "is-paused"}" style="--timer-wash:${alphaColor(timerState.color, state.activeTimer.running ? 0.2 : 0.12)}; --timer-color:${timerState.color};">
         <p class="timer-strip-name">${escapeHtml(timerState.name)}</p>
         <div class="timer-strip-bottom">
           <div class="timer-strip-clock">${timerState.elapsed}</div>
@@ -11877,7 +11881,7 @@ function renderHomeTimerOnly() {
     `;
   } else {
     dom.timerStrip.innerHTML = `
-      <div class="timer-strip-shell" style="--timer-wash:${alphaColor(timerState.color, 0.08)};">
+      <div class="timer-strip-shell ${state.activeTimer.running ? "is-running" : "is-paused"}" style="--timer-wash:${alphaColor(timerState.color, state.activeTimer.running ? 0.2 : 0.12)}; --timer-color:${timerState.color};">
         <p class="timer-strip-name">${escapeHtml(timerState.name)}</p>
         <div class="timer-strip-bottom">
           <div class="timer-strip-clock">${timerState.elapsed}</div>
@@ -12889,4 +12893,1059 @@ function renderTaskAdvancedControls() {
       renderTaskAdvancedControls();
     };
   });
+}
+if (!window.__cleanAdventureUiFinalPass) {
+  window.__cleanAdventureUiFinalPass = true;
+
+  const cleanAdventureBaseRefresh = refreshDynamicDomRefs;
+  refreshDynamicDomRefs = function () {
+    cleanAdventureBaseRefresh();
+    dom.statsPickerSheet = document.getElementById("stats-picker-sheet");
+    dom.statsPickerTitle = document.getElementById("stats-picker-title");
+    dom.statsPickerBreadcrumb = document.getElementById("stats-picker-breadcrumb");
+    dom.statsPickerList = document.getElementById("stats-picker-list");
+    dom.statsCascadeButton = document.getElementById("stats-cascade-button");
+    dom.aiCycleGrid = document.getElementById("ai-cycle-grid");
+    dom.aiWorkflowStrip = document.getElementById("ai-workflow-strip");
+    dom.aiQuestionnaire = document.getElementById("ai-questionnaire");
+    dom.aiGeneratePrompt = document.getElementById("ai-generate-prompt");
+    dom.aiPromptOutput = document.getElementById("ai-prompt-output");
+    dom.aiCopyPrompt = document.getElementById("ai-copy-prompt");
+    dom.aiResultInput = document.getElementById("ai-result-input");
+    dom.aiPreviewImport = document.getElementById("ai-preview-import");
+    dom.aiImportPlan = document.getElementById("ai-import-plan");
+    dom.aiPreviewList = document.getElementById("ai-preview-list");
+  };
+
+  const getFolderContextById = (folderId) => state.folders.find((folder) => folder.id === folderId) || null;
+
+  const getCategoryContextById = (categoryId) => {
+    for (const folder of state.folders) {
+      const category = folder.categories.find((entry) => entry.id === categoryId);
+      if (category) return { folder, category };
+    }
+    return null;
+  };
+
+  const getTemplateContextById = (templateId) => {
+    for (const folder of state.folders) {
+      for (const category of folder.categories) {
+        const template = category.templates.find((entry) => entry.id === templateId);
+        if (template) return { folder, category, template };
+      }
+    }
+    return null;
+  };
+
+  const syncStatsCascadeState = (selection) => {
+    state.ui.statsCascadeSelection = selection;
+    state.ui.statsFolderFilter = selection.folderId;
+    state.ui.statsSubcategoryFilter = selection.categoryId;
+    state.ui.statsTemplateFilter = selection.templateId;
+  };
+
+  const ensureStatsCascadeSelection = () => {
+    const current = state.ui.statsCascadeSelection || {};
+    let folderId = current.folderId || state.ui.statsFolderFilter || "all";
+    let categoryId = current.categoryId || state.ui.statsSubcategoryFilter || "all";
+    let templateId = current.templateId || state.ui.statsTemplateFilter || "all";
+
+    if (folderId === "all") {
+      categoryId = "all";
+      templateId = "all";
+    } else if (categoryId === "all") {
+      templateId = "all";
+    }
+
+    const selection = { folderId, categoryId, templateId };
+    syncStatsCascadeState(selection);
+    state.ui.statsPickerTrail = Array.isArray(state.ui.statsPickerTrail) ? state.ui.statsPickerTrail : [];
+    return selection;
+  };
+
+  const buildStatsCategoryTree = () =>
+    state.folders.reduce((tree, folder, folderIndex) => {
+      const fallbackColor = CATEGORY_COLORS[folderIndex % CATEGORY_COLORS.length];
+      tree[folder.id] = {
+        id: folder.id,
+        kind: "folder",
+        label: folder.name,
+        color: fallbackColor,
+        children: folder.categories.reduce((categoryMap, category) => {
+          categoryMap[category.id] = {
+            id: category.id,
+            kind: "category",
+            label: category.name,
+            color: category.color || fallbackColor,
+            children: category.templates.reduce((templateMap, template) => {
+              templateMap[template.id] = {
+                id: template.id,
+                kind: "template",
+                label: template.name,
+                color: category.color || fallbackColor,
+              };
+              return templateMap;
+            }, {}),
+          };
+          return categoryMap;
+        }, {}),
+      };
+      return tree;
+    }, {});
+
+  const buildStatsPickerTrailFromSelection = (selection, tree) => {
+    const trail = [];
+    if (selection.folderId !== "all" && tree[selection.folderId]) {
+      trail.push({ id: selection.folderId, kind: "folder", label: tree[selection.folderId].label, color: tree[selection.folderId].color });
+    }
+    if (selection.folderId !== "all" && selection.categoryId !== "all" && tree[selection.folderId]?.children?.[selection.categoryId]) {
+      const category = tree[selection.folderId].children[selection.categoryId];
+      trail.push({ id: selection.categoryId, kind: "category", label: category.label, color: category.color, folderId: selection.folderId });
+    }
+    return trail;
+  };
+
+  const formatStatsCascadeLabel = (selection) => {
+    const folder = selection.folderId === "all" ? null : getFolderContextById(selection.folderId);
+    const categoryContext = selection.categoryId === "all" ? null : getCategoryContextById(selection.categoryId);
+    const templateContext = selection.templateId === "all" ? null : getTemplateContextById(selection.templateId);
+    return [folder?.name || "All", categoryContext?.category.name || "All", templateContext?.template.name || "All"].join(" / ");
+  };
+
+  const getStatsPickerItems = (trail, tree) => {
+    if (!trail.length) {
+      return [{ kind: "all-root", id: "all-root", label: "All", color: "#FFCC33" }, ...Object.values(tree).map((folder) => ({ ...folder }))];
+    }
+
+    if (trail.length === 1) {
+      const folder = tree[trail[0].id];
+      if (!folder) return [];
+      return [{ kind: "all-category", id: `all-${folder.id}`, label: "All", color: folder.color, folderId: folder.id }, ...Object.values(folder.children).map((category) => ({ ...category, folderId: folder.id }))];
+    }
+
+    const folder = tree[trail[0].id];
+    const category = folder?.children?.[trail[1].id];
+    if (!folder || !category) return [];
+
+    return [{ kind: "all-template", id: `all-${category.id}`, label: "All", color: category.color, folderId: folder.id, categoryId: category.id }, ...Object.values(category.children).map((template) => ({ ...template, folderId: folder.id, categoryId: category.id }))];
+  };
+
+  const getStatsPickerTaskCount = (item, tree) => {
+    if (item.kind === "template") return 1;
+    if (item.kind === "all-root") {
+      return Object.values(tree).reduce((sum, folder) => sum + Object.values(folder.children || {}).reduce((folderSum, category) => folderSum + Object.keys(category.children || {}).length, 0), 0);
+    }
+    if (item.kind === "folder" || item.kind === "all-category") {
+      const folder = tree[item.folderId || item.id];
+      if (!folder) return 0;
+      return Object.values(folder.children || {}).reduce((sum, category) => sum + Object.keys(category.children || {}).length, 0);
+    }
+    if (item.kind === "category" || item.kind === "all-template") {
+      const category = tree[item.folderId]?.children?.[item.categoryId || item.id];
+      return category ? Object.keys(category.children || {}).length : 0;
+    }
+    return 0;
+  };
+
+  const applyStatsCascadeSelection = (nextSelection) => {
+    const selection = { folderId: nextSelection.folderId || "all", categoryId: nextSelection.categoryId || "all", templateId: nextSelection.templateId || "all" };
+    syncStatsCascadeState(selection);
+    state.ui.statsPickerTrail = [];
+    state.ui.selectedSegment = null;
+    closeAllSheets(false);
+    renderStats();
+    persistState();
+  };
+
+  const formatStatsPickerCount = (count) => `${count} task${count === 1 ? "" : "s"}`;
+  const getStatsPickerDisplayCount = (item) => {
+    if (item.kind === "all-root") return state.tasks.length;
+    if (item.kind === "folder" || item.kind === "all-category") {
+      const folderId = item.folderId || item.id;
+      return state.tasks.filter((task) => task.folderId === folderId).length;
+    }
+    if (item.kind === "category" || item.kind === "all-template") {
+      const folderId = item.folderId;
+      const categoryId = item.categoryId || item.id;
+      return state.tasks.filter((task) => task.folderId === folderId && task.categoryId === categoryId).length;
+    }
+    if (item.kind === "template") {
+      return state.tasks.filter((task) => task.templateId === item.id).length;
+    }
+    return 0;
+  };
+
+  matchesStatsCategoryFilter = function (session) {
+    const selection = ensureStatsCascadeSelection();
+    if (selection.folderId === "all") return true;
+
+    const task = state.tasks.find((entry) => entry.id === session.taskId);
+    if (!task) return false;
+    if (task.folderId !== selection.folderId) return false;
+    if (selection.categoryId !== "all" && task.categoryId !== selection.categoryId) return false;
+    if (selection.templateId !== "all" && task.templateId !== selection.templateId) return false;
+    return true;
+  };
+
+  renderStatsFilters = function () {
+    const host = document.querySelector(".filter-row.filter-row-single");
+    if (!host) return;
+
+    const selection = ensureStatsCascadeSelection();
+    host.innerHTML = `
+      <button class="filter-pill stats-cascade-button" id="stats-cascade-button" type="button" aria-haspopup="dialog" aria-controls="stats-picker-sheet">
+        <span class="stats-cascade-copy">
+          <small>Category</small>
+          <strong>${escapeHtml(formatStatsCascadeLabel(selection))}</strong>
+        </span>
+        <span class="stats-cascade-arrow" aria-hidden="true"></span>
+      </button>
+    `;
+
+    dom.statsCascadeButton = document.getElementById("stats-cascade-button");
+    if (dom.statsCascadeButton) {
+      dom.statsCascadeButton.onclick = () => {
+        const tree = buildStatsCategoryTree();
+        state.ui.statsPickerTrail = buildStatsPickerTrailFromSelection(ensureStatsCascadeSelection(), tree);
+        openSheet("stats-picker-sheet");
+        renderStatsPickerSheet();
+        persistState();
+      };
+    }
+
+    renderStatsPickerSheet();
+  };
+
+  renderStatsPickerSheet = function () {
+    if (!dom.statsPickerTitle || !dom.statsPickerBreadcrumb || !dom.statsPickerList) return;
+
+    const tree = buildStatsCategoryTree();
+    const selection = ensureStatsCascadeSelection();
+    const seededTrail = Array.isArray(state.ui.statsPickerTrail) && state.ui.statsPickerTrail.length
+      ? state.ui.statsPickerTrail
+      : buildStatsPickerTrailFromSelection(selection, tree);
+    const trail = [];
+
+    if (seededTrail[0] && tree[seededTrail[0].id]) {
+      trail.push({ id: seededTrail[0].id, kind: "folder", label: tree[seededTrail[0].id].label, color: tree[seededTrail[0].id].color });
+    }
+    if (seededTrail[1] && trail[0] && tree[trail[0].id]?.children?.[seededTrail[1].id]) {
+      const category = tree[trail[0].id].children[seededTrail[1].id];
+      trail.push({ id: seededTrail[1].id, kind: "category", label: category.label, color: category.color, folderId: trail[0].id });
+    }
+    state.ui.statsPickerTrail = trail;
+
+    const levelLabels = ["\u4e00\u7ea7\u5206\u7c7b", "\u4e8c\u7ea7\u5206\u7c7b", "\u4e09\u7ea7\u4efb\u52a1"];
+    const titleByDepth = ["\u9009\u62e9\u4e00\u7ea7\u5206\u7c7b", "\u9009\u62e9\u4e8c\u7ea7\u5206\u7c7b", "\u9009\u62e9\u4e09\u7ea7\u4efb\u52a1"];
+    dom.statsPickerTitle.textContent = titleByDepth[Math.min(trail.length, titleByDepth.length - 1)];
+
+    dom.statsPickerBreadcrumb.innerHTML = `
+      <div class="stats-picker-toolbar">
+        <button class="stats-picker-back" id="stats-picker-back" type="button" ${trail.length ? "" : "disabled"}>&lt; Back</button>
+      </div>
+      <div class="stats-picker-levels">
+        ${levelLabels
+          .map(
+            (label, index) => `
+              <span class="stats-picker-level ${index === trail.length ? "is-active" : ""}">
+                ${label}
+              </span>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="stats-picker-crumbs">
+        <button class="quick-chip" id="stats-picker-root-chip" type="button">All</button>
+        ${trail
+          .map(
+            (entry, index) => `
+              <button class="quick-chip" data-stats-picker-crumb="${index}" type="button">
+                ${escapeHtml(entry.label)}
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="stats-picker-current">${escapeHtml(formatStatsCascadeLabel(selection))}</div>
+    `;
+
+    document.getElementById("stats-picker-back")?.addEventListener("click", () => {
+      if (!state.ui.statsPickerTrail.length) return;
+      state.ui.statsPickerTrail = state.ui.statsPickerTrail.slice(0, -1);
+      renderStatsPickerSheet();
+      persistState();
+    });
+    document.getElementById("stats-picker-root-chip")?.addEventListener("click", () => {
+      state.ui.statsPickerTrail = [];
+      renderStatsPickerSheet();
+      persistState();
+    });
+    dom.statsPickerBreadcrumb.querySelectorAll("[data-stats-picker-crumb]").forEach((button) => {
+      button.onclick = () => {
+        const index = Number(button.dataset.statsPickerCrumb);
+        state.ui.statsPickerTrail = trail.slice(0, index + 1);
+        renderStatsPickerSheet();
+        persistState();
+      };
+    });
+
+    const items = getStatsPickerItems(trail, tree);
+    dom.statsPickerList.innerHTML = items
+      .map((item, index) => {
+        const count = getStatsPickerDisplayCount(item);
+        const swatchColor = item.color || CATEGORY_COLORS[index % CATEGORY_COLORS.length] || "#73D2FF";
+        return `
+          <button
+            class="stats-picker-option"
+            type="button"
+            data-stats-picker-item="${escapeHtml(item.id)}"
+          >
+            <div class="stats-picker-option-main">
+              <span class="stats-picker-swatch" style="--picker-color:${swatchColor}; background:${swatchColor};"></span>
+              <span class="stats-picker-copy">
+                <strong>${escapeHtml(item.label)}</strong>
+                <small>${escapeHtml(formatStatsPickerCount(count))}</small>
+              </span>
+            </div>
+          </button>
+        `;
+      })
+      .join("");
+
+    dom.statsPickerList.querySelectorAll("[data-stats-picker-item]").forEach((button, index) => {
+      const item = items[index];
+      button.onclick = () => {
+        if (item.kind === "all-root") {
+          applyStatsCascadeSelection({ folderId: "all", categoryId: "all", templateId: "all" });
+          return;
+        }
+        if (item.kind === "folder") {
+          state.ui.statsPickerTrail = [{ id: item.id, kind: "folder", label: item.label, color: item.color }];
+          renderStatsPickerSheet();
+          persistState();
+          return;
+        }
+        if (item.kind === "all-category") {
+          applyStatsCascadeSelection({ folderId: item.folderId, categoryId: "all", templateId: "all" });
+          return;
+        }
+        if (item.kind === "category") {
+          state.ui.statsPickerTrail = [
+            { id: item.folderId, kind: "folder", label: tree[item.folderId]?.label || item.folderId, color: tree[item.folderId]?.color || item.color },
+            { id: item.id, kind: "category", label: item.label, color: item.color, folderId: item.folderId },
+          ];
+          renderStatsPickerSheet();
+          persistState();
+          return;
+        }
+        if (item.kind === "all-template") {
+          applyStatsCascadeSelection({ folderId: item.folderId, categoryId: item.categoryId, templateId: "all" });
+          return;
+        }
+        if (item.kind === "template") {
+          applyStatsCascadeSelection({ folderId: item.folderId, categoryId: item.categoryId, templateId: item.id });
+        }
+      };
+    });
+  };
+
+  renderTrendPanel = function () {
+    if (!dom.trendToggle || !dom.trendPanel) return;
+
+    dom.trendToggle.classList.toggle("is-open", Boolean(state.ui.showTrend));
+    dom.trendToggle.innerHTML = `
+      <span>Weekly trend</span>
+      <span class="trend-arrow">${state.ui.showTrend ? "\u25b4" : "\u25be"}</span>
+    `;
+    dom.trendToggle.onclick = () => {
+      state.ui.showTrend = !state.ui.showTrend;
+      renderTrendPanel();
+      persistState();
+    };
+
+    dom.trendPanel.hidden = !state.ui.showTrend;
+    if (!state.ui.showTrend) {
+      dom.trendPanel.innerHTML = "";
+      return;
+    }
+
+    const palette = ["#73D2FF", "#FFCC33"];
+    const trend = buildWeeklyTrend();
+    dom.trendPanel.innerHTML = `
+      <div class="trend-grid">
+        ${trend
+          .map((entry, index) => {
+            const width = entry.minutes > 0 ? Math.max(entry.width, 12) : 0;
+            return `
+              <div class="trend-row">
+                <span class="trend-date">${escapeHtml(entry.label)}</span>
+                <div class="trend-bar">
+                  <span style="width:${width}%; --trend-fill:${palette[index % palette.length]};"></span>
+                </div>
+                <strong>${formatDuration(entry.minutes)}</strong>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    `;
+  };
+
+  renderStatsWheel = function (stats) {
+    if (!dom.statsWheelCard || !dom.statsLegend || !dom.statsTotalRow) return;
+
+    const chart = state.ui.statsRange === "today" ? renderClockDialSvg(stats) : renderPieSvg(stats);
+    dom.statsWheelCard.innerHTML = `
+      <div class="wheel-shell wheel-shell-comic">
+        ${chart}
+        ${
+          stats.selected
+            ? `
+              <div class="stats-floating-note-comic">
+                <strong>${escapeHtml(stats.selected.label)}</strong>
+                <span>${escapeHtml(stats.selected.note)}</span>
+              </div>
+            `
+            : ""
+        }
+      </div>
+    `;
+
+    dom.statsLegend.innerHTML = stats.breakdown
+      .map(
+        (item) => `
+          <span class="stats-legend-chip">
+            <span class="stats-legend-dot" style="--legend-color:${item.color}; background:${item.color};"></span>
+            <span>${escapeHtml(item.label)}</span>
+          </span>
+        `
+      )
+      .join("");
+
+    dom.statsTotalRow.innerHTML = `
+      <div class="stats-speech-bubble">
+        <strong>${formatDuration(stats.totalMinutes)}</strong>
+        <span>Inside this range</span>
+      </div>
+    `;
+  };
+
+  renderStatsBreakdown = function (stats) {
+    if (!dom.statsBreakdown) return;
+    if (!stats.breakdown.length) {
+      dom.statsBreakdown.innerHTML = `<p class="empty-note">Nothing in this range yet.</p>`;
+      return;
+    }
+
+    dom.statsBreakdown.innerHTML = stats.breakdown
+      .map(
+        (item) => `
+          <article class="breakdown-row breakdown-sticker">
+            <div class="breakdown-primary">
+              <span class="breakdown-dot" style="--sticker-color:${item.color}; background:${item.color};"></span>
+              <span class="breakdown-name">${escapeHtml(item.label)}</span>
+            </div>
+            <strong class="breakdown-time">${formatDuration(item.minutes)}</strong>
+          </article>
+        `
+      )
+      .join("");
+  };
+
+  ensureAiPlannerPage = function () {
+    let aiPage = document.querySelector('[data-page="ai-planner"]');
+    const settingsPage = document.querySelector('[data-page="settings"]');
+    if (!settingsPage) return;
+    if (!aiPage) {
+      aiPage = document.createElement("section");
+      aiPage.className = "page";
+      aiPage.dataset.page = "ai-planner";
+      settingsPage.insertAdjacentElement("afterend", aiPage);
+    }
+
+    aiPage.innerHTML = `
+      <header class="page-hero ai-page-hero">
+        <div class="ai-page-topbar">
+          <button class="sheet-back ai-page-back" id="ai-page-back" type="button" aria-label="Back">
+            <span class="ai-page-back-symbol">&lt;</span>
+          </button>
+          <h1 class="ai-page-title">\u0041\u0049\u751f\u6210\u65e5\u7a0b</h1>
+        </div>
+      </header>
+
+      <section class="paper-sheet ai-sheet ai-sheet-compact">
+        <section class="ai-step">
+          <div class="settings-group-title">\u8ba1\u5212\u5c42\u7ea7</div>
+          <div class="ai-cycle-grid" id="ai-cycle-grid"></div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u5b8c\u6574\u6d41\u7a0b</div>
+          <div class="settings-list-block ai-workflow-strip" id="ai-workflow-strip"></div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u586b\u5199\u95ee\u5377</div>
+          <div class="settings-list-block ai-questionnaire" id="ai-questionnaire"></div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u751f\u6210 Prompt</div>
+          <div class="settings-list-block ai-actions">
+            <div class="ai-card-tools">
+              <button class="ghost-button ai-action-button" id="ai-generate-prompt" type="button">Generate Prompt</button>
+            </div>
+            <div class="ai-textarea-wrap">
+              <button class="ghost-button ai-action-button ai-inline-copy" id="ai-copy-prompt" type="button">Copy Prompt</button>
+              <textarea id="ai-prompt-output" rows="12" readonly placeholder="Prompt output will appear here."></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u7c98\u8d34 AI \u7ed3\u679c</div>
+          <div class="settings-list-block ai-actions">
+            <textarea id="ai-result-input" rows="10" placeholder="Paste the AI result here."></textarea>
+          </div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u9884\u89c8\u5bfc\u5165</div>
+          <div class="settings-list-block ai-actions">
+            <div class="sheet-button-row ai-import-actions">
+              <button class="ghost-button ai-action-button" id="ai-preview-import" type="button">Preview</button>
+              <button class="ghost-button ai-action-button" id="ai-import-plan" type="button">Import</button>
+            </div>
+            <div class="ai-preview-list" id="ai-preview-list"></div>
+          </div>
+        </section>
+      </section>
+    `;
+  };
+
+  buildAiQuestionnaire = function (cycle) {
+    if (cycle === "overall") {
+      return `
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-overall-period">Planning horizon</label>
+          <select class="ai-input" id="ai-overall-period" data-ai-field="overall.period">
+            <option value="quarter">Quarter</option>
+            <option value="year">Year</option>
+          </select>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-overall-mbti">MBTI</label>
+          <select class="ai-input" id="ai-overall-mbti" data-ai-field="overall.mbti">
+            ${AI_MBTI_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
+          </select>
+        </div>
+        <div class="ai-field">
+          <div class="ai-field-label">Chronotype</div>
+          <div class="ai-choice-grid">
+            ${AI_CHRONOTYPE_OPTIONS.map((option) => `
+              <label class="ai-choice-chip">
+                <input type="radio" name="ai-overall-chronotype" data-ai-field="overall.chronotype" value="${option}" />
+                <span>${option}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+        <div class="ai-field">
+          <div class="ai-field-label">Work style</div>
+          <div class="ai-choice-stack">
+            ${AI_WORKSTYLE_OPTIONS.map((option) => `
+              <label class="ai-choice-line">
+                <input type="radio" name="ai-overall-workstyle" data-ai-field="overall.workStyle" value="${option.label}" />
+                <span>${option.id}. ${option.label}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+        <div class="ai-field">
+          <div class="ai-field-label">Procrastination triggers</div>
+          <div class="ai-choice-stack">
+            ${AI_PROCRASTINATION_OPTIONS.map((option) => `
+              <label class="ai-choice-line">
+                <input type="checkbox" data-ai-list="overall.procrastination" value="${option}" />
+                <span>${option}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+        <div class="ai-field">
+          <div class="ai-field-label">Top values</div>
+          <div class="ai-choice-grid">
+            <select class="ai-input" data-ai-field="overall.value1">${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+            <select class="ai-input" data-ai-field="overall.value2"><option value="">Optional</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+            <select class="ai-input" data-ai-field="overall.value3"><option value="">Optional</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+          </div>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-overall-life-stage">Current season</label>
+          <input class="ai-input" id="ai-overall-life-stage" data-ai-field="overall.lifeStage" placeholder="Student, job search, startup, recovery..." />
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-overall-challenge">Main challenge</label>
+          <textarea class="ai-input ai-textarea" id="ai-overall-challenge" rows="3" data-ai-field="overall.challenge" placeholder="What is making planning difficult right now?"></textarea>
+        </div>
+        <div class="ai-field">
+          <div class="ai-field-label">3 life domains</div>
+          <div class="ai-mit-stack">
+            ${[1, 2, 3]
+              .map(
+                (index) => `
+                  <div class="ai-mit-row">
+                    <input class="ai-input" data-ai-field="overall.domain${index}Name" placeholder="Domain ${index}" />
+                    <input class="ai-input" data-ai-field="overall.domain${index}Goal" placeholder="Goal for this domain" />
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    if (cycle === "weekly") {
+      return `
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-weekly-period">Review cycle</label>
+          <select class="ai-input" id="ai-weekly-period" data-ai-field="weekly.period">
+            <option value="week">Week</option>
+            <option value="month">Month</option>
+          </select>
+        </div>
+        <div class="ai-field">
+          <div class="ai-field-label">Date range</div>
+          <div class="ai-choice-grid">
+            <input class="ai-input" type="date" data-ai-field="weekly.start" />
+            <input class="ai-input" type="date" data-ai-field="weekly.end" />
+          </div>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-weekly-win">What worked</label>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-win" rows="3" data-ai-field="weekly.win" placeholder="Wins and momentum from the last cycle"></textarea>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-weekly-missed">What slipped</label>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-missed" rows="3" data-ai-field="weekly.missed" placeholder="Missed goals or unfinished work"></textarea>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-weekly-reason">Why it happened</label>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-reason" rows="3" data-ai-field="weekly.reason" placeholder="Patterns, blockers, or energy leaks"></textarea>
+        </div>
+        <div class="ai-field">
+          <div class="ai-field-label">Core priorities</div>
+          <div class="ai-mit-stack">
+            <input class="ai-input" data-ai-field="weekly.core1" placeholder="Core priority 1" />
+            <input class="ai-input" data-ai-field="weekly.core2" placeholder="Core priority 2" />
+            <input class="ai-input" data-ai-field="weekly.core3" placeholder="Core priority 3" />
+          </div>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-weekly-energy">Expected energy</label>
+          <input class="ai-range" id="ai-weekly-energy" type="range" min="1" max="5" step="1" data-ai-field="weekly.energy" />
+          <span class="ai-range-value" data-ai-display="weekly.energy"></span>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-weekly-special">Special events</label>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-special" rows="2" data-ai-field="weekly.special" placeholder="Trips, exams, deadlines, recovery days..."></textarea>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-weekly-commitments">Fixed commitments</label>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-commitments" rows="2" data-ai-field="weekly.commitments" placeholder="Classes, meetings, workouts, family time..."></textarea>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-weekly-obstacle">Likely obstacle</label>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-obstacle" rows="2" data-ai-field="weekly.obstacle" placeholder="What could derail the plan?"></textarea>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-weekly-response">Planned response</label>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-response" rows="2" data-ai-field="weekly.response" placeholder="How should the plan adapt if that happens?"></textarea>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-daily-horizon">Plan for</label>
+        <select class="ai-input" id="ai-daily-horizon" data-ai-field="daily.horizon">
+          <option value="today">Today</option>
+          <option value="tomorrow">Tomorrow</option>
+        </select>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-daily-date">Date</label>
+        <input class="ai-input" id="ai-daily-date" type="date" data-ai-field="daily.date" />
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Energy snapshot</div>
+        <div class="ai-meter-stack">
+          <label class="ai-range-block">
+            <span>Body</span>
+            <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.body" />
+            <span class="ai-range-value" data-ai-display="daily.body"></span>
+          </label>
+          <label class="ai-range-block">
+            <span>Mood</span>
+            <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.mood" />
+            <span class="ai-range-value" data-ai-display="daily.mood"></span>
+          </label>
+          <label class="ai-range-block">
+            <span>Focus</span>
+            <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.focus" />
+            <span class="ai-range-value" data-ai-display="daily.focus"></span>
+          </label>
+        </div>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">MITs</div>
+        <div class="ai-mit-stack">
+          ${[1, 2, 3]
+            .map(
+              (index) => `
+                <div class="ai-mit-row">
+                  <input class="ai-input" data-ai-field="daily.mit${index}" placeholder="MIT ${index}" />
+                  <input class="ai-input ai-duration-input" type="number" min="5" step="5" data-ai-field="daily.mit${index}Duration" placeholder="Minutes" />
+                </div>
+              `
+            )
+            .join("")}
+        </div>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-daily-other">Other tasks</label>
+        <textarea class="ai-input ai-textarea" id="ai-daily-other" rows="3" data-ai-field="daily.otherTasks" placeholder="Smaller tasks, errands, admin, replies..."></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-daily-windows">Time windows</label>
+        <textarea class="ai-input ai-textarea" id="ai-daily-windows" rows="3" data-ai-field="daily.windows" placeholder="09:00-11:00 focus, 14:00-15:30 calls..."></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-daily-quick">Quick start task</label>
+        <input class="ai-input" id="ai-daily-quick" data-ai-field="daily.quickTask" placeholder="A 5-minute action that gets you moving" />
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-daily-distraction">Likely distraction</label>
+        <textarea class="ai-input ai-textarea" id="ai-daily-distraction" rows="2" data-ai-field="daily.distraction" placeholder="What is most likely to interrupt you?"></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-daily-strategy">Counter move</label>
+        <textarea class="ai-input ai-textarea" id="ai-daily-strategy" rows="2" data-ai-field="daily.strategy" placeholder="How should the plan respond?"></textarea>
+      </div>
+    `;
+  };
+
+  renderAiPlanner = function () {
+    ensureAiPlannerPage();
+    refreshDynamicDomRefs();
+    if (!dom.aiCycleGrid || !dom.aiWorkflowStrip || !dom.aiQuestionnaire) return;
+
+    const cycle = state.ai.cycle || "overall";
+    const cycles = AI_CYCLES_V2 || AI_CYCLES;
+    const workflowSteps = AI_WORKFLOW_STEPS || ["Choose cycle", "Fill survey", "Generate", "Copy", "Paste", "Import"];
+
+    dom.aiCycleGrid.innerHTML = cycles
+      .map(
+        (item) => `
+          <button class="ai-cycle-card ${cycle === item.id ? "is-active" : ""}" data-ai-cycle="${item.id}" type="button">
+            <strong>${escapeHtml(item.label)}</strong>
+            <span>${escapeHtml(item.note)}</span>
+          </button>
+        `
+      )
+      .join("");
+    dom.aiWorkflowStrip.innerHTML = workflowSteps.map((step) => `<span class="ai-step-chip">${escapeHtml(step)}</span>`).join("");
+    dom.aiQuestionnaire.innerHTML = buildAiQuestionnaire(cycle);
+
+    dom.aiCycleGrid.querySelectorAll("[data-ai-cycle]").forEach((button) => {
+      button.onclick = () => {
+        state.ai.cycle = button.dataset.aiCycle;
+        state.ui.aiPreviewItems = [];
+        renderAiPlanner();
+        persistState();
+      };
+    });
+
+    bindAiQuestionnaireFields();
+
+    if (dom.aiPromptOutput) dom.aiPromptOutput.value = state.ai.promptText || "";
+    if (dom.aiResultInput) {
+      dom.aiResultInput.value = state.ai.resultText || "";
+      dom.aiResultInput.oninput = (event) => {
+        state.ai.resultText = event.target.value;
+        persistState();
+      };
+    }
+    if (dom.aiGeneratePrompt) dom.aiGeneratePrompt.onclick = handleAiPromptGenerate;
+    if (dom.aiCopyPrompt) dom.aiCopyPrompt.onclick = handleAiCopyPrompt;
+    if (dom.aiPreviewImport) dom.aiPreviewImport.onclick = handleAiPreviewImport;
+    if (dom.aiImportPlan) dom.aiImportPlan.onclick = handleAiImportPlan;
+    if (dom.aiPageBack) {
+      dom.aiPageBack.onclick = () => {
+        state.currentPage = "settings";
+        renderAll();
+        persistState();
+      };
+    }
+
+    renderAiPreview(Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : []);
+  };
+
+  buildAiPromptText = function () {
+    const cycle = state.ai.cycle || "overall";
+    const profile = getAiProfileSnapshot();
+
+    if (cycle === "overall") {
+      const form = state.ai.overall;
+      const values = [form.value1, form.value2, form.value3].filter(Boolean).join(", ") || "not set";
+      const domains = [[form.domain1Name, form.domain1Goal], [form.domain2Name, form.domain2Goal], [form.domain3Name, form.domain3Goal]]
+        .filter(([name, goal]) => name || goal)
+        .map(([name, goal]) => `- ${name || "Domain"}: ${goal || "Goal not filled"}`)
+        .join("\n");
+      return [
+        "Build a practical high-level planning map.",
+        "",
+        `Horizon: ${form.period === "year" ? "Year" : "Quarter"}`,
+        `MBTI: ${form.mbti || "Unknown"}`,
+        `Chronotype: ${form.chronotype || "Unknown"}`,
+        `Work style: ${form.workStyle || "Unknown"}`,
+        `Top values: ${values}`,
+        `Life stage: ${form.lifeStage || "Not filled"}`,
+        `Main challenge: ${form.challenge || "Not filled"}`,
+        "",
+        "Domains and goals:",
+        domains || "- No goals provided",
+        "",
+        "Output request:",
+        "- Propose 3 priorities at most",
+        "- Show tradeoffs and sequence",
+        "- Keep suggestions realistic for the user's profile",
+        "- End with a short action plan for the next 7 days",
+      ].join("\n");
+    }
+
+    if (cycle === "weekly") {
+      const form = state.ai.weekly;
+      return [
+        "Build a weekly or monthly execution plan.",
+        "",
+        `Range type: ${form.period}`,
+        `Dates: ${form.start || "Not filled"} to ${form.end || "Not filled"}`,
+        `Profile: ${profile.mbti}, ${profile.chronotype}, procrastination triggers: ${profile.procrastination}`,
+        `Wins: ${form.win || "Not filled"}`,
+        `Missed: ${form.missed || "Not filled"}`,
+        `Reason: ${form.reason || "Not filled"}`,
+        "",
+        "Core priorities:",
+        `1. ${form.core1 || "Not filled"}`,
+        `2. ${form.core2 || "Not filled"}`,
+        `3. ${form.core3 || "Not filled"}`,
+        "",
+        `Energy forecast: ${form.energy || "3"}/5`,
+        `Special events: ${form.special || "None"}`,
+        `Fixed commitments: ${form.commitments || "None"}`,
+        `Obstacle: ${form.obstacle || "None"}`,
+        `Response: ${form.response || "None"}`,
+        "",
+        "Output request:",
+        "- Turn this into a clear week plan with priorities by day",
+        "- Put deep work in the best energy window",
+        "- Leave slack for interruptions",
+        "- Suggest one fallback plan if energy drops",
+      ].join("\n");
+    }
+
+    const form = state.ai.daily;
+    return [
+      "Build a day plan.",
+      "",
+      `Target day: ${form.horizon} / ${form.date || "Not filled"}`,
+      `Body: ${form.body || "3"}/5`,
+      `Mood: ${form.mood || "3"}/5`,
+      `Focus: ${form.focus || "3"}/5`,
+      "",
+      "MITs:",
+      `1. ${form.mit1 || "Not filled"} (${form.mit1Duration || state.defaultDuration} min)`,
+      `2. ${form.mit2 || "Not filled"} (${form.mit2Duration || state.defaultDuration} min)`,
+      `3. ${form.mit3 || "Not filled"} (${form.mit3Duration || state.defaultDuration} min)`,
+      "",
+      `Other tasks: ${form.otherTasks || "None"}`,
+      `Time windows: ${form.windows || "Not filled"}`,
+      `Quick start task: ${form.quickTask || "None"}`,
+      `Likely distraction: ${form.distraction || "None"}`,
+      `Counter move: ${form.strategy || "None"}`,
+      "",
+      "Output request:",
+      "- Return a clean hourly plan",
+      "- Put the hardest MIT first",
+      "- Add buffers and recovery space",
+      "- Keep wording concise and import-friendly",
+      "- Prefer one task per line in the form HH:MM Task - 25 min",
+    ].join("\n");
+  };
+
+  handleAiCopyPrompt = async function () {
+    if (!state.ai.promptText) handleAiPromptGenerate();
+    const value = state.ai.promptText || dom.aiPromptOutput?.value || "";
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      if (dom.aiCopyPrompt) {
+        dom.aiCopyPrompt.textContent = "Copied";
+        window.setTimeout(() => {
+          if (dom.aiCopyPrompt) dom.aiCopyPrompt.textContent = "Copy Prompt";
+        }, 1200);
+      }
+    } catch {
+      if (dom.aiCopyPrompt) {
+        dom.aiCopyPrompt.textContent = "Copy failed";
+        window.setTimeout(() => {
+          if (dom.aiCopyPrompt) dom.aiCopyPrompt.textContent = "Copy Prompt";
+        }, 1400);
+      }
+    }
+  };
+
+  ensureStatsCascadeSelection();
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
+  renderAll();
+}
+if (!window.__settingsCandyTune) {
+  window.__settingsCandyTune = true;
+
+  ensureSettingsStructure = function () {
+    const settingsPage = document.querySelector('.page[data-page="settings"]');
+    const settingsSheet = settingsPage?.querySelector(".settings-sheet");
+    if (!settingsSheet) return;
+
+    const heroDate = settingsPage.querySelector(".hero-date");
+    const heroNote = settingsPage.querySelector(".hero-note");
+    if (heroDate) heroDate.textContent = "";
+    if (heroNote) heroNote.remove();
+
+    settingsSheet.dataset.layout = "v5";
+    settingsSheet.classList.add("settings-sheet-clean", "settings-sheet-candy");
+    settingsSheet.innerHTML = `
+      <section class="settings-group settings-group-app">
+        <div class="settings-group-title">App</div>
+        <div class="settings-list-block">
+          <div class="settings-install-actions">
+            <button class="settings-install-button settings-install-row" id="pwa-install-button" data-icon="📱" type="button">Install to Home Screen</button>
+            <button class="settings-row settings-row-link settings-install-row" id="apk-download-button" data-icon="📦" type="button">
+              <span class="settings-row-label">Download APK</span>
+            </button>
+          </div>
+          <p class="settings-weak-note" id="pwa-install-note">Install directly from here.</p>
+        </div>
+      </section>
+
+      <section class="settings-group settings-group-planning">
+        <div class="settings-group-title">Planning</div>
+        <div class="settings-list-block">
+          <button class="settings-row settings-row-link" id="ai-planner-link" data-icon="🤖" data-tilt="a" type="button">
+            <span class="settings-row-label">AI 生成日程</span>
+            <span class="settings-row-arrow" aria-hidden="true">›</span>
+          </button>
+          <label class="settings-row settings-row-toggle" data-icon="⏳" data-tilt="b">
+            <span class="settings-row-label">优先最近时间任务</span>
+            <input type="checkbox" id="next-time-priority-toggle" />
+          </label>
+          <label class="settings-row settings-row-toggle" data-icon="⭐" data-tilt="c">
+            <span class="settings-row-label">优先重要任务</span>
+            <input type="checkbox" id="next-important-priority-toggle" />
+          </label>
+          <button class="settings-row settings-row-link" id="default-duration-row" data-icon="⏱️" data-tilt="d" type="button">
+            <span class="settings-row-label">默认任务时长</span>
+            <span class="settings-row-trail">
+              <span id="default-duration-value">25 min</span>
+              <span class="settings-row-arrow" aria-hidden="true">›</span>
+            </span>
+          </button>
+          <button class="settings-row settings-row-link" id="day-start-row" data-icon="🌅" data-tilt="a" type="button">
+            <span class="settings-row-label">一天开始时间</span>
+            <span class="settings-row-trail">
+              <span id="day-start-value">00:00</span>
+              <span class="settings-row-arrow" aria-hidden="true">›</span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section class="settings-group settings-group-appearance">
+        <div class="settings-group-title">Appearance</div>
+        <div class="settings-list-block settings-theme-block">
+          <div class="settings-subtitle">Theme</div>
+          <div class="settings-theme-grid" id="theme-grid"></div>
+          <button class="settings-row settings-row-link" id="custom-background-row" data-icon="🖼️" data-tilt="b" type="button">
+            <span class="settings-row-label">上传背景图</span>
+            <span class="settings-row-trail">
+              <span id="custom-background-value">未上传</span>
+              <span class="settings-row-arrow" aria-hidden="true">›</span>
+            </span>
+          </button>
+          <label class="settings-row settings-row-toggle" data-icon="✅" data-tilt="c">
+            <span class="settings-row-label">Completed 默认展开</span>
+            <input type="checkbox" id="completed-default-toggle" />
+          </label>
+          <input class="settings-hidden-file" id="custom-background-input" type="file" accept="image/*" />
+        </div>
+      </section>
+
+      <div class="settings-hidden-controls" aria-hidden="true">
+        <input type="time" id="day-start-input" />
+        <select id="default-duration-select">
+          <option value="15">15 min</option>
+          <option value="20">20 min</option>
+          <option value="25">25 min</option>
+          <option value="30">30 min</option>
+          <option value="45">45 min</option>
+        </select>
+      </div>
+    `;
+  };
+
+  const settingsCandyBaseRender = renderSettings;
+  renderSettings = function () {
+    settingsCandyBaseRender();
+
+    dom.apkDownloadButton = document.getElementById("apk-download-button");
+
+    if (dom.customBackgroundValue) {
+      dom.customBackgroundValue.textContent = state.customBackgroundImage ? "已上传" : "未上传";
+    }
+    if (dom.apkDownloadButton) {
+      dom.apkDownloadButton.onclick = () => {
+        window.open("https://github.com/lumeva/Colorful-time/releases", "_blank", "noopener");
+      };
+    }
+    if (dom.defaultDurationRow) {
+      dom.defaultDurationRow.onclick = () => {
+        const raw = window.prompt("默认任务时长（分钟）", String(state.defaultDuration));
+        if (raw == null) return;
+        const minutes = Number(raw);
+        if (!Number.isFinite(minutes) || minutes <= 0) return;
+        state.defaultDuration = Math.min(240, Math.max(5, Math.round(minutes)));
+        renderSettings();
+        persistState();
+      };
+    }
+    if (dom.dayStartRow) {
+      dom.dayStartRow.onclick = () => {
+        const raw = window.prompt("一天开始时间（HH:MM）", state.dayStart || "00:00");
+        if (raw == null) return;
+        const value = raw.trim();
+        if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(value)) return;
+        state.dayStart = value;
+        renderSettings();
+        persistState();
+      };
+    }
+  };
+
+  ensureSettingsStructure();
+  refreshDynamicDomRefs();
+  renderSettings();
 }
