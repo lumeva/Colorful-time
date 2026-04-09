@@ -7691,3 +7691,111 @@ textarea {
 .page[data-page="home"] .timer-button.new {
   background: #ffffff !important;
 }
+
+/* AI planner layout + phosphor pencil pass */
+.page[data-page="ai-planner"],
+.page[data-page="ai-planner"] *,
+.page[data-page="ai-planner"] *::before,
+.page[data-page="ai-planner"] *::after {
+  box-sizing: border-box;
+}
+
+.page[data-page="ai-planner"] {
+  width: 100%;
+  max-width: 100%;
+  padding: 28px 15px calc(env(safe-area-inset-bottom, 0px) + 96px) !important;
+}
+
+.page[data-page="ai-planner"] .page-hero,
+.page[data-page="ai-planner"] .paper-sheet,
+.page[data-page="ai-planner"] .ai-step,
+.page[data-page="ai-planner"] .settings-list-block,
+.page[data-page="ai-planner"] .ai-textarea-wrap,
+.page[data-page="ai-planner"] .ai-preview-list,
+.page[data-page="ai-planner"] .ai-import-actions {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.page[data-page="ai-planner"] .page-hero {
+  padding: 6px 0 0 !important;
+  margin: 0 0 18px !important;
+}
+
+.ai-page-hero {
+  display: block !important;
+  width: 100% !important;
+}
+
+.ai-page-topbar {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  width: 100% !important;
+  gap: 12px;
+}
+
+.ai-page-title {
+  flex: 1 1 auto;
+  display: block;
+  margin: 0 !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  transform: none !important;
+  white-space: normal;
+}
+
+.page[data-page="ai-planner"] .ai-sheet {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 12px 0 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.page[data-page="ai-planner"] .ai-step {
+  padding: 18px 16px !important;
+}
+
+.page[data-page="ai-planner"] .settings-group-title {
+  margin-top: 0 !important;
+}
+
+.page[data-page="ai-planner"] .ai-card-tools,
+.page[data-page="ai-planner"] .ai-import-actions {
+  margin-top: 0 !important;
+}
+
+.page[data-page="ai-planner"] .ai-input,
+.page[data-page="ai-planner"] .ai-textarea,
+.page[data-page="ai-planner"] .ai-actions textarea,
+.page[data-page="ai-planner"] .ai-choice-chip,
+.page[data-page="ai-planner"] .ai-choice-line,
+.page[data-page="ai-planner"] .ai-cycle-card {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.hero-mini,
+.tree-mini,
+.task-action {
+  display: inline-grid;
+  place-items: center;
+}
+
+.hero-mini .ph-bold.ph-pencil-line,
+.tree-mini .ph-bold.ph-pencil-line,
+.task-action .ph-bold.ph-pencil-line {
+  display: block;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: #4a3728;
+  pointer-events: none;
+}
+
+#tasks-edit-toggle.is-active .ph-bold.ph-pencil-line,
+#todo-sort-toggle.is-active .ph-bold.ph-pencil-line,
+.page[data-page="tasks"] .tree-mini .ph-bold.ph-pencil-line {
+  color: #8f8b84;
+}

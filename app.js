@@ -14,6 +14,10 @@ const CATEGORY_COLORS = [
   "#BDE0FE",
 ];
 
+function renderPencilIconMarkup(screenReaderText = "") {
+  return `<i class="ph-bold ph-pencil-line" aria-hidden="true"></i>${screenReaderText ? `<span class="sr-only">${screenReaderText}</span>` : ""}`;
+}
+
 const THEME_OPTIONS = [
   {
     id: "paper",
@@ -13948,4 +13952,169 @@ if (!window.__settingsCandyTune) {
   ensureSettingsStructure();
   refreshDynamicDomRefs();
   renderSettings();
+}
+
+if (!window.__aiPlannerLayoutAndIconPass) {
+  window.__aiPlannerLayoutAndIconPass = true;
+
+  const applyPhosphorEditIcons = () => {
+    if (dom.todoSortToggle) {
+      dom.todoSortToggle.innerHTML = renderPencilIconMarkup(state.ui.todoSortMode ? "Done sorting" : "Sort");
+      dom.todoSortToggle.setAttribute("aria-label", state.ui.todoSortMode ? "Done sorting" : "Sort tasks");
+      dom.todoSortToggle.classList.toggle("is-active", Boolean(state.ui.todoSortMode));
+    }
+
+    if (dom.tasksEditToggle) {
+      dom.tasksEditToggle.innerHTML = renderPencilIconMarkup(state.ui.tasksEditMode ? "Done editing" : "Edit tasks");
+      dom.tasksEditToggle.setAttribute("aria-label", state.ui.tasksEditMode ? "Done editing" : "Edit tasks");
+      dom.tasksEditToggle.classList.toggle("is-active", Boolean(state.ui.tasksEditMode));
+    }
+
+    document.querySelectorAll("[data-edit-node]").forEach((button) => {
+      button.innerHTML = renderPencilIconMarkup();
+    });
+  };
+
+  ensureAiPlannerPage = function () {
+    let aiPage = document.querySelector('[data-page="ai-planner"]');
+    const settingsPage = document.querySelector('[data-page="settings"]');
+    if (!settingsPage) return;
+    if (!aiPage) {
+      aiPage = document.createElement("section");
+      aiPage.className = "page";
+      aiPage.dataset.page = "ai-planner";
+      settingsPage.insertAdjacentElement("afterend", aiPage);
+    }
+
+    aiPage.innerHTML = `
+      <header class="page-hero ai-page-hero">
+        <div class="ai-page-topbar">
+          <button class="sheet-back ai-page-back" id="ai-page-back" type="button" aria-label="Back">
+            <span class="ai-page-back-symbol">&lt;</span>
+          </button>
+          <h1 class="ai-page-title">\u0041\u0049\u751f\u6210\u65e5\u7a0b</h1>
+        </div>
+      </header>
+
+      <section class="paper-sheet ai-sheet ai-sheet-compact">
+        <section class="ai-step">
+          <div class="settings-group-title">\u8ba1\u5212\u5c42\u7ea7</div>
+          <div class="ai-cycle-grid" id="ai-cycle-grid"></div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u586b\u5199\u95ee\u5377</div>
+          <div class="settings-list-block ai-questionnaire" id="ai-questionnaire"></div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u751f\u6210 Prompt</div>
+          <div class="settings-list-block ai-actions">
+            <div class="ai-card-tools">
+              <button class="ghost-button ai-action-button" id="ai-generate-prompt" type="button">Generate Prompt</button>
+            </div>
+            <div class="ai-textarea-wrap">
+              <button class="ghost-button ai-action-button ai-inline-copy" id="ai-copy-prompt" type="button">Copy Prompt</button>
+              <textarea id="ai-prompt-output" rows="12" readonly placeholder="Prompt output will appear here."></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u7c98\u8d34 AI \u7ed3\u679c</div>
+          <div class="settings-list-block ai-actions">
+            <textarea id="ai-result-input" rows="10" placeholder="Paste the AI result here."></textarea>
+          </div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u9884\u89c8\u5bfc\u5165</div>
+          <div class="settings-list-block ai-actions">
+            <div class="sheet-button-row ai-import-actions">
+              <button class="ghost-button ai-action-button" id="ai-preview-import" type="button">Preview</button>
+              <button class="ghost-button ai-action-button" id="ai-import-plan" type="button">Import</button>
+            </div>
+            <div class="ai-preview-list" id="ai-preview-list"></div>
+          </div>
+        </section>
+      </section>
+    `;
+  };
+
+  renderAiPlanner = function () {
+    ensureAiPlannerPage();
+    refreshDynamicDomRefs();
+    if (!dom.aiCycleGrid || !dom.aiQuestionnaire) return;
+
+    const cycle = state.ai.cycle || "overall";
+    const cycles = AI_CYCLES_V2 || AI_CYCLES;
+
+    dom.aiCycleGrid.innerHTML = cycles
+      .map(
+        (item) => `
+          <button class="ai-cycle-card ${cycle === item.id ? "is-active" : ""}" data-ai-cycle="${item.id}" type="button">
+            <strong>${escapeHtml(item.label)}</strong>
+            <span>${escapeHtml(item.note)}</span>
+          </button>
+        `
+      )
+      .join("");
+    dom.aiQuestionnaire.innerHTML = buildAiQuestionnaire(cycle);
+
+    dom.aiCycleGrid.querySelectorAll("[data-ai-cycle]").forEach((button) => {
+      button.onclick = () => {
+        state.ai.cycle = button.dataset.aiCycle;
+        state.ui.aiPreviewItems = [];
+        renderAiPlanner();
+        persistState();
+      };
+    });
+
+    bindAiQuestionnaireFields();
+
+    if (dom.aiPromptOutput) dom.aiPromptOutput.value = state.ai.promptText || "";
+    if (dom.aiResultInput) {
+      dom.aiResultInput.value = state.ai.resultText || "";
+      dom.aiResultInput.oninput = (event) => {
+        state.ai.resultText = event.target.value;
+        persistState();
+      };
+    }
+    if (dom.aiGeneratePrompt) dom.aiGeneratePrompt.onclick = handleAiPromptGenerate;
+    if (dom.aiCopyPrompt) dom.aiCopyPrompt.onclick = handleAiCopyPrompt;
+    if (dom.aiPreviewImport) dom.aiPreviewImport.onclick = handleAiPreviewImport;
+    if (dom.aiImportPlan) dom.aiImportPlan.onclick = handleAiImportPlan;
+    if (dom.aiPageBack) {
+      dom.aiPageBack.onclick = () => {
+        state.currentPage = "settings";
+        renderAll();
+        persistState();
+      };
+    }
+
+    renderAiPreview(Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : []);
+  };
+
+  const baseRenderTasksTreeWithPencil = renderTasksTree;
+  renderTasksTree = function () {
+    baseRenderTasksTreeWithPencil();
+    applyPhosphorEditIcons();
+  };
+
+  const baseRenderTodoGroupsWithPencil = renderTodoGroups;
+  renderTodoGroups = function () {
+    baseRenderTodoGroupsWithPencil();
+    applyPhosphorEditIcons();
+  };
+
+  const baseRenderAllWithPencil = renderAll;
+  renderAll = function () {
+    baseRenderAllWithPencil();
+    applyPhosphorEditIcons();
+  };
+
+  ensureAiPlannerPage();
+  refreshDynamicDomRefs();
+  applyPhosphorEditIcons();
+  renderAll();
 }
