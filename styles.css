@@ -7597,12 +7597,12 @@ textarea {
 }
 
 /* Home timer dynamic wash pass */
-@keyframes timer-home-breathe {
+@keyframes breathe {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
+  50% { transform: scale(1.01); }
 }
 
-@keyframes timer-home-dash-flow {
+@keyframes borderflow {
   0% {
     background-position:
       0 0,
@@ -7626,8 +7626,15 @@ textarea {
   border: 2px dashed #4a3728 !important;
   border-radius: 20px 18px 22px 16px / 18px 22px 16px 20px !important;
   box-shadow: none !important;
+  filter: none !important;
   padding: 14px 16px !important;
   transition: background-color 0.25s ease, transform 0.25s ease;
+}
+
+.page[data-page="home"] .timer-strip-shell::before,
+.page[data-page="home"] .timer-strip-shell::after {
+  box-shadow: none !important;
+  filter: none !important;
 }
 
 .page[data-page="home"] .timer-strip-shell::after {
@@ -7635,7 +7642,7 @@ textarea {
 }
 
 .page[data-page="home"] .timer-strip-shell.is-running {
-  animation: timer-home-breathe 3.4s ease-in-out infinite;
+  animation: breathe 6s ease-in-out infinite;
 }
 
 .page[data-page="home"] .timer-strip-shell.is-running::before {
@@ -7649,7 +7656,9 @@ textarea {
     repeating-linear-gradient(90deg, #4a3728 0 10px, transparent 10px 18px) 100% 100% / calc(100% - 20px) 2px no-repeat,
     repeating-linear-gradient(0deg, #4a3728 0 10px, transparent 10px 18px) 0 100% / 2px calc(100% - 20px) no-repeat,
     repeating-linear-gradient(0deg, #4a3728 0 10px, transparent 10px 18px) 100% 0 / 2px calc(100% - 20px) no-repeat;
-  animation: timer-home-dash-flow 8s linear infinite;
+  box-shadow: none !important;
+  filter: none !important;
+  animation: borderflow 12s linear infinite;
   opacity: 0.9;
 }
 
