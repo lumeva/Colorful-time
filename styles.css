@@ -8942,3 +8942,682 @@ body.theme-minimalist #tree-editor-sheet .color-swatch[aria-pressed="true"] {
   border-color: rgba(0, 0, 0, 0.14) !important;
   color: #444444 !important;
 }
+
+/* AI planner dynamic forms */
+.page[data-page="ai-planner"] .ai-form-panels {
+  display: grid;
+  gap: 14px;
+}
+
+.page[data-page="ai-planner"] .ai-form-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.page[data-page="ai-planner"] .ai-form-panel[hidden] {
+  display: none !important;
+}
+
+.page[data-page="ai-planner"] .ai-planning-select-wrap {
+  margin: 0;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-weekly-field {
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-q-head {
+  display: grid;
+  gap: 4px;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-q-title {
+  color: #3f2f23;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-q-lead {
+  color: rgba(74, 55, 40, 0.86);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-q-note {
+  color: rgba(74, 55, 40, 0.58);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-weekly-core-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-weekly-core-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-weekly-core-item span {
+  font-weight: 800;
+  color: #4a3728;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-weekly-energy-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-weekly-energy-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-weekly-energy-row .ai-range {
+  flex: 1 1 220px;
+}
+
+.page[data-page="ai-planner"] .form-weekly .energy-icon {
+  min-width: 86px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(74, 55, 40, 0.12);
+}
+
+.page[data-page="ai-planner"] .form-weekly .energy-icon-glyph {
+  display: block;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.page[data-page="ai-planner"] .form-weekly .energy-icon-copy {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.74rem;
+  color: rgba(74, 55, 40, 0.7);
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-range {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d8ecff 0%, #ffd77a var(--energy-percent, 50%), rgba(74, 55, 40, 0.08) var(--energy-percent, 50%), rgba(74, 55, 40, 0.08) 100%);
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffcc33;
+  border: 2px solid #4a3728;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffcc33;
+  border: 2px solid #4a3728;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-range::-moz-range-track {
+  height: 14px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-weekly-obstacle-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.page[data-page="ai-planner"] .form-weekly .ai-weekly-ifthen-arrow {
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  font-weight: 900;
+  color: rgba(74, 55, 40, 0.7);
+  min-width: 28px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-field {
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-q-head {
+  display: grid;
+  gap: 4px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-q-title {
+  color: #3f2f23;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-q-lead {
+  color: rgba(74, 55, 40, 0.86);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-q-note {
+  color: rgba(74, 55, 40, 0.58);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-meta-field {
+  margin: 0;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-date-chip {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(74, 55, 40, 0.12);
+  background: rgba(255, 255, 255, 0.58);
+  color: #4a3728;
+  font-weight: 700;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-energy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-energy-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(74, 55, 40, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-energy-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-energy-head strong {
+  color: #4a3728;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.page[data-page="ai-planner"] .form-daily .daily-energy-icon {
+  min-width: 72px;
+  padding: 7px 8px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-energy-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-range {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d8ecff 0%, #ffd77a var(--energy-percent, 50%), rgba(74, 55, 40, 0.08) var(--energy-percent, 50%), rgba(74, 55, 40, 0.08) 100%);
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffcc33;
+  border: 2px solid #4a3728;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffcc33;
+  border: 2px solid #4a3728;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-range::-moz-range-track {
+  height: 14px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-mit-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-mit-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(124px, 156px);
+  align-items: center;
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-mit-index {
+  color: #4a3728;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-tag-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-tag {
+  position: relative;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-tag input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-tag span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 55, 40, 0.18);
+  background: rgba(255, 255, 255, 0.54);
+  color: #4a3728;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-tag input:checked + span {
+  background: rgba(255, 204, 51, 0.28);
+  border-color: rgba(74, 55, 40, 0.4);
+  transform: translateY(-1px);
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-obstacle-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.page[data-page="ai-planner"] .form-daily .ai-daily-ifthen-arrow {
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  font-weight: 900;
+  color: rgba(74, 55, 40, 0.7);
+  min-width: 28px;
+}
+
+.page[data-page="ai-planner"] .ai-copy-cheer {
+  position: fixed;
+  left: 50%;
+  bottom: 110px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 2px solid #4a3728;
+  background: rgba(255, 253, 240, 0.96);
+  color: #4a3728;
+  font-weight: 800;
+  opacity: 0;
+  transform: translate(-50%, 12px) scale(0.94);
+  pointer-events: none;
+  z-index: 80;
+}
+
+.page[data-page="ai-planner"] .ai-copy-cheer.is-visible {
+  animation: ai-copy-cheer-pop 1.8s ease forwards;
+}
+
+.page[data-page="ai-planner"] .ai-copy-cheer-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.page[data-page="ai-planner"] .ai-copy-cheer.is-minimalist {
+  border-width: 1px;
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(12px);
+}
+
+.page[data-page="ai-planner"] .ai-preview-list {
+  min-height: 56px;
+  display: grid;
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .ai-preview-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(74, 55, 40, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.page[data-page="ai-planner"] .ai-preview-row.ai-preview-row-create {
+  border-style: dashed;
+}
+
+.page[data-page="ai-planner"] .ai-preview-row.ai-preview-row-unmatched {
+  opacity: 0.72;
+}
+
+.page[data-page="ai-planner"] .ai-preview-toggle {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.page[data-page="ai-planner"] .ai-preview-toggle input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.page[data-page="ai-planner"] .ai-preview-toggle-ui {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 2px solid rgba(74, 55, 40, 0.38);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.page[data-page="ai-planner"] .ai-preview-toggle input:checked + .ai-preview-toggle-ui {
+  background: #ffcc33;
+  border-color: #4a3728;
+}
+
+.page[data-page="ai-planner"] .ai-preview-main,
+.page[data-page="ai-planner"] .ai-preview-side {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.page[data-page="ai-planner"] .ai-preview-titleline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.page[data-page="ai-planner"] .ai-preview-name {
+  font-weight: 700;
+  color: #4a3728;
+}
+
+.page[data-page="ai-planner"] .ai-preview-star {
+  color: #c45353;
+  font-size: 0.9rem;
+}
+
+.page[data-page="ai-planner"] .ai-preview-path {
+  color: rgba(74, 55, 40, 0.62);
+  font-size: 0.8rem;
+}
+
+.page[data-page="ai-planner"] .ai-preview-side {
+  justify-items: end;
+}
+
+.page[data-page="ai-planner"] .ai-preview-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 204, 51, 0.18);
+  color: #4a3728;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.page[data-page="ai-planner"] .ai-preview-row-unmatched .ai-preview-status {
+  background: rgba(201, 104, 104, 0.14);
+}
+
+.page[data-page="ai-planner"] .ai-import-toast .ai-copy-cheer-icon {
+  font-size: 1.15rem;
+}
+
+@keyframes ai-copy-cheer-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 12px) scale(0.94);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  82% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.98);
+  }
+}
+
+body.theme-adventure .page[data-page="ai-planner"] .form-weekly .ai-range {
+  height: 16px;
+  border: 2px solid #4a3728;
+  background: linear-gradient(90deg, rgba(255, 204, 51, 0.72) 0%, rgba(255, 204, 51, 0.72) var(--energy-percent, 50%), rgba(255, 255, 255, 0.56) var(--energy-percent, 50%), rgba(255, 255, 255, 0.56) 100%);
+}
+
+body.theme-adventure .page[data-page="ai-planner"] .form-daily .ai-daily-range {
+  height: 16px;
+  border: 2px solid #4a3728;
+  background: linear-gradient(90deg, rgba(255, 204, 51, 0.72) 0%, rgba(255, 204, 51, 0.72) var(--energy-percent, 50%), rgba(255, 255, 255, 0.56) var(--energy-percent, 50%), rgba(255, 255, 255, 0.56) 100%);
+}
+
+body.theme-adventure .page[data-page="ai-planner"] .form-weekly .energy-icon[data-energy-level="5"] .energy-icon-glyph {
+  animation: energy-pop 1s ease-in-out infinite;
+}
+
+body.theme-adventure .page[data-page="ai-planner"] .form-daily .daily-energy-icon[data-energy-level="5"] .energy-icon-glyph {
+  animation: energy-pop 1s ease-in-out infinite;
+}
+
+body.theme-minimalist .page[data-page="ai-planner"] .form-weekly .energy-icon {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.theme-minimalist .page[data-page="ai-planner"] .form-daily .daily-energy-icon {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.theme-minimalist .page[data-page="ai-planner"] .form-weekly .ai-range {
+  height: 8px;
+  border: 0;
+  background: linear-gradient(90deg, #dcecff 0%, #f3dfaa var(--energy-percent, 50%), rgba(0, 0, 0, 0.06) var(--energy-percent, 50%), rgba(0, 0, 0, 0.06) 100%);
+}
+
+body.theme-minimalist .page[data-page="ai-planner"] .form-daily .ai-daily-range {
+  height: 8px;
+  border: 0;
+  background: linear-gradient(90deg, #dcecff 0%, #f3dfaa var(--energy-percent, 50%), rgba(0, 0, 0, 0.06) var(--energy-percent, 50%), rgba(0, 0, 0, 0.06) 100%);
+}
+
+body.theme-minimalist .page[data-page="ai-planner"] .form-weekly .ai-range::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+}
+
+body.theme-minimalist .page[data-page="ai-planner"] .form-weekly .ai-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+}
+
+body.theme-minimalist .page[data-page="ai-planner"] .form-daily .ai-daily-range::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+}
+
+body.theme-minimalist .page[data-page="ai-planner"] .form-daily .ai-daily-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+}
+
+@keyframes energy-pop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-quarterly-field {
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-q-head {
+  display: grid;
+  gap: 4px;
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-q-title {
+  color: #3f2f23;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-q-note {
+  color: rgba(74, 55, 40, 0.58);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-choice-grid-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-values-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-quarterly-domain-list {
+  display: grid;
+  gap: 10px;
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-quarterly-domain-card {
+  padding: 10px;
+  border: 1px solid rgba(74, 55, 40, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-quarterly-domain-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 30%) minmax(0, 70%);
+  gap: 10px;
+  align-items: center;
+}
+
+.page[data-page="ai-planner"] .form-quarterly .ai-quarterly-domain-select,
+.page[data-page="ai-planner"] .form-quarterly .ai-quarterly-domain-goal {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .page[data-page="ai-planner"] .ai-preview-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .page[data-page="ai-planner"] .ai-preview-side {
+    grid-column: 2;
+    justify-items: start;
+  }
+
+  .page[data-page="ai-planner"] .form-daily .ai-daily-meta-row,
+  .page[data-page="ai-planner"] .form-daily .ai-daily-energy-grid,
+  .page[data-page="ai-planner"] .form-daily .ai-daily-obstacle-grid,
+  .page[data-page="ai-planner"] .form-weekly .ai-weekly-energy-shell,
+  .page[data-page="ai-planner"] .form-weekly .ai-weekly-core-grid,
+  .page[data-page="ai-planner"] .form-weekly .ai-weekly-obstacle-grid,
+  .page[data-page="ai-planner"] .form-quarterly .ai-choice-grid-5,
+  .page[data-page="ai-planner"] .form-quarterly .ai-values-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page[data-page="ai-planner"] .form-weekly .ai-weekly-ifthen-arrow {
+    min-height: 24px;
+    transform: rotate(90deg);
+  }
+
+  .page[data-page="ai-planner"] .form-daily .ai-daily-ifthen-arrow {
+    min-height: 24px;
+    transform: rotate(90deg);
+  }
+
+  .page[data-page="ai-planner"] .form-daily .ai-daily-mit-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .page[data-page="ai-planner"] .form-daily .ai-duration-input {
+    grid-column: 2;
+  }
+
+  .page[data-page="ai-planner"] .form-quarterly .ai-quarterly-domain-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -13434,22 +13434,21 @@ if (!window.__cleanAdventureUiFinalPass) {
   buildAiQuestionnaire = function (cycle) {
     if (cycle === "overall") {
       return `
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-overall-period">Planning horizon</label>
-          <select class="ai-input" id="ai-overall-period" data-ai-field="overall.period">
-            <option value="quarter">Quarter</option>
-            <option value="year">Year</option>
-          </select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-overall-mbti">MBTI</label>
+        <div class="ai-field ai-quarterly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q1 · 人格类型 (MBTI)</strong>
+            <small class="ai-q-note">作为稳定的人格偏好线索，用来决定规划的抽象层级、反馈频率和执行节奏。</small>
+          </div>
           <select class="ai-input" id="ai-overall-mbti" data-ai-field="overall.mbti">
             ${AI_MBTI_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
           </select>
         </div>
-        <div class="ai-field">
-          <div class="ai-field-label">Chronotype</div>
-          <div class="ai-choice-grid">
+        <div class="ai-field ai-quarterly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q2 · 时型偏好 (Chronotype)</strong>
+            <small class="ai-q-note">用于判断你更适合把高认知负荷任务放在一天中的哪个能量窗口。</small>
+          </div>
+          <div class="ai-choice-grid ai-choice-grid-5">
             ${AI_CHRONOTYPE_OPTIONS.map((option) => `
               <label class="ai-choice-chip">
                 <input type="radio" name="ai-overall-chronotype" data-ai-field="overall.chronotype" value="${option}" />
@@ -13458,8 +13457,11 @@ if (!window.__cleanAdventureUiFinalPass) {
             `).join("")}
           </div>
         </div>
-        <div class="ai-field">
-          <div class="ai-field-label">Work style</div>
+        <div class="ai-field ai-quarterly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q3 · 工作风格 (Work style)</strong>
+            <small class="ai-q-note">帮助系统判断你更适合单线程推进、任务切换，还是固定时间块的节奏设计。</small>
+          </div>
           <div class="ai-choice-stack">
             ${AI_WORKSTYLE_OPTIONS.map((option) => `
               <label class="ai-choice-line">
@@ -13469,8 +13471,11 @@ if (!window.__cleanAdventureUiFinalPass) {
             `).join("")}
           </div>
         </div>
-        <div class="ai-field">
-          <div class="ai-field-label">Procrastination triggers</div>
+        <div class="ai-field ai-quarterly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q4 · 拖延触发器 (Procrastination triggers)</strong>
+            <small class="ai-q-note">识别你最常卡住的触发点，后续才能在计划里预埋更有效的启动动作和缓冲机制。</small>
+          </div>
           <div class="ai-choice-stack">
             ${AI_PROCRASTINATION_OPTIONS.map((option) => `
               <label class="ai-choice-line">
@@ -13480,31 +13485,57 @@ if (!window.__cleanAdventureUiFinalPass) {
             `).join("")}
           </div>
         </div>
-        <div class="ai-field">
-          <div class="ai-field-label">Top values</div>
-          <div class="ai-choice-grid">
-            <select class="ai-input" data-ai-field="overall.value1">${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
-            <select class="ai-input" data-ai-field="overall.value2"><option value="">Optional</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
-            <select class="ai-input" data-ai-field="overall.value3"><option value="">Optional</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+        <div class="ai-field ai-quarterly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q5 · 核心价值观 (Top values)</strong>
+            <small class="ai-q-note">用前三优先价值观给季度或年度规划定锚，避免目标看起来都重要却没有真实排序。</small>
+          </div>
+          <div class="ai-choice-grid ai-values-grid">
+            <select class="ai-input" data-ai-field="overall.value1">
+              <option value="">Top value #1</option>
+              ${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
+            </select>
+            <select class="ai-input" data-ai-field="overall.value2">
+              <option value="">Top value #2</option>
+              ${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
+            </select>
+            <select class="ai-input" data-ai-field="overall.value3">
+              <option value="">Top value #3</option>
+              ${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
+            </select>
           </div>
         </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-overall-life-stage">Current season</label>
-          <input class="ai-input" id="ai-overall-life-stage" data-ai-field="overall.lifeStage" placeholder="Student, job search, startup, recovery..." />
+        <div class="ai-field ai-quarterly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q6 · 当前阶段背景 (Current season)</strong>
+            <small class="ai-q-note">记录你现在所处的人生阶段，帮助规划更贴近现实环境，而不是默认理想状态。</small>
+          </div>
+          <input class="ai-input" id="ai-overall-life-stage" type="text" data-ai-field="overall.lifeStage" placeholder="Student, job search, startup, recovery..." />
         </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-overall-challenge">Main challenge</label>
+        <div class="ai-field ai-quarterly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q7 · 主要挑战 (Main challenge)</strong>
+            <small class="ai-q-note">明确当前最主要的阻力来源，后续生成的策略才会优先解决真正拖慢你的瓶颈。</small>
+          </div>
           <textarea class="ai-input ai-textarea" id="ai-overall-challenge" rows="3" data-ai-field="overall.challenge" placeholder="What is making planning difficult right now?"></textarea>
         </div>
-        <div class="ai-field">
-          <div class="ai-field-label">3 life domains</div>
-          <div class="ai-mit-stack">
+        <div class="ai-field ai-quarterly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q8 · 三大生活领域</strong>
+            <small class="ai-q-note">把长期规划拆到 3 个稳定生活维度，每个维度同时写出领域和更具体的目标内容。</small>
+          </div>
+          <div class="ai-quarterly-domain-list">
             ${[1, 2, 3]
               .map(
                 (index) => `
-                  <div class="ai-mit-row">
-                    <input class="ai-input" data-ai-field="overall.domain${index}Name" placeholder="Domain ${index}" />
-                    <input class="ai-input" data-ai-field="overall.domain${index}Goal" placeholder="Goal for this domain" />
+                  <div class="ai-quarterly-domain-card">
+                    <div class="ai-quarterly-domain-row">
+                      <select class="ai-input ai-quarterly-domain-select" data-ai-field="overall.domain${index}Name">
+                        <option value="">Choose domain</option>
+                        ${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
+                      </select>
+                      <input class="ai-input ai-quarterly-domain-goal" type="text" data-ai-field="overall.domain${index}Goal" placeholder="Goal content" />
+                    </div>
                   </div>
                 `
               )
@@ -13516,130 +13547,181 @@ if (!window.__cleanAdventureUiFinalPass) {
 
     if (cycle === "weekly") {
       return `
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-period">Review cycle</label>
-          <select class="ai-input" id="ai-weekly-period" data-ai-field="weekly.period">
-            <option value="week">Week</option>
-            <option value="month">Month</option>
-          </select>
+        <div class="ai-field ai-weekly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q1 · 上期复盘 (Review)</strong>
+            <div class="ai-q-lead">上周/月，有哪 1-2 件事你感到“做得超预期”？有什么没做到但本来想做的？</div>
+            <small class="ai-q-note">依据：成长型思维 + 复盘学习循环（Kolb 理论）</small>
+          </div>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-review" rows="3" data-ai-field="weekly.reviewSummary" placeholder="做得超预期的事... 未完成的事及原因..."></textarea>
         </div>
-        <div class="ai-field">
-          <div class="ai-field-label">Date range</div>
-          <div class="ai-choice-grid">
-            <input class="ai-input" type="date" data-ai-field="weekly.start" />
-            <input class="ai-input" type="date" data-ai-field="weekly.end" />
+        <div class="ai-field ai-weekly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q2 · 核心任务 (Core Tasks)</strong>
+            <div class="ai-q-lead">这个周期内，如果只能完成 3 件事，你会选择什么？</div>
+            <small class="ai-q-note">依据：精要主义——少即是多的选择框架</small>
+          </div>
+          <div class="ai-weekly-core-grid">
+            <label class="ai-weekly-core-item">
+              <span>①</span>
+              <input class="ai-input" data-ai-field="weekly.core1" placeholder="核心任务 1" />
+            </label>
+            <label class="ai-weekly-core-item">
+              <span>②</span>
+              <input class="ai-input" data-ai-field="weekly.core2" placeholder="核心任务 2" />
+            </label>
+            <label class="ai-weekly-core-item">
+              <span>③</span>
+              <input class="ai-input" data-ai-field="weekly.core3" placeholder="核心任务 3" />
+            </label>
           </div>
         </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-win">What worked</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-win" rows="3" data-ai-field="weekly.win" placeholder="Wins and momentum from the last cycle"></textarea>
-        </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-missed">What slipped</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-missed" rows="3" data-ai-field="weekly.missed" placeholder="Missed goals or unfinished work"></textarea>
-        </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-reason">Why it happened</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-reason" rows="3" data-ai-field="weekly.reason" placeholder="Patterns, blockers, or energy leaks"></textarea>
-        </div>
-        <div class="ai-field">
-          <div class="ai-field-label">Core priorities</div>
-          <div class="ai-mit-stack">
-            <input class="ai-input" data-ai-field="weekly.core1" placeholder="Core priority 1" />
-            <input class="ai-input" data-ai-field="weekly.core2" placeholder="Core priority 2" />
-            <input class="ai-input" data-ai-field="weekly.core3" placeholder="Core priority 3" />
+        <div class="ai-field ai-weekly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q3 · 精力预判 (Energy)</strong>
+            <div class="ai-q-lead">预计这个周期你的整体精力状态如何？有什么特殊情况影响？</div>
+            <small class="ai-q-note">依据：精力管理理论——提前识别低精力时段</small>
           </div>
+          <div class="ai-weekly-energy-shell">
+            <div class="ai-weekly-energy-row">
+              <input class="ai-range" id="ai-weekly-energy" type="range" min="1" max="5" step="1" value="3" data-ai-field="weekly.energy" />
+              <span class="ai-range-value" data-ai-display="weekly.energy"></span>
+            </div>
+            <div class="energy-icon" id="ai-weekly-energy-icon" aria-live="polite">
+              <span class="energy-icon-glyph" id="ai-weekly-energy-glyph">😐</span>
+              <small class="energy-icon-copy" id="ai-weekly-energy-copy">普通状态</small>
+            </div>
+          </div>
+          <input class="ai-input" id="ai-weekly-special" type="text" data-ai-field="weekly.special" placeholder="特殊情况补充（如：重要会议、旅行等）" />
         </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-energy">Expected energy</label>
-          <input class="ai-range" id="ai-weekly-energy" type="range" min="1" max="5" step="1" data-ai-field="weekly.energy" />
-          <span class="ai-range-value" data-ai-display="weekly.energy"></span>
+        <div class="ai-field ai-weekly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q4 · 固定承诺 (Hard Commitments)</strong>
+            <div class="ai-q-lead">这个周期已经确定的固定事项有哪些？</div>
+            <small class="ai-q-note">依据：GTD 系统——捕获所有 Hard Commitment</small>
+          </div>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-commitments" rows="3" data-ai-field="weekly.commitments" placeholder="会议、约定、Deadline..."></textarea>
         </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-special">Special events</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-special" rows="2" data-ai-field="weekly.special" placeholder="Trips, exams, deadlines, recovery days..."></textarea>
-        </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-commitments">Fixed commitments</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-commitments" rows="2" data-ai-field="weekly.commitments" placeholder="Classes, meetings, workouts, family time..."></textarea>
-        </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-obstacle">Likely obstacle</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-obstacle" rows="2" data-ai-field="weekly.obstacle" placeholder="What could derail the plan?"></textarea>
-        </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-response">Planned response</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-response" rows="2" data-ai-field="weekly.response" placeholder="How should the plan adapt if that happens?"></textarea>
+        <div class="ai-field ai-weekly-field">
+          <div class="ai-q-head">
+            <strong class="ai-q-title">Q5 · 潜在障碍 (Obstacles)</strong>
+            <div class="ai-q-lead">你预见到哪些可能阻碍你的因素？你打算如何应对？</div>
+            <small class="ai-q-note">依据：实施意图（Gollwitzer）—— if-then 计划提升达成率</small>
+          </div>
+          <div class="ai-weekly-obstacle-grid">
+            <textarea class="ai-input ai-textarea" id="ai-weekly-obstacle" rows="3" data-ai-field="weekly.obstacle" placeholder="可能的障碍"></textarea>
+            <div class="ai-weekly-ifthen-arrow" aria-hidden="true">➔</div>
+            <textarea class="ai-input ai-textarea" id="ai-weekly-response" rows="3" data-ai-field="weekly.response" placeholder="应对策略"></textarea>
+          </div>
         </div>
       `;
     }
 
+    const dailyMeta = getAiDailyTargetMeta(state.ai?.daily?.horizon);
     return `
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-horizon">Plan for</label>
-        <select class="ai-input" id="ai-daily-horizon" data-ai-field="daily.horizon">
-          <option value="today">Today</option>
-          <option value="tomorrow">Tomorrow</option>
-        </select>
-      </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-date">Date</label>
-        <input class="ai-input" id="ai-daily-date" type="date" data-ai-field="daily.date" />
-      </div>
-      <div class="ai-field">
-        <div class="ai-field-label">Energy snapshot</div>
-        <div class="ai-meter-stack">
-          <label class="ai-range-block">
-            <span>Body</span>
-            <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.body" />
-            <span class="ai-range-value" data-ai-display="daily.body"></span>
-          </label>
-          <label class="ai-range-block">
-            <span>Mood</span>
-            <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.mood" />
-            <span class="ai-range-value" data-ai-display="daily.mood"></span>
-          </label>
-          <label class="ai-range-block">
-            <span>Focus</span>
-            <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.focus" />
-            <span class="ai-range-value" data-ai-display="daily.focus"></span>
-          </label>
+      <div class="ai-daily-meta-row">
+        <label class="ai-field ai-daily-meta-field" for="ai-daily-horizon">
+          <span class="ai-field-label">Plan for</span>
+          <select class="ai-input" id="ai-daily-horizon" data-ai-field="daily.horizon">
+            <option value="today">Today</option>
+            <option value="tomorrow">Tomorrow</option>
+          </select>
+        </label>
+        <div class="ai-field ai-daily-meta-field">
+          <span class="ai-field-label">Date</span>
+          <div class="ai-daily-date-chip" id="ai-daily-date-display" data-ai-daily-date="${dailyMeta.value}">${dailyMeta.label}</div>
         </div>
       </div>
-      <div class="ai-field">
-        <div class="ai-field-label">MITs</div>
-        <div class="ai-mit-stack">
-          ${[1, 2, 3]
+      <div class="ai-field ai-daily-field">
+        <div class="ai-q-head">
+          <strong class="ai-q-title">Q1 · 当前能量状态 (Current Energy)</strong>
+          <div class="ai-q-lead">分别评估你现在的状态（1-5 分）。</div>
+          <small class="ai-q-note">依据：精力四维模型。三维同时低分建议只做维护性任务。</small>
+        </div>
+        <div class="ai-daily-energy-grid">
+          ${[
+            { key: "body", icon: "🏃", label: "身体" },
+            { key: "mood", icon: "🌈", label: "情绪" },
+            { key: "focus", icon: "🎯", label: "专注力" },
+          ]
             .map(
-              (index) => `
-                <div class="ai-mit-row">
-                  <input class="ai-input" data-ai-field="daily.mit${index}" placeholder="MIT ${index}" />
-                  <input class="ai-input ai-duration-input" type="number" min="5" step="5" data-ai-field="daily.mit${index}Duration" placeholder="Minutes" />
+              (item) => `
+                <div class="ai-daily-energy-card">
+                  <div class="ai-daily-energy-head">
+                    <strong>${item.icon} ${item.label}</strong>
+                    <div class="energy-icon daily-energy-icon" data-daily-energy-shell="${item.key}" aria-live="polite">
+                      <span class="energy-icon-glyph" data-daily-energy-glyph="${item.key}">${item.icon}</span>
+                      <small class="energy-icon-copy" data-daily-energy-copy="${item.key}">平稳</small>
+                    </div>
+                  </div>
+                  <div class="ai-daily-energy-row">
+                    <input class="ai-range ai-daily-range" type="range" min="1" max="5" step="1" value="3" data-ai-field="daily.${item.key}" data-daily-energy-key="${item.key}" />
+                    <span class="ai-range-value" data-ai-display="daily.${item.key}"></span>
+                  </div>
                 </div>
               `
             )
             .join("")}
         </div>
       </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-other">Other tasks</label>
-        <textarea class="ai-input ai-textarea" id="ai-daily-other" rows="3" data-ai-field="daily.otherTasks" placeholder="Smaller tasks, errands, admin, replies..."></textarea>
+      <div class="ai-field ai-daily-field">
+        <div class="ai-q-head">
+          <strong class="ai-q-title">Q2 · 最重要的三件事 (3 MITs)</strong>
+          <div class="ai-q-lead">今天最重要的三件事是什么？（完成它们，今天就算成功）</div>
+          <small class="ai-q-note">依据：MIT 方法 + 帕金森定律。</small>
+        </div>
+        <div class="ai-daily-mit-stack">
+          ${[1, 2, 3]
+            .map(
+              (index) => `
+                <label class="ai-daily-mit-row">
+                  <span class="ai-daily-mit-index">${["①", "②", "③"][index - 1]}</span>
+                  <input class="ai-input" data-ai-field="daily.mit${index}" placeholder="MIT ${index}" />
+                  <input class="ai-input ai-duration-input" type="number" min="5" step="5" data-ai-field="daily.mit${index}Duration" placeholder="预计耗时(min)" />
+                </label>
+              `
+            )
+            .join("")}
+        </div>
       </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-windows">Time windows</label>
-        <textarea class="ai-input ai-textarea" id="ai-daily-windows" rows="3" data-ai-field="daily.windows" placeholder="09:00-11:00 focus, 14:00-15:30 calls..."></textarea>
+      <div class="ai-field ai-daily-field">
+        <div class="ai-q-head">
+          <strong class="ai-q-title">Q3 · 时间窗口 (Time Windows)</strong>
+          <div class="ai-q-lead">今天你有多少不被打断的专注时间段？</div>
+          <small class="ai-q-note">依据：深度工作理论。</small>
+        </div>
+        <div class="ai-daily-tag-grid">
+          ${["清晨", "上午", "下午", "晚间"]
+            .map(
+              (slot) => `
+                <label class="ai-daily-tag">
+                  <input type="checkbox" data-ai-list="daily.windowsList" value="${slot}" />
+                  <span>${slot}</span>
+                </label>
+              `
+            )
+            .join("")}
+        </div>
       </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-quick">Quick start task</label>
-        <input class="ai-input" id="ai-daily-quick" data-ai-field="daily.quickTask" placeholder="A 5-minute action that gets you moving" />
+      <div class="ai-field ai-daily-field">
+        <div class="ai-q-head">
+          <strong class="ai-q-title">Q4 · 5分钟快速启动 (Kickstart)</strong>
+          <div class="ai-q-lead">有没有一件 5 分钟内能完成的小事来开启状态？</div>
+          <small class="ai-q-note">依据：微习惯 + 启动效应。</small>
+        </div>
+        <input class="ai-input" id="ai-daily-quick" data-ai-field="daily.quickTask" placeholder="例如：整理桌面、回复一封邮件..." />
       </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-distraction">Likely distraction</label>
-        <textarea class="ai-input ai-textarea" id="ai-daily-distraction" rows="2" data-ai-field="daily.distraction" placeholder="What is most likely to interrupt you?"></textarea>
-      </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-strategy">Counter move</label>
-        <textarea class="ai-input ai-textarea" id="ai-daily-strategy" rows="2" data-ai-field="daily.strategy" placeholder="How should the plan respond?"></textarea>
+      <div class="ai-field ai-daily-field">
+        <div class="ai-q-head">
+          <strong class="ai-q-title">Q5 · 干扰预测 (Distraction)</strong>
+          <div class="ai-q-lead">今天最可能打断你的是什么？你打算如何处理？</div>
+          <small class="ai-q-note">依据：注意力恢复理论。</small>
+        </div>
+        <div class="ai-daily-obstacle-grid">
+          <textarea class="ai-input ai-textarea" id="ai-daily-distraction" rows="3" data-ai-field="daily.distraction" placeholder="干扰源"></textarea>
+          <div class="ai-daily-ifthen-arrow" aria-hidden="true">➔</div>
+          <textarea class="ai-input ai-textarea" id="ai-daily-strategy" rows="3" data-ai-field="daily.strategy" placeholder="防护机制"></textarea>
+        </div>
       </div>
     `;
   };
@@ -13702,95 +13784,118 @@ if (!window.__cleanAdventureUiFinalPass) {
 
   buildAiPromptText = function () {
     const cycle = state.ai.cycle || "overall";
-    const profile = getAiProfileSnapshot();
 
     if (cycle === "overall") {
       const form = state.ai.overall;
-      const values = [form.value1, form.value2, form.value3].filter(Boolean).join(", ") || "not set";
-      const domains = [[form.domain1Name, form.domain1Goal], [form.domain2Name, form.domain2Goal], [form.domain3Name, form.domain3Goal]]
-        .filter(([name, goal]) => name || goal)
-        .map(([name, goal]) => `- ${name || "Domain"}: ${goal || "Goal not filled"}`)
-        .join("\n");
-      return [
-        "Build a practical high-level planning map.",
-        "",
-        `Horizon: ${form.period === "year" ? "Year" : "Quarter"}`,
-        `MBTI: ${form.mbti || "Unknown"}`,
-        `Chronotype: ${form.chronotype || "Unknown"}`,
-        `Work style: ${form.workStyle || "Unknown"}`,
-        `Top values: ${values}`,
-        `Life stage: ${form.lifeStage || "Not filled"}`,
-        `Main challenge: ${form.challenge || "Not filled"}`,
-        "",
-        "Domains and goals:",
-        domains || "- No goals provided",
-        "",
-        "Output request:",
-        "- Propose 3 priorities at most",
-        "- Show tradeoffs and sequence",
-        "- Keep suggestions realistic for the user's profile",
-        "- End with a short action plan for the next 7 days",
-      ].join("\n");
+      const mbti = form.mbti || "不知道";
+      const chronotype = form.chronotype || "未填写";
+      const value1 = form.value1 || "未填写";
+      const value2 = form.value2 || "未填写";
+      const value3 = form.value3 || "未填写";
+      const workStyle = form.workStyle || "未填写";
+      const triggers = Array.isArray(form.procrastination) && form.procrastination.length
+        ? form.procrastination.join(" / ")
+        : "未填写";
+      const currentSeason = form.lifeStage || "未填写";
+      const mainChallenge = form.challenge || "未填写";
+      const domain1 = form.domain1Name || "未填写";
+      const goal1 = form.domain1Goal || "未填写";
+      const domain2 = form.domain2Name || "未填写";
+      const goal2 = form.domain2Goal || "未填写";
+      const domain3 = form.domain3Name || "未填写";
+      const goal3 = form.domain3Goal || "未填写";
+
+      return `【角色设定】
+你现在是我的顶级生产力教练兼心理咨询师。请在一个持续的对话窗口中，陪我完成我的年度/季度规划。
+【我的用户画像】
+我是一个 ${mbti} 类型的人，时型偏向 ${chronotype}，我的核心价值观优先级为：${value1} > ${value2} > ${value3}。
+我倾向的工作风格是 ${workStyle}，最容易导致我拖延的触发器是 ${triggers}。
+【当前阶段背景】
+我目前处于：${currentSeason}。
+我面临的主要挑战是：${mainChallenge}。
+【初步设想的3个领域目标】
+领域1 (${domain1}): ${goal1}
+领域2 (${domain2}): ${goal2}
+领域3 (${domain3}): ${goal3}
+【你的首要任务（非常重要）】
+收到以上信息后，请不要立刻给我生成最终的规划表格！
+第一步，请先以教练的口吻回应我，指出我的目标与我的 MBTI/价值观 是否匹配。
+第二步，向我提出 2-3 个关键问题（例如：我每周有多少实际空闲时间？这些目标的具体可衡量标准是什么？），以便你更深入了解我。
+等我回答完你的问题后，你再为我输出最终的 OKR 路线图。
+明白的话，请开始你的教练提问：`;
     }
+
+    const profile = getAiProfileSnapshot();
 
     if (cycle === "weekly") {
       const form = state.ai.weekly;
-      return [
-        "Build a weekly or monthly execution plan.",
-        "",
-        `Range type: ${form.period}`,
-        `Dates: ${form.start || "Not filled"} to ${form.end || "Not filled"}`,
-        `Profile: ${profile.mbti}, ${profile.chronotype}, procrastination triggers: ${profile.procrastination}`,
-        `Wins: ${form.win || "Not filled"}`,
-        `Missed: ${form.missed || "Not filled"}`,
-        `Reason: ${form.reason || "Not filled"}`,
-        "",
-        "Core priorities:",
-        `1. ${form.core1 || "Not filled"}`,
-        `2. ${form.core2 || "Not filled"}`,
-        `3. ${form.core3 || "Not filled"}`,
-        "",
-        `Energy forecast: ${form.energy || "3"}/5`,
-        `Special events: ${form.special || "None"}`,
-        `Fixed commitments: ${form.commitments || "None"}`,
-        `Obstacle: ${form.obstacle || "None"}`,
-        `Response: ${form.response || "None"}`,
-        "",
-        "Output request:",
-        "- Turn this into a clear week plan with priorities by day",
-        "- Put deep work in the best energy window",
-        "- Leave slack for interruptions",
-        "- Suggest one fallback plan if energy drops",
-      ].join("\n");
+      const review = parseWeeklyReviewSummary(form.reviewSummary);
+      const mit1 = form.core1 || "未填写";
+      const mit2 = form.core2 || "未填写";
+      const mit3 = form.core3 || "未填写";
+      const commitments = form.commitments || "未填写";
+      const energy = form.energy || "3";
+      const energyContext = form.special || "无";
+      const obstacle = form.obstacle || "未填写";
+      const strategy = form.response || "未填写";
+      const chronotypeWindow = getChronotypePeak(profile.chronotype);
+
+      return `【角色设定】
+你是我的私人生产力教练。现在我们要开始进行【月/周度】的执行规划。
+【上下文信息】
+我的用户画像（已在 LocalStorage 中）：${profile.mbti} · ${profile.chronotype} · 拖延触发：${profile.procrastination}。
+【复盘数据】
+超预期完成：${review.result}
+存在的问题：${review.issues}
+【本期规划数据】
+核心任务 (3 MITs)：${mit1}, ${mit2}, ${mit3}
+固定承诺：${commitments}
+精力状态：${energy}/5，特殊情况：${energyContext}
+预见的障碍：${obstacle} -> 应对策略：${strategy}
+【你的教练指令】
+第一步：请基于我的精力状态和复盘结果，评价我的 3 个核心任务是否合理（是否太重或太轻？）。
+第二步：请根据我的 MBTI 类型（特别是 P/J 倾向），帮我安排缓冲时间。
+第三步：请向我确认： 除了以上固定承诺，我每天大概能拿出多少小时的“专注窗口”？
+在我回答完你的确认问题后，请输出：
+按艾森豪威尔矩阵分类的任务清单。
+一份包含每日主题的周规划（需将核心任务对齐我的认知高峰时段：${chronotypeWindow}）。
+针对障碍的 if-then 执行清单。`;
     }
 
     const form = state.ai.daily;
-    return [
-      "Build a day plan.",
-      "",
-      `Target day: ${form.horizon} / ${form.date || "Not filled"}`,
-      `Body: ${form.body || "3"}/5`,
-      `Mood: ${form.mood || "3"}/5`,
-      `Focus: ${form.focus || "3"}/5`,
-      "",
-      "MITs:",
-      `1. ${form.mit1 || "Not filled"} (${form.mit1Duration || state.defaultDuration} min)`,
-      `2. ${form.mit2 || "Not filled"} (${form.mit2Duration || state.defaultDuration} min)`,
-      `3. ${form.mit3 || "Not filled"} (${form.mit3Duration || state.defaultDuration} min)`,
-      "",
-      `Other tasks: ${form.otherTasks || "None"}`,
-      `Time windows: ${form.windows || "Not filled"}`,
-      `Quick start task: ${form.quickTask || "None"}`,
-      `Likely distraction: ${form.distraction || "None"}`,
-      `Counter move: ${form.strategy || "None"}`,
-      "",
-      "Output request:",
-      "- Return a clean hourly plan",
-      "- Put the hardest MIT first",
-      "- Add buffers and recovery space",
-      "- Keep wording concise and import-friendly",
-      "- Prefer one task per line in the form HH:MM Task - 25 min",
-    ].join("\n");
+    const currentDate = syncAiDailyDate();
+    const body = Number(form.body) || 3;
+    const mood = Number(form.mood) || 3;
+    const focus = Number(form.focus) || 3;
+    const avgEnergy = (((body + mood + focus) / 3).toFixed(1)).replace(/\.0$/, "");
+    const windows = Array.isArray(form.windowsList) && form.windowsList.length ? form.windowsList.join(" / ") : "未填写";
+    const chronotypeWindow = getChronotypePeak(profile.chronotype);
+    return `【角色设定】
+你是我的私人执行助理。现在请为我安排【今日/明日】的具体执行计划。
+【我的当前状态】
+日期：${currentDate.label}
+能量得分：身体 ${body}/5 · 情绪 ${mood}/5 · 专注力 ${focus}/5
+综合平均分：${avgEnergy}/5
+【今日待办池】
+三大核心任务 (MITs)：
+${form.mit1 || "未填写"} (预计 ${form.mit1Duration || state.defaultDuration} min)
+${form.mit2 || "未填写"} (预计 ${form.mit2Duration || state.defaultDuration} min)
+${form.mit3 || "未填写"} (预计 ${form.mit3Duration || state.defaultDuration} min)
+启动任务：${form.quickTask || "未填写"}
+专注窗口：${windows}
+干扰源及对策：${form.distraction || "未填写"} -> ${form.strategy || "未填写"}
+【你的助理任务】
+状态自适应规划（核心）：
+如果平均分 ≥ 4：请催促我立刻开始 MIT1，并安排在我的高峰时段 ${chronotypeWindow}。
+如果平均分在 2-3：请建议我先做‘启动任务’，然后只攻克 MIT1，其余任务灵活调整。
+如果平均分 ≤ 1：请温柔地劝我休息，或者只做一些机械性的行政琐事。
+确认提问：
+请问我：‘除了这三件事，今天还有什么绝对不能漏掉的杂事（琐碎但必须做）吗？’
+输出要求：
+在我回答后，输出：
+小时级时间块安排表。
+三个 MIT 的 if-then 实施意图。
+今日‘完成标准’（一句话总结，达到什么状态今天就算成功）。`;
   };
 
   handleAiCopyPrompt = async function () {
@@ -13800,6 +13905,7 @@ if (!window.__cleanAdventureUiFinalPass) {
 
     try {
       await navigator.clipboard.writeText(value);
+      showAiCopyCheer();
       if (dom.aiCopyPrompt) {
         dom.aiCopyPrompt.textContent = "Copied";
         window.setTimeout(() => {
@@ -14514,4 +14620,884 @@ if (!window.__homeTimerAndStatusLogicPass) {
       openSheet("quick-sheet");
     });
   };
+}
+
+if (!window.__aiPlannerDynamicFormsMemoryPass) {
+  window.__aiPlannerDynamicFormsMemoryPass = true;
+
+  const AI_PLANNER_MEMORY_KEY = `${STORAGE_KEY}:ai-form-memory:v1`;
+  let aiPlannerMemoryHydrated = false;
+
+  const getAiDailyTargetMeta = (horizon = state?.ai?.daily?.horizon || "today") => {
+    const target = new Date();
+    if (horizon === "tomorrow") target.setDate(target.getDate() + 1);
+    const value = formatInputDate(target);
+    const label = target.toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      weekday: "short",
+    });
+    return { value, label };
+  };
+
+  const syncAiDailyDate = () => {
+    ensureAiPlannerStateShape();
+    const meta = getAiDailyTargetMeta(state.ai.daily.horizon || "today");
+    state.ai.daily.date = meta.value;
+    const display = document.getElementById("ai-daily-date-display");
+    if (display) {
+      display.textContent = meta.label;
+      display.dataset.aiDailyDate = meta.value;
+    }
+    return meta;
+  };
+
+  const showAiCopyCheer = () => {
+    const root = document.querySelector('[data-page="ai-planner"] .ai-sheet');
+    if (!root) return;
+    let toast = document.getElementById("ai-copy-cheer");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "ai-copy-cheer";
+      toast.className = "ai-copy-cheer";
+      toast.innerHTML = `<span class="ai-copy-cheer-icon" aria-hidden="true"></span><span class="ai-copy-cheer-text"></span>`;
+      root.appendChild(toast);
+    }
+    const minimalist = document.body.classList.contains("theme-minimalist");
+    toast.classList.toggle("is-minimalist", minimalist);
+    toast.classList.toggle("is-adventure", !minimalist);
+    const icon = toast.querySelector(".ai-copy-cheer-icon");
+    const text = toast.querySelector(".ai-copy-cheer-text");
+    if (icon) icon.textContent = minimalist ? "✓" : "🌈";
+    if (text) text.textContent = minimalist ? "productive day" : "祝今天也是个好天气！";
+    toast.classList.remove("is-visible");
+    void toast.offsetWidth;
+    toast.classList.add("is-visible");
+    window.clearTimeout(toast.__hideTimer);
+    toast.__hideTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 1800);
+  };
+
+  const showAiImportSyncedToast = () => {
+    const root = document.querySelector('[data-page="ai-planner"] .ai-sheet');
+    if (!root) return;
+    let toast = document.getElementById("ai-import-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "ai-import-toast";
+      toast.className = "ai-copy-cheer ai-import-toast";
+      toast.innerHTML = `<span class="ai-copy-cheer-icon" aria-hidden="true">🎉</span><span class="ai-copy-cheer-text">计划已同步！</span>`;
+      root.appendChild(toast);
+    }
+    toast.classList.remove("is-visible");
+    void toast.offsetWidth;
+    toast.classList.add("is-visible");
+    window.clearTimeout(toast.__hideTimer);
+    toast.__hideTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 1800);
+  };
+
+  const AI_IMPORT_COLOR_OPTIONS = [
+    { name: "阿宝蓝", hex: "#A2D2FF" },
+    { name: "老皮黄", hex: "#FFD6A5" },
+    { name: "泡泡糖粉", hex: "#FFADAD" },
+    { name: "BMO绿", hex: "#CAFFBF" },
+    { name: "团块紫", hex: "#BDB2FF" },
+    { name: "火焰橘", hex: "#FFC3A0" },
+    { name: "柠檬绿", hex: "#D4F1BE" },
+    { name: "薄荷红", hex: "#FF8B8B" },
+    { name: "玛瑟琳暗紫", hex: "#9D81BA" },
+    { name: "寒冰蓝", hex: "#BDE0FE" },
+  ];
+
+  const normalizeAiKey = (value) => String(value || "").trim().toLowerCase();
+
+  const resolveAiColorHex = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const byName = AI_IMPORT_COLOR_OPTIONS.find((option) => option.name === raw);
+    if (byName) return byName.hex;
+    const byHex = AI_IMPORT_COLOR_OPTIONS.find((option) => option.hex.toLowerCase() === raw.toLowerCase());
+    return byHex?.hex || (/^#[0-9a-f]{6}$/i.test(raw) ? raw.toUpperCase() : "");
+  };
+
+  const buildAiCategorySnapshot = () => {
+    if (!Array.isArray(state.folders) || !state.folders.length) {
+      return "当前还没有已创建的一级/二级分类。若确实需要新分类，请写入 newCategories。";
+    }
+    return state.folders
+      .map((folder) => {
+        const categoryList = (folder.categories || []).map((category) => `${folder.name} > ${category.name}`).join("；");
+        return categoryList || `${folder.name} > (暂无二级分类)`;
+      })
+      .join("\n");
+  };
+
+  const buildAiColorPaletteText = () => AI_IMPORT_COLOR_OPTIONS.map((option) => `${option.name} (${option.hex})`).join("、");
+
+  const buildAiOutputConstraints = (planType) => `【当前分类体系】
+${buildAiCategorySnapshot()}
+【可用分类颜色】
+${buildAiColorPaletteText()}
+【输出约束】
+请只输出一个 JSON 对象，不要输出 Markdown 代码块，不要输出解释文字，不要输出注释。
+JSON 结构必须为：
+{
+  "version": "1.0",
+  "planType": "${planType}",
+  "tasks": [
+    {
+      "title": "任务名称",
+      "folder": "一级分类名称",
+      "category": "二级分类名称",
+      "template": null,
+      "color": "阿宝蓝",
+      "duration": 30,
+      "startTime": ${planType === "daily" ? "\"08:00\"" : "null"},
+      "isImportant": false
+    }
+  ],
+  "newCategories": [
+    {
+      "folder": "一级分类名称",
+      "category": "二级分类名称",
+      "color": "阿宝蓝"
+    }
+  ]
+}
+规则：
+1. 优先复用我当前已有的一级/二级分类，只有没有合适选项时才写入 newCategories。
+2. folder 和 category 必须使用完整路径中的真实名称，不要自造近义词。
+3. color 只能从这 10 个颜色名称里选择。
+4. ${planType === "daily" ? "daily 模式允许填写 startTime，格式必须是 HH:MM。" : `${planType} 模式下 startTime 必须为 null。`}
+5. isImportant 只能是 true 或 false。
+6. duration 必须是分钟整数。
+7. JSON 内部不要有任何注释，确保格式 100% 正确以便我系统自动识别。`;
+
+  const buildAiImportLookup = () => {
+    const byPath = new Map();
+    const byCategoryName = new Map();
+    const byFolderName = new Map();
+    state.folders.forEach((folder) => {
+      byFolderName.set(normalizeAiKey(folder.name), folder);
+      (folder.categories || []).forEach((category) => {
+        byPath.set(`${normalizeAiKey(folder.name)}>${normalizeAiKey(category.name)}`, { folder, category });
+        const key = normalizeAiKey(category.name);
+        const list = byCategoryName.get(key) || [];
+        list.push({ folder, category });
+        byCategoryName.set(key, list);
+      });
+    });
+    return { byPath, byCategoryName, byFolderName };
+  };
+
+  const parseAiPlanJson = (text) => {
+    const raw = String(text || "").trim();
+    if (!raw) return { version: "1.0", planType: state.ai.cycle || "overall", tasks: [], newCategories: [], error: "empty" };
+    const fenceFree = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/, "").trim();
+    const candidate = fenceFree.startsWith("{") ? fenceFree : fenceFree.slice(fenceFree.indexOf("{"), fenceFree.lastIndexOf("}") + 1);
+    try {
+      const parsed = JSON.parse(candidate);
+      return {
+        version: parsed.version || "1.0",
+        planType: parsed.planType || state.ai.cycle || "overall",
+        tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+        newCategories: Array.isArray(parsed.newCategories) ? parsed.newCategories : [],
+        error: "",
+      };
+    } catch {
+      return { version: "1.0", planType: state.ai.cycle || "overall", tasks: [], newCategories: [], error: "invalid-json" };
+    }
+  };
+
+  const normalizeAiPreviewItem = (raw, index, planType, newCategoryMap, lookup) => {
+    const title = String(raw?.title || raw?.name || "").trim() || `Untitled ${index + 1}`;
+    const folderName = String(raw?.folder || "").trim();
+    const categoryName = String(raw?.category || "").trim();
+    const templateName = raw?.template == null ? "" : String(raw.template).trim();
+    const suggestedColor = resolveAiColorHex(raw?.color) || resolveAiColorHex(newCategoryMap.get(`${normalizeAiKey(folderName)}>${normalizeAiKey(categoryName)}`));
+    const durationMin = Math.max(1, Number(raw?.duration) || Number(raw?.durationMin) || state.defaultDuration || 25);
+    const time = planType === "daily" && /^\d{1,2}:\d{2}$/.test(String(raw?.startTime || "").trim()) ? String(raw.startTime).trim() : "";
+    const important = Boolean(raw?.isImportant);
+    const previewId = `ai-preview-${Date.now()}-${index}`;
+
+    let folder = null;
+    let category = null;
+    if (folderName && categoryName) {
+      const exact = lookup.byPath.get(`${normalizeAiKey(folderName)}>${normalizeAiKey(categoryName)}`);
+      folder = exact?.folder || null;
+      category = exact?.category || null;
+    } else if (!folderName && categoryName) {
+      const categoryMatches = lookup.byCategoryName.get(normalizeAiKey(categoryName)) || [];
+      if (categoryMatches.length === 1) {
+        folder = categoryMatches[0].folder;
+        category = categoryMatches[0].category;
+      }
+    }
+
+    let templateId = null;
+    if (category && templateName) {
+      templateId = category.templates?.find((entry) => normalizeAiKey(entry.name) === normalizeAiKey(templateName))?.id || null;
+    }
+
+    const status = category
+      ? "matched"
+      : folderName && categoryName
+        ? "create"
+        : "unmatched";
+    const statusLabel =
+      status === "matched" ? "已匹配" : status === "create" ? "将新建分类" : "未匹配";
+
+    return {
+      previewId,
+      title,
+      folderName: folder?.name || folderName,
+      categoryName: category?.name || categoryName,
+      templateName,
+      folderId: folder?.id || null,
+      categoryId: category?.id || null,
+      templateId,
+      durationMin,
+      time,
+      important,
+      colorHex: category?.color || suggestedColor || "",
+      status,
+      statusLabel,
+      selected: status !== "unmatched",
+    };
+  };
+
+  const ensureAiImportCategory = (item) => {
+    if (item.folderId && item.categoryId) return item;
+    const folderName = String(item.folderName || "").trim();
+    const categoryName = String(item.categoryName || "").trim();
+    if (!folderName || !categoryName) return item;
+
+    let folder = state.folders.find((entry) => normalizeAiKey(entry.name) === normalizeAiKey(folderName));
+    if (!folder) {
+      folder = { id: makeId("folder"), name: folderName, expanded: true, categories: [] };
+      state.folders.push(folder);
+    }
+
+    let category = (folder.categories || []).find((entry) => normalizeAiKey(entry.name) === normalizeAiKey(categoryName));
+    if (!category) {
+      category = {
+        id: makeId("cat"),
+        name: categoryName,
+        color: item.colorHex || CATEGORY_COLORS[0],
+        expanded: true,
+        templates: [],
+      };
+      folder.categories.push(category);
+    }
+
+    let templateId = item.templateId;
+    if (!templateId && item.templateName) {
+      templateId =
+        category.templates?.find((entry) => normalizeAiKey(entry.name) === normalizeAiKey(item.templateName))?.id || null;
+    }
+
+    return {
+      ...item,
+      folderId: folder.id,
+      categoryId: category.id,
+      templateId,
+      colorHex: category.color,
+      folderName: folder.name,
+      categoryName: category.name,
+      status: "matched",
+      statusLabel: "已匹配",
+    };
+  };
+
+  const ensureAiPlannerStateShape = () => {
+    state.ai = state.ai || {};
+    state.ai.overall = state.ai.overall || {};
+    state.ai.weekly = state.ai.weekly || {};
+    state.ai.daily = state.ai.daily || {};
+    state.ai.cycle = state.ai.cycle || "overall";
+  };
+
+  const readAiPlannerMemory = () => {
+    try {
+      const raw = localStorage.getItem(AI_PLANNER_MEMORY_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const writeAiPlannerMemory = () => {
+    ensureAiPlannerStateShape();
+    try {
+      localStorage.setItem(
+        AI_PLANNER_MEMORY_KEY,
+        JSON.stringify({
+          cycle: state.ai.cycle || "overall",
+          overall: state.ai.overall || {},
+          weekly: state.ai.weekly || {},
+          daily: state.ai.daily || {},
+        })
+      );
+    } catch {}
+  };
+
+  const hydrateAiPlannerMemory = () => {
+    if (aiPlannerMemoryHydrated) return;
+    ensureAiPlannerStateShape();
+    const stored = readAiPlannerMemory();
+    if (stored && typeof stored === "object") {
+      state.ai = {
+        ...state.ai,
+        cycle: stored.cycle || state.ai.cycle || "overall",
+        overall: { ...state.ai.overall, ...(stored.overall || {}) },
+        weekly: { ...state.ai.weekly, ...(stored.weekly || {}) },
+        daily: { ...state.ai.daily, ...(stored.daily || {}) },
+      };
+    }
+    aiPlannerMemoryHydrated = true;
+  };
+
+  const aiPlannerBaseRefreshDynamicDomRefs = refreshDynamicDomRefs;
+  refreshDynamicDomRefs = function () {
+    aiPlannerBaseRefreshDynamicDomRefs();
+    dom.aiPlanningHorizon = document.getElementById("ai-planning-horizon");
+    dom.aiFormPanels = document.getElementById("ai-form-panels");
+    dom.aiOverallForm = document.getElementById("ai-form-overall");
+    dom.aiWeeklyForm = document.getElementById("ai-form-weekly");
+    dom.aiDailyForm = document.getElementById("ai-form-daily");
+    dom.aiWeeklyEnergyIcon = document.getElementById("ai-weekly-energy-icon");
+    dom.aiWeeklyEnergyGlyph = document.getElementById("ai-weekly-energy-glyph");
+    dom.aiWeeklyEnergyCopy = document.getElementById("ai-weekly-energy-copy");
+  };
+
+  const parseWeeklyReviewSummary = (text) => {
+    const lines = String(text || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (!lines.length) {
+      return { result: "未填写", issues: "未填写" };
+    }
+
+    if (lines.length === 1) {
+      return { result: lines[0], issues: lines[0] };
+    }
+
+    return {
+      result: lines[0],
+      issues: lines.slice(1).join("；"),
+    };
+  };
+
+  const WEEKLY_ENERGY_PRESETS = {
+    adventure: {
+      1: { icon: "😫", label: "快没电了" },
+      2: { icon: "🥱", label: "有点疲惫" },
+      3: { icon: "😐", label: "普通状态" },
+      4: { icon: "😎", label: "状态不错" },
+      5: { icon: "🔥", label: "满格冲刺" },
+    },
+    minimalist: {
+      1: { icon: "💤", label: "low" },
+      2: { icon: "🧊", label: "cool" },
+      3: { icon: "🌱", label: "steady" },
+      4: { icon: "⚡", label: "ready" },
+      5: { icon: "🌟", label: "peak" },
+    },
+  };
+
+  const DAILY_ENERGY_PRESETS = {
+    adventure: {
+      1: { icon: "😵", label: "萎靡" },
+      2: { icon: "😪", label: "偏低" },
+      3: { icon: "🙂", label: "平稳" },
+      4: { icon: "😎", label: "在线" },
+      5: { icon: "🤩", label: "亢奋" },
+    },
+    minimalist: {
+      1: { icon: "◔", label: "low" },
+      2: { icon: "◑", label: "soft" },
+      3: { icon: "○", label: "steady" },
+      4: { icon: "✦", label: "ready" },
+      5: { icon: "✺", label: "peak" },
+    },
+  };
+
+  const updateEnergyUI = () => {
+    const slider = document.getElementById("ai-weekly-energy");
+    const glyphNode = document.getElementById("ai-weekly-energy-glyph");
+    const copyNode = document.getElementById("ai-weekly-energy-copy");
+    const shellNode = document.getElementById("ai-weekly-energy-icon");
+    if (!slider || !glyphNode || !copyNode || !shellNode) return;
+
+    const level = Math.min(5, Math.max(1, Number(slider.value) || 3));
+    const themeKey = document.body.classList.contains("theme-minimalist") ? "minimalist" : "adventure";
+    const preset = WEEKLY_ENERGY_PRESETS[themeKey]?.[level] || WEEKLY_ENERGY_PRESETS.adventure[3];
+    const percent = ((level - 1) / 4) * 100;
+
+    glyphNode.textContent = preset.icon;
+    copyNode.textContent = preset.label;
+    shellNode.dataset.energyTheme = themeKey;
+    shellNode.dataset.energyLevel = String(level);
+    slider.style.setProperty("--energy-percent", `${percent}%`);
+  };
+
+  const updateDailyEnergyUI = () => {
+    const themeKey = document.body.classList.contains("theme-minimalist") ? "minimalist" : "adventure";
+
+    document.querySelectorAll("[data-daily-energy-key]").forEach((slider) => {
+      const key = slider.dataset.dailyEnergyKey;
+      const glyphNode = document.querySelector(`[data-daily-energy-glyph="${key}"]`);
+      const copyNode = document.querySelector(`[data-daily-energy-copy="${key}"]`);
+      const shellNode = document.querySelector(`[data-daily-energy-shell="${key}"]`);
+      if (!glyphNode || !copyNode || !shellNode) return;
+
+      const level = Math.min(5, Math.max(1, Number(slider.value) || 3));
+      const preset = DAILY_ENERGY_PRESETS[themeKey]?.[level] || DAILY_ENERGY_PRESETS.adventure[3];
+      const percent = ((level - 1) / 4) * 100;
+
+      glyphNode.textContent = preset.icon;
+      copyNode.textContent = preset.label;
+      shellNode.dataset.energyTheme = themeKey;
+      shellNode.dataset.energyLevel = String(level);
+      slider.style.setProperty("--energy-percent", `${percent}%`);
+    });
+  };
+
+  const aiPlannerBaseSyncAiRangeDisplays = syncAiRangeDisplays;
+  syncAiRangeDisplays = function () {
+    aiPlannerBaseSyncAiRangeDisplays();
+    updateEnergyUI();
+    updateDailyEnergyUI();
+  };
+
+  bindAiQuestionnaireFields = function (root = document) {
+    const scope = root?.querySelectorAll ? root : document;
+
+    scope.querySelectorAll("[data-ai-field]").forEach((input) => {
+      const path = input.dataset.aiField;
+      const value = getAiPathValue(path);
+
+      if (input.type === "radio") {
+        input.checked = value === input.value;
+        input.onchange = () => {
+          if (!input.checked) return;
+          setAiPathValue(path, input.value);
+          syncAiRangeDisplays();
+          writeAiPlannerMemory();
+          persistState();
+        };
+        return;
+      }
+
+      input.value = value ?? "";
+      input.oninput = () => {
+        setAiPathValue(path, input.value);
+        if (path === "daily.horizon") {
+          syncAiDailyDate();
+          writeAiPlannerMemory();
+          persistState();
+          renderAiPlanner();
+          return;
+        }
+        syncAiRangeDisplays();
+        writeAiPlannerMemory();
+        persistState();
+      };
+      input.onchange = input.oninput;
+    });
+
+    scope.querySelectorAll("[data-ai-list]").forEach((input) => {
+      const path = input.dataset.aiList;
+      const list = getAiPathValue(path) || [];
+      input.checked = list.includes(input.value);
+      input.onchange = () => {
+        const current = new Set(getAiPathValue(path) || []);
+        if (input.checked) current.add(input.value);
+        else current.delete(input.value);
+        setAiPathValue(path, [...current]);
+        writeAiPlannerMemory();
+        persistState();
+      };
+    });
+
+    syncAiRangeDisplays();
+  };
+
+  buildAiPromptText = function () {
+    const cycle = state.ai.cycle || "overall";
+    const profile = getAiProfileSnapshot();
+
+    if (cycle === "overall") {
+      const form = state.ai.overall || {};
+      const mbti = form.mbti || "不知道";
+      const chronotype = form.chronotype || "未填写";
+      const value1 = form.value1 || "未填写";
+      const value2 = form.value2 || "未填写";
+      const value3 = form.value3 || "未填写";
+      const workStyle = form.workStyle || "未填写";
+      const triggers = Array.isArray(form.procrastination) && form.procrastination.length ? form.procrastination.join(" / ") : "未填写";
+      const currentSeason = form.lifeStage || "未填写";
+      const mainChallenge = form.challenge || "未填写";
+      const domain1 = form.domain1Name || "未填写";
+      const goal1 = form.domain1Goal || "未填写";
+      const domain2 = form.domain2Name || "未填写";
+      const goal2 = form.domain2Goal || "未填写";
+      const domain3 = form.domain3Name || "未填写";
+      const goal3 = form.domain3Goal || "未填写";
+
+      return `【角色设定】
+你现在是我的顶级生产力教练兼心理咨询师。请在一个持续的对话窗口中，陪我完成我的年度/季度规划。
+【我的用户画像】
+我是一个 ${mbti} 类型的人，时型偏向 ${chronotype}，我的核心价值观优先级为：${value1} > ${value2} > ${value3}。
+我倾向的工作风格是 ${workStyle}，最容易导致我拖延的触发器是 ${triggers}。
+【当前阶段背景】
+我目前处于：${currentSeason}。
+我面临的主要挑战是：${mainChallenge}。
+【初步设想的3个领域目标】
+领域1 (${domain1}): ${goal1}
+领域2 (${domain2}): ${goal2}
+领域3 (${domain3}): ${goal3}
+【你的首要任务（非常重要）】
+收到以上信息后，请不要立刻给我生成最终的规划表格！
+第一步，请先以教练的口吻回应我，指出我的目标与我的 MBTI/价值观 是否匹配。
+第二步，向我提出 2-3 个关键问题（例如：我每周有多少实际空闲时间？这些目标的具体可衡量标准是什么？），以便你更深入了解我。
+等我回答完你的问题后，你再为我输出最终的 OKR 路线图。
+明白的话，请开始你的教练提问：
+
+${buildAiOutputConstraints("overall")}`;
+    }
+
+    if (cycle === "weekly") {
+      const form = state.ai.weekly || {};
+      const review = parseWeeklyReviewSummary(form.reviewSummary);
+      const mit1 = form.core1 || "未填写";
+      const mit2 = form.core2 || "未填写";
+      const mit3 = form.core3 || "未填写";
+      const commitments = form.commitments || "未填写";
+      const energy = form.energy || "3";
+      const energyContext = form.special || "无";
+      const obstacle = form.obstacle || "未填写";
+      const strategy = form.response || "未填写";
+      const chronotypeWindow = getChronotypePeak(profile.chronotype);
+
+      return `【角色设定】
+你是我的私人生产力教练。现在我们要开始进行【月/周度】的执行规划。
+【上下文信息】
+我的用户画像（已在 LocalStorage 中）：${profile.mbti} · ${profile.chronotype} · 拖延触发：${profile.procrastination}。
+【复盘数据】
+超预期完成：${review.result}
+存在的问题：${review.issues}
+【本期规划数据】
+核心任务 (3 MITs)：${mit1}, ${mit2}, ${mit3}
+固定承诺：${commitments}
+精力状态：${energy}/5，特殊情况：${energyContext}
+预见的障碍：${obstacle} -> 应对策略：${strategy}
+【你的教练指令】
+第一步：请基于我的精力状态和复盘结果，评价我的 3 个核心任务是否合理（是否太重或太轻？）。
+第二步：请根据我的 MBTI 类型（特别是 P/J 倾向），帮我安排缓冲时间。
+第三步：请向我确认： 除了以上固定承诺，我每天大概能拿出多少小时的‘专注窗口’？
+在我回答完你的确认问题后，请输出：
+按艾森豪威尔矩阵分类的任务清单。
+一份包含每日主题的周规划（需将核心任务对齐我的认知高峰时段：${chronotypeWindow}）。
+针对障碍的 if-then 执行清单。
+
+${buildAiOutputConstraints("weekly")}`;
+    }
+
+    const form = state.ai.daily || {};
+    const currentDate = syncAiDailyDate();
+    const body = Number(form.body) || 3;
+    const mood = Number(form.mood) || 3;
+    const focus = Number(form.focus) || 3;
+    const avgEnergy = (((body + mood + focus) / 3).toFixed(1)).replace(/\.0$/, "");
+    const windows = Array.isArray(form.windowsList) && form.windowsList.length ? form.windowsList.join(" / ") : "未填写";
+    const chronotypeWindow = getChronotypePeak(profile.chronotype);
+
+    return `【角色设定】
+你是我的私人执行助理。现在请为我安排【今日/明日】的具体执行计划。
+【我的当前状态】
+日期：${currentDate.label}
+能量得分：身体 ${body}/5 · 情绪 ${mood}/5 · 专注力 ${focus}/5
+综合平均分：${avgEnergy}/5
+【今日待办池】
+三大核心任务 (MITs)：
+${form.mit1 || "未填写"} (预计 ${form.mit1Duration || state.defaultDuration} min)
+${form.mit2 || "未填写"} (预计 ${form.mit2Duration || state.defaultDuration} min)
+${form.mit3 || "未填写"} (预计 ${form.mit3Duration || state.defaultDuration} min)
+启动任务：${form.quickTask || "未填写"}
+专注窗口：${windows}
+干扰源及对策：${form.distraction || "未填写"} -> ${form.strategy || "未填写"}
+【你的助理任务】
+状态自适应规划（核心）：
+如果平均分 ≥ 4：请催促我立刻开始 MIT1，并安排在我的高峰时段 ${chronotypeWindow}。
+如果平均分在 2-3：请建议我先做‘启动任务’，然后只攻克 MIT1，其余任务灵活调整。
+如果平均分 ≤ 1：请温柔地劝我休息，或者只做一些机械性的行政琐事。
+确认提问：
+请问我：‘除了这三件事，今天还有什么绝对不能漏掉的杂事（琐碎但必须做）吗？’
+输出要求：
+在我回答后，输出：
+小时级时间块安排表。
+三个 MIT 的 if-then 实施意图。
+今日‘完成标准’（一句话总结，达到什么状态今天就算成功）。
+
+${buildAiOutputConstraints("daily")}`;
+  };
+
+  ensureAiPlannerPage = function () {
+    let aiPage = document.querySelector('[data-page="ai-planner"]');
+    const settingsPage = document.querySelector('[data-page="settings"]');
+    if (!settingsPage) return;
+    if (!aiPage) {
+      aiPage = document.createElement("section");
+      aiPage.className = "page";
+      aiPage.dataset.page = "ai-planner";
+      settingsPage.insertAdjacentElement("afterend", aiPage);
+    }
+
+    const formsTemplate =
+      document.getElementById("ai-planner-form-panels-template")?.innerHTML ||
+      `
+        <div class="ai-form-panels" id="ai-form-panels">
+          <div class="settings-list-block ai-questionnaire ai-form-panel form-quarterly" id="ai-form-overall"></div>
+          <div class="settings-list-block ai-questionnaire ai-form-panel form-weekly" id="ai-form-weekly" hidden></div>
+          <div class="settings-list-block ai-questionnaire ai-form-panel form-daily" id="ai-form-daily" hidden></div>
+        </div>
+      `;
+
+    aiPage.innerHTML = `
+      <header class="page-hero ai-page-hero">
+        <div class="ai-page-topbar">
+          <button class="sheet-back ai-page-back" id="ai-page-back" type="button" aria-label="Back">
+            <span class="ai-page-back-symbol">&lt;</span>
+          </button>
+          <h1 class="ai-page-title">\u0041\u0049\u751f\u6210\u65e5\u7a0b</h1>
+        </div>
+      </header>
+
+      <section class="paper-sheet ai-sheet ai-sheet-compact">
+        <section class="ai-step">
+          <div class="settings-group-title">\u8ba1\u5212\u5c42\u7ea7</div>
+          <label class="ai-field ai-planning-select-wrap" for="ai-planning-horizon">
+            <span class="ai-field-label">Planning horizon</span>
+            <select class="ai-input" id="ai-planning-horizon">
+              <option value="overall">\u603b\u4f53\u89c4\u5212 (Quarter / Year)</option>
+              <option value="weekly">\u6708 / \u5468\u89c4\u5212 (Month / Week)</option>
+              <option value="daily">\u4eca\u65e5 / \u660e\u65e5\u89c4\u5212 (Daily)</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u586b\u5199\u95ee\u5377</div>
+          ${formsTemplate}
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u751f\u6210 Prompt</div>
+          <div class="settings-list-block ai-actions">
+            <div class="ai-card-tools">
+              <button class="ghost-button ai-action-button" id="ai-generate-prompt" type="button">Generate Prompt</button>
+            </div>
+            <div class="ai-textarea-wrap">
+              <button class="ghost-button ai-action-button ai-inline-copy" id="ai-copy-prompt" type="button">Copy Prompt</button>
+              <textarea id="ai-prompt-output" rows="12" readonly placeholder="Prompt output will appear here."></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u7c98\u8d34 AI \u7ed3\u679c</div>
+          <div class="settings-list-block ai-actions">
+            <textarea id="ai-result-input" rows="10" placeholder="Paste the AI result here."></textarea>
+          </div>
+        </section>
+
+        <section class="ai-step">
+          <div class="settings-group-title">\u9884\u89c8\u5bfc\u5165</div>
+          <div class="settings-list-block ai-actions">
+            <div class="sheet-button-row ai-import-actions">
+              <button class="ghost-button ai-action-button" id="ai-preview-import" type="button">Preview</button>
+              <button class="ghost-button ai-action-button" id="ai-import-plan" type="button">Import</button>
+            </div>
+            <div class="ai-preview-list" id="ai-preview-list"></div>
+          </div>
+        </section>
+      </section>
+    `;
+  };
+
+  renderAiPlanner = function () {
+    hydrateAiPlannerMemory();
+    ensureAiPlannerStateShape();
+    syncAiDailyDate();
+    ensureAiPlannerPage();
+    refreshDynamicDomRefs();
+
+    if (!dom.aiPlanningHorizon || !dom.aiOverallForm || !dom.aiWeeklyForm || !dom.aiDailyForm) return;
+
+    const cycle = state.ai.cycle || "overall";
+    dom.aiPlanningHorizon.value = cycle;
+
+    dom.aiOverallForm.innerHTML = buildAiQuestionnaire("overall");
+    dom.aiWeeklyForm.innerHTML = buildAiQuestionnaire("weekly");
+    dom.aiDailyForm.innerHTML = buildAiQuestionnaire("daily");
+
+    dom.aiOverallForm.hidden = cycle !== "overall";
+    dom.aiWeeklyForm.hidden = cycle !== "weekly";
+    dom.aiDailyForm.hidden = cycle !== "daily";
+
+    dom.aiOverallForm.classList.toggle("is-active", cycle === "overall");
+    dom.aiWeeklyForm.classList.toggle("is-active", cycle === "weekly");
+    dom.aiDailyForm.classList.toggle("is-active", cycle === "daily");
+
+    dom.aiQuestionnaire =
+      cycle === "overall" ? dom.aiOverallForm : cycle === "weekly" ? dom.aiWeeklyForm : dom.aiDailyForm;
+
+    dom.aiPlanningHorizon.onchange = (event) => {
+      state.ai.cycle = event.target.value || "overall";
+      state.ui.aiPreviewItems = [];
+      state.ui.aiPreviewPlanType = null;
+      writeAiPlannerMemory();
+      renderAiPlanner();
+      persistState();
+    };
+
+    bindAiQuestionnaireFields(dom.aiFormPanels || document);
+    syncAiDailyDate();
+
+    if (dom.aiPromptOutput) dom.aiPromptOutput.value = state.ai.promptText || "";
+    if (dom.aiResultInput) {
+      dom.aiResultInput.value = state.ai.resultText || "";
+      dom.aiResultInput.oninput = (event) => {
+        state.ai.resultText = event.target.value;
+        persistState();
+      };
+    }
+    if (dom.aiGeneratePrompt) dom.aiGeneratePrompt.onclick = handleAiPromptGenerate;
+    if (dom.aiCopyPrompt) dom.aiCopyPrompt.onclick = handleAiCopyPrompt;
+    if (dom.aiPreviewImport) dom.aiPreviewImport.onclick = handleAiPreviewImport;
+    if (dom.aiImportPlan) dom.aiImportPlan.onclick = handleAiImportPlan;
+    if (dom.aiPageBack) {
+      dom.aiPageBack.onclick = () => {
+        state.currentPage = "settings";
+        renderAll();
+        persistState();
+      };
+    }
+
+    renderAiPreview(Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : []);
+  };
+
+  handleAiPreviewImport = function () {
+    const raw = dom.aiResultInput?.value || state.ai.resultText || "";
+    const payload = parseAiPlanJson(raw);
+    const lookup = buildAiImportLookup();
+    const newCategoryMap = new Map(
+      (payload.newCategories || []).map((entry) => [`${normalizeAiKey(entry.folder)}>${normalizeAiKey(entry.category)}`, entry.color])
+    );
+
+    if (!payload.tasks.length) {
+      state.ui.aiPreviewItems = [];
+      renderAiPreview([]);
+      if (payload.error === "invalid-json") window.alert("AI 输出不是有效 JSON，请按 Prompt 约束重新生成。");
+      persistState();
+      return;
+    }
+
+    state.ui.aiPreviewItems = payload.tasks.map((item, index) =>
+      normalizeAiPreviewItem(item, index, payload.planType || state.ai.cycle || "overall", newCategoryMap, lookup)
+    );
+    state.ui.aiPreviewPlanType = payload.planType || state.ai.cycle || "overall";
+    renderAiPreview(state.ui.aiPreviewItems);
+    persistState();
+  };
+
+  renderAiPreview = function (items) {
+    if (!dom.aiPreviewList) return;
+    if (!items.length) {
+      dom.aiPreviewList.innerHTML = `<p class="empty-note">还没有可导入的内容。</p>`;
+      return;
+    }
+
+    dom.aiPreviewList.innerHTML = items
+      .map(
+        (item) => `
+          <label class="ai-preview-row ai-preview-row-${item.status}">
+            <span class="ai-preview-toggle">
+              <input type="checkbox" data-ai-preview-toggle="${item.previewId}" ${item.selected ? "checked" : ""} />
+              <span class="ai-preview-toggle-ui" aria-hidden="true"></span>
+            </span>
+            <span class="ai-preview-main">
+              <span class="ai-preview-titleline">
+                <span class="ai-preview-name">${escapeHtml(item.title)}</span>
+                ${item.important ? `<span class="ai-preview-star">★</span>` : ""}
+              </span>
+              <span class="ai-preview-path">${escapeHtml(
+                item.folderName && item.categoryName ? `${item.folderName} / ${item.categoryName}` : "未指定分类"
+              )}</span>
+            </span>
+            <span class="ai-preview-side">
+              <span class="ai-preview-status">${escapeHtml(item.statusLabel)}</span>
+              <span class="ai-preview-meta">${escapeHtml(item.time || "Any time")} · ${item.durationMin} min</span>
+            </span>
+          </label>
+        `
+      )
+      .join("");
+
+    dom.aiPreviewList.querySelectorAll("[data-ai-preview-toggle]").forEach((input) => {
+      input.onchange = () => {
+        const target = (state.ui.aiPreviewItems || []).find((entry) => entry.previewId === input.dataset.aiPreviewToggle);
+        if (!target) return;
+        target.selected = Boolean(input.checked);
+        persistState();
+      };
+    });
+  };
+
+  handleAiImportPlan = function () {
+    if (!Array.isArray(state.ui.aiPreviewItems) || !state.ui.aiPreviewItems.length) handleAiPreviewImport();
+    const items = Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : [];
+    const selectedItems = items.filter((item) => item.selected);
+    if (!selectedItems.length) {
+      window.alert("请先在预览列表里勾选至少一项再导入。");
+      return;
+    }
+
+    const cycle = state.ui.aiPreviewPlanType || state.ai.cycle || "overall";
+    const importDate = cycle === "daily" ? syncAiDailyDate().value : cycle === "weekly" ? state.ai.weekly.start || formatInputDate(new Date()) : null;
+
+    selectedItems
+      .slice()
+      .reverse()
+      .forEach((rawItem) => {
+        const item = ensureAiImportCategory(rawItem);
+        const task = createTask({
+          name: item.title,
+          time: cycle === "daily" ? item.time : "",
+          folderId: item.folderId || null,
+          categoryId: item.categoryId || null,
+          templateId: item.templateId || null,
+          durationMin: item.durationMin,
+          important: item.important,
+        });
+        task.scheduledDate = importDate;
+        state.tasks.unshift(task);
+      });
+
+    state.ui.aiPreviewItems = [];
+    state.ui.aiPreviewPlanType = null;
+    state.ai.resultText = "";
+    if (dom.aiResultInput) dom.aiResultInput.value = "";
+    renderAiPreview([]);
+    showAiImportSyncedToast();
+    state.currentPage = "home";
+    renderAll();
+    persistState();
+  };
+
+  hydrateAiPlannerMemory();
+  renderAll();
 }
