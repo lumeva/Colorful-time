@@ -1092,7 +1092,7 @@ body.reduce-texture .timer-strip::before {
 
 .color-picker {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(48px, 1fr));
   gap: 14px 12px;
   width: 100%;
   align-items: stretch;
@@ -1177,8 +1177,8 @@ body.reduce-texture .timer-strip::before {
 
 @media (max-width: 420px) {
   .color-picker {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(5, minmax(48px, 1fr));
+    gap: 10px 8px;
   }
 }
 
@@ -7337,15 +7337,18 @@ textarea {
   gap: 12px;
 }
 
-#tree-editor-sheet .sheet-button-row .primary-button {
+#tree-editor-sheet .sheet-button-row .save-button {
   min-width: 180px;
   margin: 0 auto;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
+}
+
+.save-button {
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  line-height: 1 !important;
   text-align: center !important;
-  padding-left: 24px !important;
-  padding-right: 24px !important;
+  min-height: 58px;
 }
 
 .page[data-page="ai-planner"] {

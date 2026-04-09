@@ -7,11 +7,11 @@ const CATEGORY_COLORS = [
   "#FFADAD",
   "#CAFFBF",
   "#BDB2FF",
-  "#FFD6A5",
-  "#FF5D5D",
-  "#E4F1EE",
-  "#9BD1A3",
-  "#A06CD5",
+  "#FFC3A0",
+  "#D4F1BE",
+  "#FF8B8B",
+  "#9D81BA",
+  "#BDE0FE",
 ];
 
 const THEME_OPTIONS = [
