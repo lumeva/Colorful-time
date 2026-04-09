@@ -14118,3 +14118,211 @@ if (!window.__aiPlannerLayoutAndIconPass) {
   applyPhosphorEditIcons();
   renderAll();
 }
+
+if (!window.__settingsAdventureMinimalPass) {
+  window.__settingsAdventureMinimalPass = true;
+
+  const normalizeSettingsTheme = () => {
+    if (state.theme === "adventure") return "adventure";
+    if (state.theme === "minimalist") return "minimalist";
+    return "minimalist";
+  };
+
+  applyTheme = function () {
+    const visualTheme = normalizeSettingsTheme();
+    state.theme = visualTheme;
+
+    dom.body.dataset.theme = visualTheme === "adventure" ? "adventure" : "paper";
+    dom.body.classList.toggle("theme-adventure", visualTheme === "adventure");
+    dom.body.classList.toggle("theme-minimalist", visualTheme === "minimalist");
+    dom.body.style.removeProperty("--custom-paper-image");
+    dom.body.classList.remove("has-custom-background");
+
+    if (visualTheme === "minimalist" && state.customBackgroundImage) {
+      dom.body.style.setProperty("--custom-paper-image", `url("${state.customBackgroundImage}")`);
+      dom.body.classList.add("has-custom-background");
+    }
+
+    applyBodyFlags();
+  };
+
+  handleCustomBackgroundUpload = function (event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      state.customBackgroundImage = String(reader.result || "");
+      state.theme = "minimalist";
+      applyTheme();
+      renderSettings();
+      persistState();
+      if (dom.customBackgroundInput) dom.customBackgroundInput.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  ensureSettingsStructure = function () {
+    const settingsPage = document.querySelector('.page[data-page="settings"]');
+    const settingsSheet = settingsPage?.querySelector(".settings-sheet");
+    if (!settingsSheet) return;
+
+    const heroDate = settingsPage.querySelector(".hero-date");
+    const heroNote = settingsPage.querySelector(".hero-note");
+    if (heroDate) heroDate.textContent = "";
+    if (heroNote) heroNote.remove();
+
+    settingsSheet.dataset.layout = "v8";
+    settingsSheet.classList.add("settings-sheet-clean", "settings-sheet-candy");
+    settingsSheet.innerHTML = `
+      <section class="settings-group settings-group-app">
+        <div class="settings-group-title">App</div>
+        <div class="settings-list-block">
+          <div class="settings-install-actions settings-install-actions-grid">
+            <button class="settings-install-button settings-install-row" id="pwa-install-button" data-icon="📱" data-tilt="a" type="button">
+              <span class="settings-row-label">Add to Home</span>
+            </button>
+            <button class="settings-row settings-row-link settings-install-row" id="apk-download-button" data-icon="📦" data-tilt="b" type="button">
+              <span class="settings-row-label">Download APK</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-group settings-group-planning">
+        <div class="settings-group-title">Planning</div>
+        <div class="settings-list-block">
+          <button class="settings-row settings-row-link" id="ai-planner-link" data-icon="🤖" data-tilt="a" type="button">
+            <span class="settings-row-label">AI 生成日程</span>
+            <span class="settings-row-arrow" aria-hidden="true">›</span>
+          </button>
+          <label class="settings-row settings-row-toggle" data-icon="⏳" data-tilt="b">
+            <span class="settings-row-label">优先最近时间任务</span>
+            <input type="checkbox" id="next-time-priority-toggle" />
+          </label>
+          <label class="settings-row settings-row-toggle" data-icon="⭐" data-tilt="c">
+            <span class="settings-row-label">优先重要任务</span>
+            <input type="checkbox" id="next-important-priority-toggle" />
+          </label>
+          <label class="settings-row settings-row-toggle" data-icon="✅" data-tilt="d">
+            <span class="settings-row-label">Completed 默认展开</span>
+            <input type="checkbox" id="completed-default-toggle" />
+          </label>
+          <button class="settings-row settings-row-link" id="default-duration-row" data-icon="⏱️" data-tilt="a" type="button">
+            <span class="settings-row-label">默认任务时长</span>
+            <span class="settings-row-trail">
+              <span id="default-duration-value">25 min</span>
+              <span class="settings-row-arrow" aria-hidden="true">›</span>
+            </span>
+          </button>
+          <button class="settings-row settings-row-link" id="day-start-row" data-icon="🌅" data-tilt="b" type="button">
+            <span class="settings-row-label">一天开始时间</span>
+            <span class="settings-row-trail">
+              <span id="day-start-value">00:00</span>
+              <span class="settings-row-arrow" aria-hidden="true">›</span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section class="settings-group settings-group-appearance">
+        <div class="settings-group-title">Appearance</div>
+        <div class="settings-list-block settings-theme-block">
+          <div class="settings-subtitle">Theme</div>
+          <div class="settings-theme-grid" id="theme-grid"></div>
+          <div class="settings-upload-wrap">
+            <button class="settings-upload-button" id="custom-background-row" type="button">
+              <span aria-hidden="true">🖼️</span>
+              <span>上传背景图</span>
+            </button>
+          </div>
+          <input class="settings-hidden-file" id="custom-background-input" type="file" accept="image/*" />
+        </div>
+      </section>
+
+      <div class="settings-hidden-controls" aria-hidden="true">
+        <input type="time" id="day-start-input" />
+        <select id="default-duration-select">
+          <option value="15">15 min</option>
+          <option value="20">20 min</option>
+          <option value="25">25 min</option>
+          <option value="30">30 min</option>
+          <option value="45">45 min</option>
+        </select>
+      </div>
+    `;
+  };
+
+  const settingsAdventureBaseRender = renderSettings;
+  renderSettings = function () {
+    state.theme = normalizeSettingsTheme();
+    settingsAdventureBaseRender();
+    refreshDynamicDomRefs();
+
+    dom.apkDownloadButton = document.getElementById("apk-download-button");
+
+    if (dom.themeGrid) {
+      dom.themeGrid.innerHTML = [
+        { id: "adventure", label: "🗡️ 英雄冒险", tilt: "a" },
+        { id: "minimalist", label: "☁️ 极简透明", tilt: "b" },
+      ]
+        .map(
+          (theme) => `
+            <button
+              class="settings-theme-option ${state.theme === theme.id ? "is-active" : ""}"
+              data-theme-card="${theme.id}"
+              data-tilt="${theme.tilt}"
+              type="button"
+            >
+              <span class="settings-theme-copy"><strong>${escapeHtml(theme.label)}</strong></span>
+              <span class="settings-theme-radio" aria-hidden="true"></span>
+            </button>
+          `
+        )
+        .join("");
+
+      dom.themeGrid.querySelectorAll("[data-theme-card]").forEach((button) => {
+        button.onclick = () => {
+          state.theme = button.dataset.themeCard;
+          applyTheme();
+          renderSettings();
+          persistState();
+        };
+      });
+    }
+
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+    if (dom.pwaInstallButton) {
+      dom.pwaInstallButton.textContent = isStandalone ? "Installed" : "Add to Home";
+      dom.pwaInstallButton.disabled = isStandalone;
+      dom.pwaInstallButton.onclick = handlePwaInstall;
+    }
+
+    if (dom.apkDownloadButton) {
+      dom.apkDownloadButton.onclick = () => {
+        window.open("https://github.com/lumeva/Colorful-time/releases", "_blank", "noopener");
+      };
+    }
+
+    if (dom.customBackgroundRow) {
+      const canUploadBackground = state.theme === "minimalist";
+      dom.customBackgroundRow.disabled = !canUploadBackground;
+      dom.customBackgroundRow.classList.toggle("is-disabled", !canUploadBackground);
+      dom.customBackgroundRow.classList.toggle("is-enabled", canUploadBackground);
+      dom.customBackgroundRow.onclick = () => {
+        if (!canUploadBackground || !dom.customBackgroundInput) return;
+        dom.customBackgroundInput.value = "";
+        dom.customBackgroundInput.click();
+      };
+    }
+
+    if (dom.customBackgroundInput) {
+      dom.customBackgroundInput.onchange = handleCustomBackgroundUpload;
+    }
+  };
+
+  applyTheme();
+  ensureSettingsStructure();
+  refreshDynamicDomRefs();
+  renderSettings();
+}

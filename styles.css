@@ -7808,3 +7808,293 @@ textarea {
 .page[data-page="tasks"] .tree-mini .ph-bold.ph-pencil-line {
   color: #8f8b84;
 }
+
+/* Settings adventure/minimal pass */
+body.theme-adventure {
+  --settings-upload-opacity: 0.45;
+}
+
+body.theme-minimalist {
+  --settings-upload-opacity: 1;
+}
+
+.settings-install-actions.settings-install-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px !important;
+}
+
+.settings-install-actions.settings-install-actions-grid .settings-install-row {
+  min-height: 76px;
+  margin-bottom: 0 !important;
+  justify-content: center !important;
+  text-align: center;
+}
+
+.settings-install-actions.settings-install-actions-grid .settings-row-label {
+  text-align: center;
+}
+
+.settings-group-appearance .settings-theme-block {
+  gap: 0 !important;
+}
+
+.settings-theme-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px !important;
+  padding: 0 0 10px !important;
+}
+
+.settings-theme-option {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  min-height: 72px;
+}
+
+.settings-theme-option .settings-theme-copy {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.settings-theme-option .settings-theme-copy strong {
+  font-size: 1rem;
+}
+
+.settings-upload-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.settings-upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  min-width: min(100%, 240px);
+  padding: 0 18px !important;
+  margin: 0 auto !important;
+  background: transparent !important;
+  border: 1px solid rgba(74, 55, 40, 0.35) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  color: #4a3728 !important;
+  font: inherit;
+  font-weight: 700;
+  opacity: var(--settings-upload-opacity, 1);
+  transition: opacity 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.settings-upload-button.is-enabled {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-color: rgba(115, 210, 255, 0.9) !important;
+}
+
+.settings-upload-button.is-disabled,
+.settings-upload-button:disabled {
+  cursor: not-allowed;
+}
+
+/* Minimalist theme glass overrides */
+body.theme-minimalist :is(
+  .paper-sheet,
+  .timer-strip-shell,
+  .next-card,
+  .task-row,
+  .settings-row,
+  .settings-install-button,
+  .settings-theme-option,
+  .settings-upload-button,
+  .action-card,
+  .sheet-panel,
+  .category-item,
+  .stats-wheel-card,
+  .breakdown-row,
+  .breakdown-sticker,
+  .stats-cascade-button,
+  .stats-picker-option,
+  .picker-row,
+  .ghost-button,
+  .primary-button,
+  .hero-mini,
+  .nav-item,
+  .line-field input,
+  .line-field select,
+  .line-field textarea,
+  .sheet-form input[type="text"],
+  .sheet-form input[type="time"],
+  .sheet-form input[type="number"],
+  .sheet-form input[type="date"],
+  .ai-input,
+  .ai-choice-chip,
+  .ai-choice-line,
+  .ai-cycle-card,
+  .task-edit-inline,
+  .flat-start,
+  .timer-button,
+  .filter-pill,
+  .toggle-row,
+  .task-check span,
+  .stats-total-row,
+  .ai-step
+) {
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+body.theme-minimalist :is(
+  .paper-sheet,
+  .timer-strip-shell,
+  .next-card,
+  .task-row,
+  .settings-row,
+  .settings-install-button,
+  .settings-theme-option,
+  .settings-upload-button,
+  .action-card,
+  .sheet-panel,
+  .category-item,
+  .stats-wheel-card,
+  .breakdown-row,
+  .breakdown-sticker,
+  .stats-cascade-button,
+  .stats-picker-option,
+  .stats-total-row,
+  .ai-step
+) {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+body.theme-minimalist :is(
+  .paper-sheet,
+  .timer-strip-shell,
+  .next-card,
+  .task-row,
+  .settings-row,
+  .settings-install-button,
+  .settings-theme-option,
+  .settings-upload-button,
+  .action-card,
+  .sheet-panel,
+  .category-item,
+  .stats-wheel-card,
+  .breakdown-row,
+  .breakdown-sticker,
+  .stats-cascade-button,
+  .stats-picker-option,
+  .stats-total-row,
+  .ai-step
+)::before,
+body.theme-minimalist :is(
+  .paper-sheet,
+  .timer-strip-shell,
+  .next-card,
+  .task-row,
+  .settings-row,
+  .settings-install-button,
+  .settings-theme-option,
+  .settings-upload-button,
+  .action-card,
+  .sheet-panel,
+  .category-item,
+  .stats-wheel-card,
+  .breakdown-row,
+  .breakdown-sticker,
+  .stats-cascade-button,
+  .stats-picker-option,
+  .stats-total-row,
+  .ai-step
+)::after {
+  box-shadow: none !important;
+  filter: none !important;
+  animation: none !important;
+}
+
+body.theme-minimalist :is(
+  .paper-sheet,
+  .timer-strip-shell,
+  .next-card,
+  .task-row,
+  .settings-row,
+  .settings-install-button,
+  .settings-theme-option,
+  .settings-upload-button,
+  .action-card,
+  .sheet-panel,
+  .category-item,
+  .stats-wheel-card,
+  .breakdown-row,
+  .breakdown-sticker,
+  .stats-cascade-button,
+  .stats-picker-option,
+  .stats-total-row,
+  .ai-step,
+  .ghost-button,
+  .primary-button,
+  .hero-mini,
+  .nav-item,
+  .timer-button
+) {
+  transform: none !important;
+  animation: none !important;
+}
+
+body.theme-minimalist .timer-strip-shell.is-running,
+body.theme-minimalist .timer-strip-shell.is-running::before,
+body.theme-minimalist .timer-strip-shell.is-running::after,
+body.theme-minimalist .timer-strip-shell,
+body.theme-minimalist .timer-strip-shell::before,
+body.theme-minimalist .timer-strip-shell::after {
+  animation: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+body.theme-minimalist .timer-strip-shell::before,
+body.theme-minimalist .timer-strip-shell::after {
+  content: none !important;
+}
+
+body.theme-minimalist :is(
+  .mini-pill,
+  .inline-tag,
+  .stats-legend button,
+  .settings-upload-button.is-enabled,
+  .settings-theme-option.is-active,
+  .settings-theme-option.is-active .settings-theme-radio,
+  .breakdown-dot,
+  .category-color-bar,
+  .timer-chip
+) {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.14) !important;
+  color: rgba(0, 0, 0, 0.78) !important;
+  box-shadow: none !important;
+}
+
+body.theme-minimalist .settings-theme-option.is-active .settings-theme-radio {
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.18) !important;
+}
+
+body.theme-minimalist :is(
+  input[type="checkbox"],
+  input[type="radio"]
+) {
+  accent-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+body.theme-minimalist .task-check span::before,
+body.theme-minimalist .task-check input:checked + span::before {
+  border-color: rgba(0, 0, 0, 0.18) !important;
+  background: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: none !important;
+}
