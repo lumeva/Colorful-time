@@ -3401,6 +3401,7 @@ function renderCategorySheet() {
 function openTreeEditor(config) {
   state.ui.treeEditor = config;
   const current = getTreeEditorCurrent(config);
+  const actionRow = dom.treeEditorForm?.querySelector(".sheet-button-row");
   const titleMap = {
     folder: config.mode === "edit" ? "Edit Folder" : "New Folder",
     category: config.mode === "edit" ? "Edit Category" : "New Category",
@@ -3413,6 +3414,9 @@ function openTreeEditor(config) {
   dom.treeDurationInput.value = current?.durationMin || "";
   dom.treeColorPicker.hidden = config.type !== "category";
   dom.treeDeleteButton.hidden = config.mode !== "edit";
+  if (actionRow) {
+    actionRow.classList.toggle("is-single-action", config.mode !== "edit");
+  }
   renderColorPicker(current?.color || CATEGORY_COLORS[0]);
   openSheet("tree-editor-sheet");
 }
@@ -13894,6 +13898,10 @@ if (!window.__settingsCandyTune) {
             <span class="settings-row-label">Completed 默认展开</span>
             <input type="checkbox" id="completed-default-toggle" />
           </label>
+          <label class="settings-row settings-row-toggle" data-icon="馃“?" data-tilt="c">
+            <span class="settings-row-label">鏄剧ず鑳屾櫙妯嚎绾圭悊</span>
+            <input type="checkbox" id="reduce-texture-toggle" />
+          </label>
           <input class="settings-hidden-file" id="custom-background-input" type="file" accept="image/*" />
         </div>
       </section>
@@ -14125,7 +14133,8 @@ if (!window.__settingsAdventureMinimalPass) {
   const normalizeSettingsTheme = () => {
     if (state.theme === "adventure") return "adventure";
     if (state.theme === "minimalist") return "minimalist";
-    return "minimalist";
+    if (state.theme === "custom" && state.customBackgroundImage) return "minimalist";
+    return "adventure";
   };
 
   applyTheme = function () {
@@ -14261,6 +14270,17 @@ if (!window.__settingsAdventureMinimalPass) {
 
     dom.apkDownloadButton = document.getElementById("apk-download-button");
 
+    if (!dom.reduceTextureToggle && dom.customBackgroundInput) {
+      const textureToggleRow = document.createElement("label");
+      textureToggleRow.className = "settings-row settings-row-toggle";
+      textureToggleRow.dataset.icon = "📏";
+      textureToggleRow.dataset.tilt = "c";
+      textureToggleRow.innerHTML =
+        '<span class="settings-row-label">Show paper lines</span><input type="checkbox" id="reduce-texture-toggle" />';
+      dom.customBackgroundInput.insertAdjacentElement("beforebegin", textureToggleRow);
+      dom.reduceTextureToggle = document.getElementById("reduce-texture-toggle");
+    }
+
     if (dom.themeGrid) {
       dom.themeGrid.innerHTML = [
         { id: "adventure", label: "🗡️ 英雄冒险", tilt: "a" },
@@ -14318,6 +14338,15 @@ if (!window.__settingsAdventureMinimalPass) {
 
     if (dom.customBackgroundInput) {
       dom.customBackgroundInput.onchange = handleCustomBackgroundUpload;
+    }
+
+    if (dom.reduceTextureToggle) {
+      dom.reduceTextureToggle.checked = !Boolean(state.reduceTexture);
+      dom.reduceTextureToggle.onchange = (event) => {
+        state.reduceTexture = !Boolean(event.target.checked);
+        applyBodyFlags();
+        persistState();
+      };
     }
   };
 

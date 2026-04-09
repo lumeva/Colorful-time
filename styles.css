@@ -7337,9 +7337,19 @@ textarea {
   gap: 12px;
 }
 
+#tree-editor-sheet .sheet-button-row.is-single-action {
+  grid-template-columns: 1fr !important;
+}
+
 #tree-editor-sheet .sheet-button-row .save-button {
   min-width: 180px;
   margin: 0 auto;
+}
+
+#tree-editor-sheet .sheet-button-row.is-single-action .save-button {
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
 }
 
 .save-button {
@@ -7699,6 +7709,21 @@ textarea {
 .page[data-page="home"] .timer-button.resume,
 .page[data-page="home"] .timer-button.new {
   background: #ffffff !important;
+}
+
+.page[data-page="home"] .timer-strip {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  padding: 0 !important;
+}
+
+.page[data-page="home"] .timer-strip::before,
+.page[data-page="home"] .timer-strip::after {
+  content: none !important;
+  box-shadow: none !important;
+  filter: none !important;
 }
 
 /* AI planner layout + phosphor pencil pass */
