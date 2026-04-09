@@ -8123,3 +8123,445 @@ body.theme-minimalist .task-check input:checked + span::before {
   background: rgba(0, 0, 0, 0.08) !important;
   box-shadow: none !important;
 }
+
+/* Minimalist glass refinement pass */
+body.theme-minimalist {
+  --font-main: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-note: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-round: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --ink: rgba(20, 20, 20, 0.88);
+  --muted: rgba(20, 20, 20, 0.56);
+  --line: rgba(0, 0, 0, 0.08);
+  --dashed: rgba(0, 0, 0, 0.12);
+}
+
+body.theme-minimalist,
+body.theme-minimalist button,
+body.theme-minimalist input,
+body.theme-minimalist select,
+body.theme-minimalist textarea {
+  font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-weight: 400;
+}
+
+body.theme-minimalist .hero-note,
+body.theme-minimalist .settings-weak-note,
+body.theme-minimalist .empty-note,
+body.theme-minimalist .muted,
+body.theme-minimalist .line-field-label,
+body.theme-minimalist .hero-date {
+  font-weight: 300 !important;
+}
+
+body.theme-minimalist *,
+body.theme-minimalist *::before,
+body.theme-minimalist *::after {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+body.theme-minimalist :is(
+  .paper-sheet,
+  .paper-band,
+  .timer-strip-shell,
+  .next-card,
+  .task-row,
+  .settings-list-block,
+  .settings-row,
+  .settings-install-button,
+  .settings-theme-option,
+  .settings-upload-button,
+  .action-card,
+  .sheet-panel,
+  .tree-row,
+  .category-item,
+  .stats-wheel-card,
+  .breakdown-row,
+  .breakdown-sticker,
+  .stats-cascade-button,
+  .stats-picker-option,
+  .stats-total-row,
+  .filter-pill,
+  .toggle-row,
+  .line-field,
+  .sheet-form input[type="text"],
+  .sheet-form input[type="date"],
+  .sheet-form textarea,
+  .sheet-form select,
+  .ai-input,
+  .ai-step,
+  .nav-item,
+  .timer-button,
+  .ghost-button,
+  .primary-button,
+  .hero-mini,
+  .flat-start
+) {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+body.theme-minimalist :is(
+  .paper-sheet,
+  .paper-band,
+  .timer-strip-shell,
+  .next-card,
+  .task-row,
+  .settings-list-block,
+  .settings-row,
+  .settings-install-button,
+  .settings-theme-option,
+  .settings-upload-button,
+  .action-card,
+  .sheet-panel,
+  .tree-row,
+  .category-item,
+  .stats-wheel-card,
+  .breakdown-row,
+  .breakdown-sticker,
+  .stats-cascade-button,
+  .stats-picker-option,
+  .stats-total-row,
+  .filter-pill,
+  .toggle-row,
+  .line-field,
+  .sheet-form input[type="text"],
+  .sheet-form input[type="date"],
+  .sheet-form textarea,
+  .sheet-form select,
+  .ai-input,
+  .ai-step,
+  .nav-item,
+  .timer-button,
+  .ghost-button,
+  .primary-button,
+  .hero-mini,
+  .flat-start
+)::before,
+body.theme-minimalist :is(
+  .paper-sheet,
+  .paper-band,
+  .timer-strip-shell,
+  .next-card,
+  .task-row,
+  .settings-list-block,
+  .settings-row,
+  .settings-install-button,
+  .settings-theme-option,
+  .settings-upload-button,
+  .action-card,
+  .sheet-panel,
+  .tree-row,
+  .category-item,
+  .stats-wheel-card,
+  .breakdown-row,
+  .breakdown-sticker,
+  .stats-cascade-button,
+  .stats-picker-option,
+  .stats-total-row,
+  .filter-pill,
+  .toggle-row,
+  .line-field,
+  .sheet-form input[type="text"],
+  .sheet-form input[type="date"],
+  .sheet-form textarea,
+  .sheet-form select,
+  .ai-input,
+  .ai-step,
+  .nav-item,
+  .timer-button,
+  .ghost-button,
+  .primary-button,
+  .hero-mini,
+  .flat-start
+)::after {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+body.theme-minimalist :is(
+  .paper-sheet,
+  .paper-band,
+  .timer-strip-shell,
+  .next-card,
+  .task-row,
+  .settings-list-block,
+  .settings-row,
+  .settings-install-button,
+  .settings-theme-option,
+  .settings-upload-button,
+  .action-card,
+  .sheet-panel,
+  .tree-row,
+  .category-item,
+  .stats-wheel-card,
+  .breakdown-row,
+  .breakdown-sticker,
+  .stats-cascade-button,
+  .stats-picker-option,
+  .stats-total-row,
+  .filter-pill,
+  .toggle-row,
+  .line-field,
+  .ai-step,
+  .nav-item,
+  .timer-button,
+  .ghost-button,
+  .primary-button,
+  .hero-mini,
+  .flat-start
+) {
+  transform: none !important;
+  animation: none !important;
+  transition-property: background-color, border-color, color, opacity !important;
+}
+
+body.theme-minimalist .paper-noise {
+  z-index: 0;
+  opacity: 0.34 !important;
+  mix-blend-mode: multiply;
+}
+
+body.theme-minimalist.reduce-texture .paper-noise {
+  opacity: 0.14 !important;
+}
+
+body.theme-minimalist .app-shell {
+  position: relative;
+  z-index: 1;
+}
+
+body.theme-minimalist :is(
+  .mini-pill,
+  .inline-tag,
+  .stats-legend button,
+  .settings-upload-button.is-enabled,
+  .settings-theme-option.is-active,
+  .settings-theme-option.is-active .settings-theme-radio,
+  .breakdown-dot,
+  .category-color-bar,
+  .timer-chip,
+  .task-check span,
+  .weekday-chip,
+  .quick-option,
+  .seg-button,
+  .mini-seg-button
+) {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: rgba(0, 0, 0, 0.72) !important;
+}
+
+body.theme-minimalist :is(
+  input[type="checkbox"],
+  input[type="radio"]
+) {
+  accent-color: rgba(0, 0, 0, 0.42) !important;
+}
+
+body.theme-minimalist .task-check span::before,
+body.theme-minimalist .task-check input:checked + span::before,
+body.theme-minimalist .settings-theme-radio {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.16) !important;
+}
+
+body.theme-minimalist .page[data-page="home"] .task-row .inline-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #666666 !important;
+  font-size: 0.76rem !important;
+  font-weight: 500 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.theme-minimalist .page[data-page="home"] .task-row .inline-tag::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 8px;
+  background: var(--tag-color, rgba(0, 0, 0, 0.25));
+}
+
+body.theme-minimalist .page[data-page="stats"] .breakdown-row.breakdown-sticker {
+  width: 100% !important;
+  justify-self: stretch !important;
+  transform: none !important;
+  background: rgba(255, 255, 255, 0.32) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-left: 4px solid var(--sticker-color, rgba(0, 0, 0, 0.18)) !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .breakdown-row.breakdown-sticker:nth-child(odd),
+body.theme-minimalist .page[data-page="stats"] .breakdown-row.breakdown-sticker:nth-child(even) {
+  justify-self: stretch !important;
+  transform: none !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .breakdown-row.breakdown-sticker .breakdown-dot {
+  display: none !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .breakdown-primary {
+  gap: 0 !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .wheel-svg [data-segment-key] {
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
+
+body.theme-minimalist .page[data-page="stats"] .trend-bar {
+  height: 6px !important;
+  padding: 0 !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .trend-bar > span {
+  height: 6px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: var(--trend-fill, rgba(0, 0, 0, 0.22)) !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .stats-wheel-card,
+body.theme-minimalist .page[data-page="stats"] .wheel-shell,
+body.theme-minimalist .page[data-page="stats"] .wheel-shell-comic {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.theme-minimalist .page[data-page="stats"] .stats-total-row,
+body.theme-minimalist .page[data-page="stats"] .stats-speech-bubble {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.theme-minimalist .stats-speech-bubble strong {
+  background: none !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12) !important;
+  padding: 0 0 2px !important;
+}
+
+body.theme-minimalist .task-star,
+body.theme-minimalist .task-important-badge {
+  width: auto !important;
+  height: auto !important;
+  margin-left: 6px;
+  color: transparent !important;
+  font-size: 0 !important;
+}
+
+body.theme-minimalist .task-star::before,
+body.theme-minimalist .task-important-badge::before {
+  content: "☆" !important;
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  color: #c86a6a !important;
+  font-size: 0.84rem !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+body.theme-minimalist .task-star::after,
+body.theme-minimalist .task-important-badge::after {
+  content: none !important;
+}
+
+body.theme-minimalist .fab,
+body.theme-minimalist #add-folder-button {
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(0, 0, 0, 0.14) !important;
+  color: #333333 !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+body.theme-minimalist .fab:hover,
+body.theme-minimalist #add-folder-button:hover {
+  border-color: rgba(0, 0, 0, 0.24) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+}
+
+body.theme-minimalist .page[data-page="home"] .flat-start,
+body.theme-minimalist .page[data-page="home"] .timeline-start.small {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border: 1px solid rgba(0, 0, 0, 0.14) !important;
+  color: #444444 !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+body.theme-minimalist .page[data-page="home"] .flat-start:hover,
+body.theme-minimalist .page[data-page="home"] .timeline-start.small:hover {
+  background: rgba(255, 255, 255, 0.34) !important;
+  border-color: rgba(0, 0, 0, 0.26) !important;
+}
+
+body.theme-minimalist .page[data-page="home"] .flat-start.is-live,
+body.theme-minimalist .page[data-page="home"] .flat-start:disabled {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: rgba(0, 0, 0, 0.42) !important;
+}
+
+body.theme-minimalist :is(
+  .filter-pill select,
+  .line-field select,
+  .sheet-form select,
+  select.ai-input,
+  select
+) {
+  background-color: rgba(255, 255, 255, 0.46) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  border-radius: 12px !important;
+  color: #333333 !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+body.theme-minimalist :is(
+  .filter-pill select,
+  .line-field select,
+  .sheet-form select,
+  select.ai-input
+) {
+  padding: 10px 12px !important;
+}

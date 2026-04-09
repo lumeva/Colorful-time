@@ -6826,7 +6826,7 @@ function renderTaskRow(task, isCompleted = false) {
       <div class="task-main">
         <div class="task-title-row task-title-inline">
           <h4 class="task-name">${escapeHtml(task.name)}</h4>
-          <span class="mini-pill inline-tag" style="background:${alphaColor(visual.color, 0.14)};">${escapeHtml(visual.categoryName)}</span>
+          <span class="mini-pill inline-tag" style="--tag-color:${visual.color}; background:${alphaColor(visual.color, 0.14)};">${escapeHtml(visual.categoryName)}</span>
           ${task.important ? '<span class="task-star">★</span>' : ""}
         </div>
         <div class="task-subline">
@@ -13348,7 +13348,7 @@ if (!window.__cleanAdventureUiFinalPass) {
     dom.statsBreakdown.innerHTML = stats.breakdown
       .map(
         (item) => `
-          <article class="breakdown-row breakdown-sticker">
+          <article class="breakdown-row breakdown-sticker" style="--sticker-color:${item.color};">
             <div class="breakdown-primary">
               <span class="breakdown-dot" style="--sticker-color:${item.color}; background:${item.color};"></span>
               <span class="breakdown-name">${escapeHtml(item.label)}</span>
