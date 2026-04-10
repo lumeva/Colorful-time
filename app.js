@@ -78,22 +78,24 @@ function createDefaultAiState() {
       domain3Name: "",
       domain3Goal: "",
     },
-    weekly: {
-      period: "week",
-      start: formatInputDate(today),
-      end: formatInputDate(shiftDate(today, 6)),
-      win: "",
-      missed: "",
-      reason: "",
-      core1: "",
-      core2: "",
-      core3: "",
-      energy: "3",
-      special: "",
-      commitments: "",
-      obstacle: "",
-      response: "",
-    },
+      weekly: {
+        period: "week",
+        start: formatInputDate(today),
+        end: formatInputDate(shiftDate(today, 6)),
+        review: "",
+        win: "",
+        missed: "",
+        reason: "",
+        core1: "",
+        core2: "",
+        core3: "",
+        energy: "3",
+        energyContext: "",
+        special: "",
+        commitments: "",
+        obstacle: "",
+        response: "",
+      },
     daily: {
       horizon: "today",
       date: formatInputDate(today),
@@ -104,14 +106,15 @@ function createDefaultAiState() {
       mit1Duration: "25",
       mit2: "",
       mit2Duration: "25",
-      mit3: "",
-      mit3Duration: "25",
-      otherTasks: "",
-      windows: "",
-      quickTask: "",
-      distraction: "",
-      strategy: "",
-    },
+        mit3: "",
+        mit3Duration: "25",
+        otherTasks: "",
+        windows: "",
+        windowTags: [],
+        quickTask: "",
+        distraction: "",
+        strategy: "",
+      },
   };
 }
 
@@ -13442,13 +13445,17 @@ if (!window.__cleanAdventureUiFinalPass) {
           </select>
         </div>
         <div class="ai-field">
-          <label class="ai-field-label" for="ai-overall-mbti">MBTI</label>
+          <label class="ai-field-label" for="ai-overall-mbti">Q1 · Personality type (MBTI)</label>
+          <div class="ai-question-copy">Choose the closest profile if you know it. If not, pick "I don't know" and move on.</div>
+          <div class="ai-question-note">Theory note: personality preference can shape how goals feel motivating or draining.</div>
           <select class="ai-input" id="ai-overall-mbti" data-ai-field="overall.mbti">
             ${AI_MBTI_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
           </select>
         </div>
         <div class="ai-field">
-          <div class="ai-field-label">Chronotype</div>
+          <div class="ai-field-label">Q2 · Chronotype</div>
+          <div class="ai-question-copy">When do you usually feel the most mentally alive?</div>
+          <div class="ai-question-note">Theory note: matching planning rhythm to circadian preference reduces friction.</div>
           <div class="ai-choice-grid">
             ${AI_CHRONOTYPE_OPTIONS.map((option) => `
               <label class="ai-choice-chip">
@@ -13459,7 +13466,9 @@ if (!window.__cleanAdventureUiFinalPass) {
           </div>
         </div>
         <div class="ai-field">
-          <div class="ai-field-label">Work style</div>
+          <div class="ai-field-label">Q3 · Work style</div>
+          <div class="ai-question-copy">Which pattern feels most natural when you work on meaningful goals?</div>
+          <div class="ai-question-note">Theory note: execution style affects how plans should be chunked and sequenced.</div>
           <div class="ai-choice-stack">
             ${AI_WORKSTYLE_OPTIONS.map((option) => `
               <label class="ai-choice-line">
@@ -13470,7 +13479,9 @@ if (!window.__cleanAdventureUiFinalPass) {
           </div>
         </div>
         <div class="ai-field">
-          <div class="ai-field-label">Procrastination triggers</div>
+          <div class="ai-field-label">Q4 · Procrastination triggers</div>
+          <div class="ai-question-copy">Select the patterns that usually make you stall.</div>
+          <div class="ai-question-note">Theory note: identifying triggers makes future planning more realistic and compassionate.</div>
           <div class="ai-choice-stack">
             ${AI_PROCRASTINATION_OPTIONS.map((option) => `
               <label class="ai-choice-line">
@@ -13481,30 +13492,50 @@ if (!window.__cleanAdventureUiFinalPass) {
           </div>
         </div>
         <div class="ai-field">
-          <div class="ai-field-label">Top values</div>
-          <div class="ai-choice-grid">
-            <select class="ai-input" data-ai-field="overall.value1">${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
-            <select class="ai-input" data-ai-field="overall.value2"><option value="">Optional</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
-            <select class="ai-input" data-ai-field="overall.value3"><option value="">Optional</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+          <div class="ai-field-label">Q5 · Top values</div>
+          <div class="ai-question-copy">Pick the three values you most want your plan to protect.</div>
+          <div class="ai-question-note">Theory note: value-aligned goals are easier to sustain over longer horizons.</div>
+          <div class="ai-three-grid">
+            <select class="ai-input" data-ai-field="overall.value1"><option value="">Top value 1</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+            <select class="ai-input" data-ai-field="overall.value2"><option value="">Top value 2</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+            <select class="ai-input" data-ai-field="overall.value3"><option value="">Top value 3</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
           </div>
         </div>
         <div class="ai-field">
-          <label class="ai-field-label" for="ai-overall-life-stage">Current season</label>
+          <label class="ai-field-label" for="ai-overall-life-stage">Q6 · Current season</label>
+          <div class="ai-question-copy">What larger life context are you planning inside right now?</div>
+          <div class="ai-question-note">Theory note: the same goal means something different in different life seasons.</div>
           <input class="ai-input" id="ai-overall-life-stage" data-ai-field="overall.lifeStage" placeholder="Student, job search, startup, recovery..." />
         </div>
         <div class="ai-field">
-          <label class="ai-field-label" for="ai-overall-challenge">Main challenge</label>
+          <label class="ai-field-label" for="ai-overall-challenge">Q7 · Main challenge</label>
+          <div class="ai-question-copy">What is making planning difficult right now?</div>
+          <div class="ai-question-note">Theory note: naming the real friction makes better plans than pretending it is not there.</div>
           <textarea class="ai-input ai-textarea" id="ai-overall-challenge" rows="3" data-ai-field="overall.challenge" placeholder="What is making planning difficult right now?"></textarea>
         </div>
         <div class="ai-field">
-          <div class="ai-field-label">3 life domains</div>
-          <div class="ai-mit-stack">
+          <div class="ai-field-label">Q8 · Three life domains</div>
+          <div class="ai-question-copy">Choose three domains you want this quarter or year to move forward.</div>
+          <div class="ai-question-note">Theory note: broad life balance is easier to maintain when goals are grouped by domain.</div>
+          <div class="ai-quarterly-domain-stack">
             ${[1, 2, 3]
               .map(
                 (index) => `
-                  <div class="ai-mit-row">
-                    <input class="ai-input" data-ai-field="overall.domain${index}Name" placeholder="Domain ${index}" />
-                    <input class="ai-input" data-ai-field="overall.domain${index}Goal" placeholder="Goal for this domain" />
+                  <div class="ai-quarterly-domain-card">
+                    <div class="ai-quarterly-domain-row">
+                      <select class="ai-input" data-ai-field="overall.domain${index}Name">
+                        <option value="">Domain ${index}</option>
+                        <option value="Career / Study">Career / Study</option>
+                        <option value="Health">Health</option>
+                        <option value="Relationships">Relationships</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Creativity">Creativity</option>
+                        <option value="Home / Life admin">Home / Life admin</option>
+                        <option value="Spirituality">Spirituality</option>
+                        <option value="Fun / Adventure">Fun / Adventure</option>
+                      </select>
+                      <input class="ai-input" data-ai-field="overall.domain${index}Goal" placeholder="Goal content" />
+                    </div>
                   </div>
                 `
               )
@@ -13517,7 +13548,7 @@ if (!window.__cleanAdventureUiFinalPass) {
     if (cycle === "weekly") {
       return `
         <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-period">Review cycle</label>
+          <label class="ai-field-label" for="ai-weekly-period">Planning span</label>
           <select class="ai-input" id="ai-weekly-period" data-ai-field="weekly.period">
             <option value="week">Week</option>
             <option value="month">Month</option>
@@ -13531,49 +13562,52 @@ if (!window.__cleanAdventureUiFinalPass) {
           </div>
         </div>
         <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-win">What worked</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-win" rows="3" data-ai-field="weekly.win" placeholder="Wins and momentum from the last cycle"></textarea>
+          <label class="ai-field-label" for="ai-weekly-review">Q1 · Review</label>
+          <div class="ai-question-copy">What went better than expected last week or month? What did not happen even though you meant to do it?</div>
+          <div class="ai-question-note">Theory note: growth mindset + Kolb review loop.</div>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-review" rows="3" data-ai-field="weekly.review" placeholder="Things that went better than expected... unfinished things and why..."></textarea>
         </div>
         <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-missed">What slipped</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-missed" rows="3" data-ai-field="weekly.missed" placeholder="Missed goals or unfinished work"></textarea>
-        </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-reason">Why it happened</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-reason" rows="3" data-ai-field="weekly.reason" placeholder="Patterns, blockers, or energy leaks"></textarea>
-        </div>
-        <div class="ai-field">
-          <div class="ai-field-label">Core priorities</div>
-          <div class="ai-mit-stack">
-            <input class="ai-input" data-ai-field="weekly.core1" placeholder="Core priority 1" />
-            <input class="ai-input" data-ai-field="weekly.core2" placeholder="Core priority 2" />
-            <input class="ai-input" data-ai-field="weekly.core3" placeholder="Core priority 3" />
+          <div class="ai-field-label">Q2 · Core tasks</div>
+          <div class="ai-question-copy">If you could only finish three things this cycle, what would they be?</div>
+          <div class="ai-question-note">Theory note: essentialism. Fewer priorities usually means stronger follow-through.</div>
+          <div class="ai-three-grid ai-core-task-grid">
+            <input class="ai-input" data-ai-field="weekly.core1" placeholder="① Core task" />
+            <input class="ai-input" data-ai-field="weekly.core2" placeholder="② Core task" />
+            <input class="ai-input" data-ai-field="weekly.core3" placeholder="③ Core task" />
           </div>
         </div>
         <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-energy">Expected energy</label>
-          <input class="ai-range" id="ai-weekly-energy" type="range" min="1" max="5" step="1" data-ai-field="weekly.energy" />
-          <span class="ai-range-value" data-ai-display="weekly.energy"></span>
+          <label class="ai-field-label" for="ai-weekly-energy">Q3 · Energy</label>
+          <div class="ai-question-copy">How do you expect your overall energy to feel this cycle? Any special context?</div>
+          <div class="ai-question-note">Theory note: energy management works better when you predict the dips before they arrive.</div>
+          <div class="ai-weekly-energy-card">
+            <div class="ai-weekly-energy-row">
+              <input class="ai-range" id="ai-weekly-energy" type="range" min="1" max="5" step="1" data-ai-field="weekly.energy" />
+              <span class="ai-range-value" data-ai-display="weekly.energy"></span>
+            </div>
+            <input class="ai-input" data-ai-field="weekly.energyContext" placeholder="Special context (meetings, travel, recovery, deadlines...)" />
+          </div>
         </div>
         <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-special">Special events</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-special" rows="2" data-ai-field="weekly.special" placeholder="Trips, exams, deadlines, recovery days..."></textarea>
+          <label class="ai-field-label" for="ai-weekly-commitments">Q4 · Hard commitments</label>
+          <div class="ai-question-copy">What fixed commitments already exist in this cycle?</div>
+          <div class="ai-question-note">Theory note: GTD starts with capturing the immovable pieces first.</div>
+          <textarea class="ai-input ai-textarea" id="ai-weekly-commitments" rows="3" data-ai-field="weekly.commitments" placeholder="Meetings, appointments, classes, deadlines..."></textarea>
         </div>
         <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-commitments">Fixed commitments</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-commitments" rows="2" data-ai-field="weekly.commitments" placeholder="Classes, meetings, workouts, family time..."></textarea>
-        </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-obstacle">Likely obstacle</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-obstacle" rows="2" data-ai-field="weekly.obstacle" placeholder="What could derail the plan?"></textarea>
-        </div>
-        <div class="ai-field">
-          <label class="ai-field-label" for="ai-weekly-response">Planned response</label>
-          <textarea class="ai-input ai-textarea" id="ai-weekly-response" rows="2" data-ai-field="weekly.response" placeholder="How should the plan adapt if that happens?"></textarea>
+          <div class="ai-field-label">Q5 · Obstacles</div>
+          <div class="ai-question-copy">What might get in your way, and how do you want to respond if it happens?</div>
+          <div class="ai-question-note">Theory note: implementation intentions make plans more resilient.</div>
+          <div class="ai-obstacle-row">
+            <textarea class="ai-input ai-textarea" id="ai-weekly-obstacle" rows="3" data-ai-field="weekly.obstacle" placeholder="Possible obstacle"></textarea>
+            <div class="ai-obstacle-arrow" aria-hidden="true">➔</div>
+            <textarea class="ai-input ai-textarea" id="ai-weekly-response" rows="3" data-ai-field="weekly.response" placeholder="Response strategy"></textarea>
+          </div>
         </div>
       `;
     }
-
+  
     return `
       <div class="ai-field">
         <label class="ai-field-label" for="ai-daily-horizon">Plan for</label>
@@ -13584,65 +13618,81 @@ if (!window.__cleanAdventureUiFinalPass) {
       </div>
       <div class="ai-field">
         <label class="ai-field-label" for="ai-daily-date">Date</label>
-        <input class="ai-input" id="ai-daily-date" type="date" data-ai-field="daily.date" />
-      </div>
-      <div class="ai-field">
-        <div class="ai-field-label">Energy snapshot</div>
-        <div class="ai-meter-stack">
-          <label class="ai-range-block">
-            <span>Body</span>
-            <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.body" />
-            <span class="ai-range-value" data-ai-display="daily.body"></span>
-          </label>
-          <label class="ai-range-block">
-            <span>Mood</span>
-            <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.mood" />
-            <span class="ai-range-value" data-ai-display="daily.mood"></span>
-          </label>
-          <label class="ai-range-block">
-            <span>Focus</span>
-            <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.focus" />
-            <span class="ai-range-value" data-ai-display="daily.focus"></span>
-          </label>
+          <input class="ai-input" id="ai-daily-date" type="date" data-ai-field="daily.date" />
         </div>
-      </div>
-      <div class="ai-field">
-        <div class="ai-field-label">MITs</div>
-        <div class="ai-mit-stack">
-          ${[1, 2, 3]
-            .map(
-              (index) => `
-                <div class="ai-mit-row">
-                  <input class="ai-input" data-ai-field="daily.mit${index}" placeholder="MIT ${index}" />
-                  <input class="ai-input ai-duration-input" type="number" min="5" step="5" data-ai-field="daily.mit${index}Duration" placeholder="Minutes" />
-                </div>
-              `
-            )
-            .join("")}
+        <div class="ai-field">
+          <div class="ai-field-label">Q1 · Current energy</div>
+          <div class="ai-question-copy">Score your state right now across three dimensions.</div>
+          <div class="ai-question-note">Theory note: if several dimensions are low, maintenance tasks are often the wiser plan.</div>
+          <div class="ai-meter-stack ai-daily-energy-grid">
+            <label class="ai-range-block">
+              <span>🏃 Body</span>
+              <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.body" />
+              <span class="ai-range-value" data-ai-display="daily.body"></span>
+            </label>
+            <label class="ai-range-block">
+              <span>🌈 Mood</span>
+              <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.mood" />
+              <span class="ai-range-value" data-ai-display="daily.mood"></span>
+            </label>
+            <label class="ai-range-block">
+              <span>🎯 Focus</span>
+              <input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.focus" />
+              <span class="ai-range-value" data-ai-display="daily.focus"></span>
+            </label>
+          </div>
         </div>
-      </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-other">Other tasks</label>
-        <textarea class="ai-input ai-textarea" id="ai-daily-other" rows="3" data-ai-field="daily.otherTasks" placeholder="Smaller tasks, errands, admin, replies..."></textarea>
-      </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-windows">Time windows</label>
-        <textarea class="ai-input ai-textarea" id="ai-daily-windows" rows="3" data-ai-field="daily.windows" placeholder="09:00-11:00 focus, 14:00-15:30 calls..."></textarea>
-      </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-quick">Quick start task</label>
-        <input class="ai-input" id="ai-daily-quick" data-ai-field="daily.quickTask" placeholder="A 5-minute action that gets you moving" />
-      </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-distraction">Likely distraction</label>
-        <textarea class="ai-input ai-textarea" id="ai-daily-distraction" rows="2" data-ai-field="daily.distraction" placeholder="What is most likely to interrupt you?"></textarea>
-      </div>
-      <div class="ai-field">
-        <label class="ai-field-label" for="ai-daily-strategy">Counter move</label>
-        <textarea class="ai-input ai-textarea" id="ai-daily-strategy" rows="2" data-ai-field="daily.strategy" placeholder="How should the plan respond?"></textarea>
-      </div>
-    `;
-  };
+        <div class="ai-field">
+          <div class="ai-field-label">Q2 · 3 MITs</div>
+          <div class="ai-question-copy">If these three get done, today still counts as a win.</div>
+          <div class="ai-question-note">Theory note: MIT planning works best when the scope is concrete and time-bounded.</div>
+          <div class="ai-mit-stack">
+            ${[1, 2, 3]
+              .map(
+                (index) => `
+                  <div class="ai-mit-row ai-daily-mit-row">
+                    <input class="ai-input" data-ai-field="daily.mit${index}" placeholder="${["①", "②", "③"][index - 1]} Most important task" />
+                    <input class="ai-input ai-duration-input" type="number" min="5" step="5" data-ai-field="daily.mit${index}Duration" placeholder="Est. min" />
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+        <div class="ai-field">
+          <div class="ai-field-label">Q3 · Time windows</div>
+          <div class="ai-question-copy">How many interruption-free focus windows do you actually have today?</div>
+          <div class="ai-question-note">Theory note: deep work depends on protecting a few real windows, not fantasy hours.</div>
+          <div class="ai-window-tag-grid">
+            ${["Early morning", "Morning", "Afternoon", "Evening"]
+              .map(
+                (window) => `
+                  <label class="ai-choice-chip ai-window-tag">
+                    <input type="checkbox" data-ai-list="daily.windowTags" value="${window}" />
+                    <span>${window}</span>
+                  </label>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+        <div class="ai-field">
+          <label class="ai-field-label" for="ai-daily-quick">Q4 · Kickstart</label>
+          <div class="ai-question-copy">What is one five-minute action that would help you get moving?</div>
+          <div class="ai-question-note">Theory note: small activation lowers the threshold for starting.</div>
+          <input class="ai-input" id="ai-daily-quick" data-ai-field="daily.quickTask" placeholder="For example: clear desk, reply to one email..." />
+        </div>
+        <div class="ai-field">
+          <div class="ai-field-label">Q5 · Distraction</div>
+          <div class="ai-question-copy">What is most likely to break your attention today, and how will you protect against it?</div>
+          <div class="ai-question-note">Theory note: attention management improves when the defense is chosen in advance.</div>
+          <div class="ai-two-grid ai-daily-guard-grid">
+            <textarea class="ai-input ai-textarea" id="ai-daily-distraction" rows="3" data-ai-field="daily.distraction" placeholder="Distraction source"></textarea>
+            <textarea class="ai-input ai-textarea" id="ai-daily-strategy" rows="3" data-ai-field="daily.strategy" placeholder="Protection mechanism"></textarea>
+          </div>
+        </div>
+      `;
+    };
 
   renderAiPlanner = function () {
     ensureAiPlannerPage();
@@ -13972,6 +14022,8 @@ if (!window.__settingsCandyTune) {
 
 if (!window.__aiPlannerLayoutAndIconPass) {
   window.__aiPlannerLayoutAndIconPass = true;
+  const AI_PLANNER_MEMORY_KEY = "colorful-time-ai-memory-v1";
+  let aiPlannerMemoryHydrated = false;
 
   const applyPhosphorEditIcons = () => {
     if (dom.todoSortToggle) {
@@ -13989,6 +14041,44 @@ if (!window.__aiPlannerLayoutAndIconPass) {
     document.querySelectorAll("[data-edit-node]").forEach((button) => {
       button.innerHTML = renderPencilIconMarkup();
     });
+  };
+
+  const hydrateAiPlannerMemory = () => {
+    if (aiPlannerMemoryHydrated) return;
+    aiPlannerMemoryHydrated = true;
+
+    try {
+      const raw = window.localStorage.getItem(AI_PLANNER_MEMORY_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== "object") return;
+
+      state.ai = {
+        ...state.ai,
+        cycle: saved.cycle || state.ai.cycle,
+        overall: { ...(state.ai.overall || {}), ...(saved.overall || {}) },
+        weekly: { ...(state.ai.weekly || {}), ...(saved.weekly || {}) },
+        daily: { ...(state.ai.daily || {}), ...(saved.daily || {}) },
+      };
+    } catch (error) {
+      console.warn("Failed to hydrate AI planner memory", error);
+    }
+  };
+
+  const saveAiPlannerMemory = () => {
+    try {
+      window.localStorage.setItem(
+        AI_PLANNER_MEMORY_KEY,
+        JSON.stringify({
+          cycle: state.ai.cycle || "overall",
+          overall: state.ai.overall || {},
+          weekly: state.ai.weekly || {},
+          daily: state.ai.daily || {},
+        })
+      );
+    } catch (error) {
+      console.warn("Failed to save AI planner memory", error);
+    }
   };
 
   ensureAiPlannerPage = function () {
@@ -14014,17 +14104,48 @@ if (!window.__aiPlannerLayoutAndIconPass) {
 
       <section class="paper-sheet ai-sheet ai-sheet-compact">
         <section class="ai-step">
-          <div class="settings-group-title">\u8ba1\u5212\u5c42\u7ea7</div>
-          <div class="ai-cycle-grid" id="ai-cycle-grid"></div>
+          <div class="settings-group-title">Planning horizon</div>
+          <div class="settings-list-block ai-planning-select-card">
+            <label class="ai-field" for="ai-cycle-select">
+              <span class="ai-field-label">Choose a planning level</span>
+              <select class="ai-input" id="ai-cycle-select">
+                <option value="overall">Overall planning (Quarter / Year)</option>
+                <option value="weekly">Month / Week planning</option>
+                <option value="daily">Today / Tomorrow planning</option>
+              </select>
+            </label>
+          </div>
         </section>
 
         <section class="ai-step">
-          <div class="settings-group-title">\u586b\u5199\u95ee\u5377</div>
-          <div class="settings-list-block ai-questionnaire" id="ai-questionnaire"></div>
+          <div class="settings-group-title">Questionnaire</div>
+          <div class="settings-list-block ai-questionnaire" id="ai-questionnaire">
+            <div class="ai-form-panel" data-ai-panel="overall">
+              <div class="ai-form-panel-head">
+                <strong>Overall planning</strong>
+                <span>Use this when you want quarter or year level direction.</span>
+              </div>
+              <div class="ai-form-panel-body">${buildAiQuestionnaire("overall")}</div>
+            </div>
+            <div class="ai-form-panel" data-ai-panel="weekly">
+              <div class="ai-form-panel-head">
+                <strong>Month / Week planning</strong>
+                <span>Use this when you want a short-cycle review and execution plan.</span>
+              </div>
+              <div class="ai-form-panel-body">${buildAiQuestionnaire("weekly")}</div>
+            </div>
+            <div class="ai-form-panel" data-ai-panel="daily">
+              <div class="ai-form-panel-head">
+                <strong>Today / Tomorrow planning</strong>
+                <span>Use this for day-level prioritization and time windows.</span>
+              </div>
+              <div class="ai-form-panel-body">${buildAiQuestionnaire("daily")}</div>
+            </div>
+          </div>
         </section>
 
         <section class="ai-step">
-          <div class="settings-group-title">\u751f\u6210 Prompt</div>
+          <div class="settings-group-title">Generate Prompt</div>
           <div class="settings-list-block ai-actions">
             <div class="ai-card-tools">
               <button class="ghost-button ai-action-button" id="ai-generate-prompt" type="button">Generate Prompt</button>
@@ -14037,14 +14158,14 @@ if (!window.__aiPlannerLayoutAndIconPass) {
         </section>
 
         <section class="ai-step">
-          <div class="settings-group-title">\u7c98\u8d34 AI \u7ed3\u679c</div>
+          <div class="settings-group-title">Paste AI Result</div>
           <div class="settings-list-block ai-actions">
             <textarea id="ai-result-input" rows="10" placeholder="Paste the AI result here."></textarea>
           </div>
         </section>
 
         <section class="ai-step">
-          <div class="settings-group-title">\u9884\u89c8\u5bfc\u5165</div>
+          <div class="settings-group-title">Preview Import</div>
           <div class="settings-list-block ai-actions">
             <div class="sheet-button-row ai-import-actions">
               <button class="ghost-button ai-action-button" id="ai-preview-import" type="button">Preview</button>
@@ -14057,34 +14178,71 @@ if (!window.__aiPlannerLayoutAndIconPass) {
     `;
   };
 
-  renderAiPlanner = function () {
-    ensureAiPlannerPage();
-    refreshDynamicDomRefs();
-    if (!dom.aiCycleGrid || !dom.aiQuestionnaire) return;
+  bindAiQuestionnaireFields = function () {
+    if (!dom.aiQuestionnaire) return;
 
-    const cycle = state.ai.cycle || "overall";
-    const cycles = AI_CYCLES_V2 || AI_CYCLES;
+    dom.aiQuestionnaire.querySelectorAll("[data-ai-field]").forEach((input) => {
+      const path = input.dataset.aiField;
+      const value = getAiPathValue(path);
+      if (input.type === "radio") {
+        input.checked = value === input.value;
+        input.onchange = () => {
+          if (!input.checked) return;
+          setAiPathValue(path, input.value);
+          syncAiRangeDisplays();
+          saveAiPlannerMemory();
+          persistState();
+        };
+        return;
+      }
 
-    dom.aiCycleGrid.innerHTML = cycles
-      .map(
-        (item) => `
-          <button class="ai-cycle-card ${cycle === item.id ? "is-active" : ""}" data-ai-cycle="${item.id}" type="button">
-            <strong>${escapeHtml(item.label)}</strong>
-            <span>${escapeHtml(item.note)}</span>
-          </button>
-        `
-      )
-      .join("");
-    dom.aiQuestionnaire.innerHTML = buildAiQuestionnaire(cycle);
+      input.value = value ?? "";
+      input.oninput = () => {
+        setAiPathValue(path, input.value);
+        syncAiRangeDisplays();
+        saveAiPlannerMemory();
+        persistState();
+      };
+      input.onchange = input.oninput;
+    });
 
-    dom.aiCycleGrid.querySelectorAll("[data-ai-cycle]").forEach((button) => {
-      button.onclick = () => {
-        state.ai.cycle = button.dataset.aiCycle;
-        state.ui.aiPreviewItems = [];
-        renderAiPlanner();
+    dom.aiQuestionnaire.querySelectorAll("[data-ai-list]").forEach((input) => {
+      const path = input.dataset.aiList;
+      const list = getAiPathValue(path) || [];
+      input.checked = list.includes(input.value);
+      input.onchange = () => {
+        const current = new Set(getAiPathValue(path) || []);
+        if (input.checked) current.add(input.value);
+        else current.delete(input.value);
+        setAiPathValue(path, [...current]);
+        saveAiPlannerMemory();
         persistState();
       };
     });
+
+    syncAiRangeDisplays();
+  };
+
+  renderAiPlanner = function () {
+    hydrateAiPlannerMemory();
+    ensureAiPlannerPage();
+    refreshDynamicDomRefs();
+    dom.aiCycleSelect = document.getElementById("ai-cycle-select");
+    if (!dom.aiCycleSelect || !dom.aiQuestionnaire) return;
+
+    const cycle = state.ai.cycle || "overall";
+    dom.aiCycleSelect.value = cycle;
+    dom.aiQuestionnaire.querySelectorAll("[data-ai-panel]").forEach((panel) => {
+      panel.classList.toggle("is-active", panel.dataset.aiPanel === cycle);
+    });
+
+    dom.aiCycleSelect.onchange = () => {
+      state.ai.cycle = dom.aiCycleSelect.value || "overall";
+      state.ui.aiPreviewItems = [];
+      saveAiPlannerMemory();
+      persistState();
+      renderAiPlanner();
+    };
 
     bindAiQuestionnaireFields();
 
@@ -14093,6 +14251,7 @@ if (!window.__aiPlannerLayoutAndIconPass) {
       dom.aiResultInput.value = state.ai.resultText || "";
       dom.aiResultInput.oninput = (event) => {
         state.ai.resultText = event.target.value;
+        saveAiPlannerMemory();
         persistState();
       };
     }
