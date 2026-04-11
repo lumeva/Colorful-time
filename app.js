@@ -1560,96 +1560,9 @@ function createSeedState(baseDate = new Date()) {
     },
   ];
 
-  const lookup = buildLookupFromFolders(folders);
-  const tasks = [
-    createTask({
-      name: "Read Book",
-      time: "08:00",
-      folderId: lookup.byTemplateName["Read Book"].folder.id,
-      categoryId: lookup.byTemplateName["Read Book"].category.id,
-      templateId: lookup.byTemplateName["Read Book"].template.id,
-      durationMin: 30,
-    }),
-    createTask({
-      name: "Exercise",
-      time: "09:30",
-      folderId: lookup.byTemplateName["Exercise"].folder.id,
-      categoryId: lookup.byTemplateName["Exercise"].category.id,
-      templateId: lookup.byTemplateName["Exercise"].template.id,
-      durationMin: 30,
-    }),
-    createTask({
-      name: "Study Math",
-      time: "11:00",
-      folderId: lookup.byTemplateName["Do Exercises"].folder.id,
-      categoryId: lookup.byTemplateName["Do Exercises"].category.id,
-      templateId: lookup.byTemplateName["Do Exercises"].template.id,
-      durationMin: 45,
-      important: true,
-    }),
-    createTask({
-      name: "Lunch",
-      time: "13:00",
-      folderId: lookup.byTemplateName["Lunch"].folder.id,
-      categoryId: lookup.byTemplateName["Lunch"].category.id,
-      templateId: lookup.byTemplateName["Lunch"].template.id,
-      durationMin: 40,
-    }),
-    createTask({
-      name: "Review Notes",
-      time: "18:30",
-      folderId: lookup.byTemplateName["Review Notes"].folder.id,
-      categoryId: lookup.byTemplateName["Review Notes"].category.id,
-      templateId: lookup.byTemplateName["Review Notes"].template.id,
-      durationMin: 25,
-      important: true,
-    }),
-    createTask({
-      name: "Fill Survey",
-      folderId: lookup.byTemplateName["Fill Survey"].folder.id,
-      categoryId: lookup.byTemplateName["Fill Survey"].category.id,
-      templateId: lookup.byTemplateName["Fill Survey"].template.id,
-      durationMin: 5,
-      important: true,
-    }),
-    createTask({
-      name: "Room Reset",
-      folderId: lookup.byTemplateName["Shower"].folder.id,
-      categoryId: lookup.byTemplateName["Shower"].category.id,
-      durationMin: 15,
-    }),
-    createTask({
-      name: "Morning Pages",
-      time: "06:40",
-      folderId: lookup.byTemplateName["Review Notes"].folder.id,
-      categoryId: lookup.byTemplateName["Review Notes"].category.id,
-      durationMin: 20,
-      completed: true,
-      completedAt: addMinutes(dayStart, 410).toISOString(),
-    }),
-  ];
-
-  const activeTimerTask = tasks.find((task) => task.name === "Study Math");
-  const sessions = [
-    createSession(tasks.find((task) => task.name === "Read Book"), dayStart, 8, 10, 8, 55),
-    createSession(tasks.find((task) => task.name === "Exercise"), dayStart, 9, 36, 10, 8),
-    createSession(activeTimerTask, dayStart, 10, 15, 11, 45),
-    createSession(tasks.find((task) => task.name === "Lunch"), dayStart, 12, 10, 12, 52),
-    createSession(tasks.find((task) => task.name === "Fill Survey"), dayStart, 14, 20, 14, 35),
-    createSession(tasks.find((task) => task.name === "Review Notes"), shiftDate(dayStart, -1), 19, 0, 19, 28),
-    createSession(tasks.find((task) => task.name === "Exercise"), shiftDate(dayStart, -1), 9, 20, 9, 55),
-    createSession(tasks.find((task) => task.name === "Read Book"), shiftDate(dayStart, -2), 8, 5, 8, 40),
-    createSession(tasks.find((task) => task.name === "Lunch"), shiftDate(dayStart, -2), 12, 0, 12, 38),
-    createSession(tasks.find((task) => task.name === "Review Notes"), shiftDate(dayStart, -3), 18, 30, 19, 5),
-    createSession(tasks.find((task) => task.name === "Fill Survey"), shiftDate(dayStart, -3), 14, 0, 14, 10),
-    createSession(tasks.find((task) => task.name === "Exercise"), shiftDate(dayStart, -4), 9, 10, 9, 40),
-    createSession(tasks.find((task) => task.name === "Read Book"), shiftDate(dayStart, -5), 8, 0, 8, 25),
-    createSession(tasks.find((task) => task.name === "Study Math"), shiftDate(dayStart, -5), 10, 0, 11, 20),
-    createSession(tasks.find((task) => task.name === "Lunch"), shiftDate(dayStart, -6), 12, 18, 12, 55),
-  ];
-
   return {
     schemaVersion: STATE_SCHEMA_VERSION,
+    demoSeedCleared: 1,
     currentPage: "home",
     theme: "paper",
     dayStart: "00:00",
@@ -1675,14 +1588,9 @@ function createSeedState(baseDate = new Date()) {
       },
     },
     folders,
-    tasks,
-    sessions,
-    activeTimer: {
-      taskId: activeTimerTask.id,
-      startedAt: new Date(Date.now() - (25 * 60 + 32) * 1000).toISOString(),
-      pausedElapsedMs: 0,
-      running: true,
-    },
+    tasks: [],
+    sessions: [],
+    activeTimer: null,
   };
 }
 
@@ -4198,6 +4106,267 @@ function persistState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, schemaVersion: STATE_SCHEMA_VERSION }));
 }
 
+const LEGACY_DEMO_TASK_SIGNATURES = [
+  {
+    name: "Read Book",
+    scheduledMinutes: parseTimeString("08:00"),
+    durationMin: 30,
+    folderName: "Study",
+    categoryName: "English",
+    templateName: "Read Book",
+    important: false,
+    completed: false,
+  },
+  {
+    name: "Exercise",
+    scheduledMinutes: parseTimeString("09:30"),
+    durationMin: 30,
+    folderName: "Life",
+    categoryName: "Fitness",
+    templateName: "Exercise",
+    important: false,
+    completed: false,
+  },
+  {
+    name: "Study Math",
+    scheduledMinutes: parseTimeString("11:00"),
+    durationMin: 45,
+    folderName: "Study",
+    categoryName: "Math",
+    templateName: "Do Exercises",
+    important: true,
+    completed: false,
+  },
+  {
+    name: "Lunch",
+    scheduledMinutes: parseTimeString("13:00"),
+    durationMin: 40,
+    folderName: "Life",
+    categoryName: "Daily",
+    templateName: "Lunch",
+    important: false,
+    completed: false,
+  },
+  {
+    name: "Review Notes",
+    scheduledMinutes: parseTimeString("18:30"),
+    durationMin: 25,
+    folderName: "Study",
+    categoryName: "Math",
+    templateName: "Review Notes",
+    important: true,
+    completed: false,
+  },
+  {
+    name: "Fill Survey",
+    scheduledMinutes: null,
+    durationMin: 5,
+    folderName: "Work",
+    categoryName: "Admin",
+    templateName: "Fill Survey",
+    important: true,
+    completed: false,
+  },
+  {
+    name: "Room Reset",
+    scheduledMinutes: null,
+    durationMin: 15,
+    folderName: "Life",
+    categoryName: "Daily",
+    templateName: null,
+    important: false,
+    completed: false,
+  },
+  {
+    name: "Morning Pages",
+    scheduledMinutes: parseTimeString("06:40"),
+    durationMin: 20,
+    folderName: "Study",
+    categoryName: "Math",
+    templateName: null,
+    important: false,
+    completed: true,
+  },
+];
+
+function buildFixtureLookupMaps(folders) {
+  const folderNames = new Map();
+  const categoryNames = new Map();
+  const templateNames = new Map();
+
+  (folders || []).forEach((folder) => {
+    folderNames.set(folder.id, folder.name || "");
+    (folder.categories || []).forEach((category) => {
+      categoryNames.set(category.id, category.name || "");
+      (category.templates || []).forEach((template) => {
+        templateNames.set(template.id, template.name || "");
+      });
+    });
+  });
+
+  return { folderNames, categoryNames, templateNames };
+}
+
+function matchesLegacyDemoTask(task, lookupMaps) {
+  const folderName = lookupMaps.folderNames.get(task.folderId) || "";
+  const categoryName = lookupMaps.categoryNames.get(task.categoryId) || "";
+  const templateName = lookupMaps.templateNames.get(task.templateId) || null;
+
+  return LEGACY_DEMO_TASK_SIGNATURES.some(
+    (signature) =>
+      task.name === signature.name &&
+      task.scheduledMinutes === signature.scheduledMinutes &&
+      Number(task.durationMin || 0) === signature.durationMin &&
+      Boolean(task.important) === signature.important &&
+      Boolean(task.completed) === signature.completed &&
+      folderName === signature.folderName &&
+      categoryName === signature.categoryName &&
+      templateName === signature.templateName
+  );
+}
+
+function stripLegacyDemoFixtures(snapshot) {
+  if (snapshot.demoSeedCleared === 1) {
+    return snapshot;
+  }
+
+  const lookupMaps = buildFixtureLookupMaps(snapshot.folders);
+  const matchedTasks = (snapshot.tasks || []).filter((task) => matchesLegacyDemoTask(task, lookupMaps));
+
+  if (matchedTasks.length < 4) {
+    return { ...snapshot, demoSeedCleared: 1 };
+  }
+
+  const matchedTaskIds = new Set(matchedTasks.map((task) => task.id));
+  const matchedTaskNames = new Set(matchedTasks.map((task) => task.name));
+
+  return {
+    ...snapshot,
+    demoSeedCleared: 1,
+    tasks: (snapshot.tasks || []).filter((task) => !matchedTaskIds.has(task.id)),
+    sessions: (snapshot.sessions || []).filter(
+      (session) => !matchedTaskIds.has(session.taskId) && !matchedTaskNames.has(session.taskName)
+    ),
+    activeTimer: matchedTaskIds.has(snapshot.activeTimer?.taskId) ? null : snapshot.activeTimer,
+  };
+}
+
+function createSeedState(baseDate = new Date()) {
+  const dayStart = cloneDate(baseDate);
+  dayStart.setHours(0, 0, 0, 0);
+
+  return {
+    schemaVersion: STATE_SCHEMA_VERSION,
+    demoSeedCleared: 2,
+    currentPage: "home",
+    theme: "paper",
+    dayStart: "00:00",
+    defaultDuration: 25,
+    reduceTexture: false,
+    showCompletedOpen: false,
+    ui: {
+      openSheet: null,
+      statsRange: "today",
+      statsMode: "category",
+      statsCategoryFilter: "all",
+      statsTaskFilter: "all",
+      selectedSegment: null,
+      showTrend: false,
+      tasksEditMode: false,
+      editingTaskId: null,
+      createTaskSelection: null,
+      categoryTrail: [],
+      treeEditor: null,
+      customRange: {
+        start: formatInputDate(shiftDate(dayStart, -6)),
+        end: formatInputDate(dayStart),
+      },
+    },
+    folders: [],
+    tasks: [],
+    sessions: [],
+    activeTimer: null,
+  };
+}
+
+function stripLegacyDemoFixtures(snapshot) {
+  if (Number(snapshot.demoSeedCleared || 0) >= 2) {
+    return snapshot;
+  }
+
+  const demoFolderBlueprint = {
+    Study: {
+      Math: ["Do Exercises", "Review Notes"],
+      English: ["Read Book", "Practice Vocabulary"],
+    },
+    Life: {
+      Daily: ["Lunch", "Shower"],
+      Fitness: ["Exercise"],
+    },
+    Work: {
+      Admin: ["Fill Survey", "Reply Messages"],
+    },
+  };
+
+  const folderIds = new Set();
+  const categoryIds = new Set();
+  const templateIds = new Set();
+
+  (snapshot.folders || []).forEach((folder) => {
+    const folderSpec = demoFolderBlueprint[folder.name];
+    if (!folderSpec) return;
+
+    const categories = folder.categories || [];
+    const folderMatches = Object.entries(folderSpec).every(([categoryName, expectedTemplates]) => {
+      const category = categories.find((item) => item.name === categoryName);
+      if (!category) return false;
+      const templateNames = new Set((category.templates || []).map((template) => template.name));
+      return expectedTemplates.every((templateName) => templateNames.has(templateName));
+    });
+
+    if (!folderMatches) return;
+
+    folderIds.add(folder.id);
+    categories.forEach((category) => {
+      categoryIds.add(category.id);
+      (category.templates || []).forEach((template) => templateIds.add(template.id));
+    });
+  });
+
+  const lookupMaps = buildFixtureLookupMaps(snapshot.folders);
+  const matchedTasks = (snapshot.tasks || []).filter(
+    (task) =>
+      folderIds.has(task.folderId) ||
+      categoryIds.has(task.categoryId) ||
+      templateIds.has(task.templateId) ||
+      matchesLegacyDemoTask(task, lookupMaps)
+  );
+  const matchedTaskIds = new Set(matchedTasks.map((task) => task.id));
+  const matchedTaskNames = new Set(matchedTasks.map((task) => task.name));
+
+  return {
+    ...snapshot,
+    demoSeedCleared: 2,
+    folders: (snapshot.folders || []).filter((folder) => !folderIds.has(folder.id)),
+    tasks: (snapshot.tasks || []).filter((task) => !matchedTaskIds.has(task.id)),
+    sessions: (snapshot.sessions || []).filter(
+      (session) =>
+        !matchedTaskIds.has(session.taskId) &&
+        !matchedTaskNames.has(session.taskName) &&
+        !folderIds.has(session.folderId) &&
+        !categoryIds.has(session.categoryId) &&
+        !templateIds.has(session.templateId)
+    ),
+    activeTimer:
+      folderIds.has(snapshot.activeTimer?.folderId) ||
+      categoryIds.has(snapshot.activeTimer?.categoryId) ||
+      templateIds.has(snapshot.activeTimer?.templateId) ||
+      matchedTaskIds.has(snapshot.activeTimer?.taskId)
+        ? null
+        : snapshot.activeTimer,
+  };
+}
+
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return createSeedState();
@@ -4206,10 +4375,7 @@ function loadState() {
     const seed = createSeedState();
     const isStaleSchema = parsed.schemaVersion !== STATE_SCHEMA_VERSION;
     const hasCoreCollections = Array.isArray(parsed.folders) && Array.isArray(parsed.tasks) && Array.isArray(parsed.sessions);
-    const looksLikeBrokenSnapshot =
-      hasCoreCollections &&
-      (!parsed.folders.length || !parsed.tasks.length || !parsed.sessions.length);
-    if (isStaleSchema || !hasCoreCollections || looksLikeBrokenSnapshot) {
+    if (isStaleSchema || !hasCoreCollections) {
       return {
         ...seed,
         theme: parsed.theme || seed.theme,
@@ -4219,7 +4385,7 @@ function loadState() {
         customBackgroundImage: parsed.customBackgroundImage || "",
       };
     }
-    return {
+    const hydrated = {
       ...seed,
       ...parsed,
       ui: {
@@ -4228,6 +4394,7 @@ function loadState() {
         customRange: { ...seed.ui.customRange, ...parsed.ui?.customRange },
       },
     };
+    return stripLegacyDemoFixtures(hydrated);
   } catch (error) {
     console.warn("Failed to load saved state, resetting.", error);
     return createSeedState();
@@ -13132,7 +13299,7 @@ if (!window.__cleanAdventureUiFinalPass) {
 
     const tree = buildStatsCategoryTree();
     const selection = ensureStatsCascadeSelection();
-    const seededTrail = Array.isArray(state.ui.statsPickerTrail) && state.ui.statsPickerTrail.length
+    const seededTrail = Array.isArray(state.ui.statsPickerTrail)
       ? state.ui.statsPickerTrail
       : buildStatsPickerTrailFromSelection(selection, tree);
     const trail = [];
@@ -13146,7 +13313,6 @@ if (!window.__cleanAdventureUiFinalPass) {
     }
     state.ui.statsPickerTrail = trail;
 
-    const levelLabels = ["\u4e00\u7ea7\u5206\u7c7b", "\u4e8c\u7ea7\u5206\u7c7b", "\u4e09\u7ea7\u4efb\u52a1"];
     const titleByDepth = ["\u9009\u62e9\u4e00\u7ea7\u5206\u7c7b", "\u9009\u62e9\u4e8c\u7ea7\u5206\u7c7b", "\u9009\u62e9\u4e09\u7ea7\u4efb\u52a1"];
     dom.statsPickerTitle.textContent = titleByDepth[Math.min(trail.length, titleByDepth.length - 1)];
 
@@ -13154,30 +13320,6 @@ if (!window.__cleanAdventureUiFinalPass) {
       <div class="stats-picker-toolbar">
         <button class="stats-picker-back" id="stats-picker-back" type="button" ${trail.length ? "" : "disabled"}>&lt; Back</button>
       </div>
-      <div class="stats-picker-levels">
-        ${levelLabels
-          .map(
-            (label, index) => `
-              <span class="stats-picker-level ${index === trail.length ? "is-active" : ""}">
-                ${label}
-              </span>
-            `
-          )
-          .join("")}
-      </div>
-      <div class="stats-picker-crumbs">
-        <button class="quick-chip" id="stats-picker-root-chip" type="button">All</button>
-        ${trail
-          .map(
-            (entry, index) => `
-              <button class="quick-chip" data-stats-picker-crumb="${index}" type="button">
-                ${escapeHtml(entry.label)}
-              </button>
-            `
-          )
-          .join("")}
-      </div>
-      <div class="stats-picker-current">${escapeHtml(formatStatsCascadeLabel(selection))}</div>
     `;
 
     document.getElementById("stats-picker-back")?.addEventListener("click", () => {
@@ -13185,19 +13327,6 @@ if (!window.__cleanAdventureUiFinalPass) {
       state.ui.statsPickerTrail = state.ui.statsPickerTrail.slice(0, -1);
       renderStatsPickerSheet();
       persistState();
-    });
-    document.getElementById("stats-picker-root-chip")?.addEventListener("click", () => {
-      state.ui.statsPickerTrail = [];
-      renderStatsPickerSheet();
-      persistState();
-    });
-    dom.statsPickerBreadcrumb.querySelectorAll("[data-stats-picker-crumb]").forEach((button) => {
-      button.onclick = () => {
-        const index = Number(button.dataset.statsPickerCrumb);
-        state.ui.statsPickerTrail = trail.slice(0, index + 1);
-        renderStatsPickerSheet();
-        persistState();
-      };
     });
 
     const items = getStatsPickerItems(trail, tree);
@@ -13752,94 +13881,206 @@ if (!window.__cleanAdventureUiFinalPass) {
 
   buildAiPromptText = function () {
     const cycle = state.ai.cycle || "overall";
-    const profile = getAiProfileSnapshot();
+    const overall = state.ai.overall || {};
+    const weekly = state.ai.weekly || {};
+    const daily = state.ai.daily || {};
+    const text = (value, fallback = "未填写") => {
+      if (value === 0) return "0";
+      const normalized = String(value ?? "").trim();
+      return normalized || fallback;
+    };
+    const listText = (value, fallback = "未填写") => {
+      if (Array.isArray(value)) {
+        const items = value.map((item) => String(item ?? "").trim()).filter(Boolean);
+        return items.length ? items.join("、") : fallback;
+      }
+      return text(value, fallback);
+    };
+    const chronotypePeaks = {
+      清晨: "06:00-10:00",
+      上午: "09:00-12:00",
+      下午: "13:00-16:00",
+      傍晚: "17:00-19:00",
+      夜间: "20:00-23:00",
+    };
+    const colorPalette = [
+      ["阿宝蓝", "#A2D2FF"],
+      ["老皮黄", "#FFD6A5"],
+      ["泡泡糖粉", "#FFADAD"],
+      ["BMO绿", "#CAFFBF"],
+      ["团块紫", "#BDB2FF"],
+      ["火焰橘", "#FFC3A0"],
+      ["柠檬绿", "#D4F1BE"],
+      ["薄荷红", "#FF8B8B"],
+      ["玛瑟琳暗紫", "#9D81BA"],
+      ["寒冰蓝", "#BDE0FE"],
+    ];
+    const categoryPaths = (state.folders || [])
+      .flatMap((folder) =>
+        (folder.categories || []).map((category) => `${text(folder.name, "未命名一级分类")} > ${text(category.name, "未命名二级分类")}`)
+      )
+      .filter(Boolean);
+    const categorySection = categoryPaths.length
+      ? categoryPaths.map((path, index) => `${index + 1}. ${path}`).join("\n")
+      : "当前还没有现成分类。如果最终计划里确实需要新分类，请写入 newCategories。";
+    const renderJsonFooter = (planType) => {
+      const startTimeRule = planType === "daily" ? '"08:00"' : "null";
+      const startTimeNote =
+        planType === "daily"
+          ? '4. daily 模式允许 startTime，格式必须为 "HH:MM"。'
+          : "4. overall / weekly 模式的 startTime 必须为 null。";
+      return [
+        "",
+        "【当前分类体系】",
+        categorySection,
+        "",
+        "【可用颜色】",
+        ...colorPalette.map(([name, hex], index) => `${index + 1}. ${name}: ${hex}`),
+        "",
+        "【输出约束】",
+        "当我回答完你的澄清问题，并明确让你输出最终计划时，请只输出一个 JSON 对象。",
+        "不要输出 Markdown 代码块，不要输出解释文字，不要输出注释。",
+        "JSON 结构必须为：",
+        "{",
+        '  "version": "1.0",',
+        `  "planType": "${planType}",`,
+        '  "tasks": [',
+        "    {",
+        '      "title": "任务名称",',
+        '      "folder": "一级分类名称",',
+        '      "category": "二级分类名称",',
+        '      "template": null,',
+        '      "color": "阿宝蓝",',
+        '      "duration": 30,',
+        `      "startTime": ${startTimeRule},`,
+        '      "isImportant": false',
+        "    }",
+        "  ],",
+        '  "newCategories": []',
+        "}",
+        "规则：",
+        "1. 优先使用我当前已有的一级/二级分类路径，不要随意新建分类。",
+        "2. 如果没有合适分类，请把建议的新分类写进 newCategories，不要直接混入 tasks。",
+        "3. color 只能从上面的 10 个颜色名里选择。",
+        startTimeNote,
+        "5. title / folder / category / color / duration / isImportant 都必须填写。",
+        "6. JSON 内部不要有任何注释，确保格式 100% 正确以便我系统自动识别。",
+      ].join("\n");
+    };
 
     if (cycle === "overall") {
-      const form = state.ai.overall;
-      const values = [form.value1, form.value2, form.value3].filter(Boolean).join(", ") || "not set";
-      const domains = [[form.domain1Name, form.domain1Goal], [form.domain2Name, form.domain2Goal], [form.domain3Name, form.domain3Goal]]
-        .filter(([name, goal]) => name || goal)
-        .map(([name, goal]) => `- ${name || "Domain"}: ${goal || "Goal not filled"}`)
+      const values = [overall.value1, overall.value2, overall.value3].map((value) => text(value)).join(" > ");
+      const domains = [1, 2, 3]
+        .map((index) => ({
+          name: text(overall[`domain${index}Name`]),
+          goal: text(overall[`domain${index}Goal`]),
+        }))
+        .map((item, index) => `领域${index + 1} (${item.name}): ${item.goal}`)
         .join("\n");
+
       return [
-        "Build a practical high-level planning map.",
+        "【角色设定】",
+        "你现在是我的顶级生产力教练兼心理咨询师。请在一个持续的对话窗口中，陪我完成我的年度/季度规划。",
         "",
-        `Horizon: ${form.period === "year" ? "Year" : "Quarter"}`,
-        `MBTI: ${form.mbti || "Unknown"}`,
-        `Chronotype: ${form.chronotype || "Unknown"}`,
-        `Work style: ${form.workStyle || "Unknown"}`,
-        `Top values: ${values}`,
-        `Life stage: ${form.lifeStage || "Not filled"}`,
-        `Main challenge: ${form.challenge || "Not filled"}`,
+        "【我的用户画像】",
+        `我是一个 ${text(overall.mbti)} 类型的人，时型偏向 ${text(overall.chronotype)}，我的核心价值观优先级为：${values}。`,
+        `我倾向的工作风格是 ${text(overall.workStyle)}，最容易导致我拖延的触发器是 ${listText(overall.procrastination)}。`,
         "",
-        "Domains and goals:",
-        domains || "- No goals provided",
+        "【当前阶段背景】",
+        `我目前处于：${text(overall.lifeStage)}。`,
+        `我面临的主要挑战是：${text(overall.challenge)}。`,
         "",
-        "Output request:",
-        "- Propose 3 priorities at most",
-        "- Show tradeoffs and sequence",
-        "- Keep suggestions realistic for the user's profile",
-        "- End with a short action plan for the next 7 days",
+        "【初步设想的3个领域目标】",
+        domains,
+        "",
+        "【你的首要任务（非常重要）】",
+        "收到以上信息后，请不要立刻给我生成最终的规划表格！",
+        "第一步，请先以教练的口吻回应我，指出我的目标与我的 MBTI/价值观 是否匹配。",
+        "第二步，向我提出 2-3 个关键问题（例如：我每周有多少实际空闲时间？这些目标的具体可衡量标准是什么？），以便你更深入了解我。",
+        "等我回答完你的问题后，你再为我输出最终的 OKR 路线图。",
+        "明白的话，请开始你的教练提问：",
+        renderJsonFooter("overall"),
       ].join("\n");
     }
 
     if (cycle === "weekly") {
-      const form = state.ai.weekly;
+      const reviewRaw = text(weekly.review);
+      const reviewParts = String(weekly.review || "")
+        .split(/\r?\n+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+      const reviewWins = reviewParts[0] || reviewRaw;
+      const reviewIssues = reviewParts.slice(1).join(" / ") || reviewRaw;
+      const peakWindow = chronotypePeaks[text(overall.chronotype)] || "未填写";
       return [
-        "Build a weekly or monthly execution plan.",
+        "【角色设定】",
+        "你是我的私人生产力教练。现在我们要开始进行【月/周度】的执行规划。",
         "",
-        `Range type: ${form.period}`,
-        `Dates: ${form.start || "Not filled"} to ${form.end || "Not filled"}`,
-        `Profile: ${profile.mbti}, ${profile.chronotype}, procrastination triggers: ${profile.procrastination}`,
-        `Wins: ${form.win || "Not filled"}`,
-        `Missed: ${form.missed || "Not filled"}`,
-        `Reason: ${form.reason || "Not filled"}`,
+        "【上下文信息】",
+        `我的用户画像（已在 LocalStorage 中）：${text(overall.mbti)} · ${text(overall.chronotype)} · 拖延触发：${listText(overall.procrastination)}。`,
         "",
-        "Core priorities:",
-        `1. ${form.core1 || "Not filled"}`,
-        `2. ${form.core2 || "Not filled"}`,
-        `3. ${form.core3 || "Not filled"}`,
+        "【复盘数据】",
+        `超预期完成：${reviewWins}`,
+        `存在的问题：${reviewIssues}`,
         "",
-        `Energy forecast: ${form.energy || "3"}/5`,
-        `Special events: ${form.special || "None"}`,
-        `Fixed commitments: ${form.commitments || "None"}`,
-        `Obstacle: ${form.obstacle || "None"}`,
-        `Response: ${form.response || "None"}`,
+        "【本期规划数据】",
+        `核心任务 (3 MITs)：${text(weekly.core1)}, ${text(weekly.core2)}, ${text(weekly.core3)}`,
+        `固定承诺：${text(weekly.commitments, "无")}`,
+        `精力状态：${text(weekly.energy, "3")}/5，特殊情况：${text(weekly.energyContext, "无")}`,
+        `预见的障碍：${text(weekly.obstacle, "无")} -> 应对策略：${text(weekly.response, "无")}`,
         "",
-        "Output request:",
-        "- Turn this into a clear week plan with priorities by day",
-        "- Put deep work in the best energy window",
-        "- Leave slack for interruptions",
-        "- Suggest one fallback plan if energy drops",
+        "【你的教练指令】",
+        "第一步：请基于我的精力状态和复盘结果，评价我的 3 个核心任务是否合理（是否太重或太轻？）。",
+        "第二步：请根据我的 MBTI 类型（特别是 P/J 倾向），帮我安排缓冲时间。",
+        "第三步：请向我确认：除了以上固定承诺，我每天大概能拿出多少小时的“专注窗口”？",
+        "在我回答完你的确认问题后，请输出：",
+        "按艾森豪威尔矩阵分类的任务清单。",
+        `一份包含每日主题的周规划（需将核心任务对齐我的认知高峰时段：${peakWindow}）。`,
+        "针对障碍的 if-then 执行清单。",
+        renderJsonFooter("weekly"),
       ].join("\n");
     }
 
-    const form = state.ai.daily;
+    const body = Number(daily.body || 3);
+    const mood = Number(daily.mood || 3);
+    const focus = Number(daily.focus || 3);
+    const average = (body + mood + focus) / 3;
+    const averageText = Number.isInteger(average) ? String(average) : average.toFixed(1);
+    const dailyDate = text(daily.date || formatInputDate(new Date()));
+    const focusWindows = Array.isArray(daily.windowTags) && daily.windowTags.length ? daily.windowTags.join("、") : "未填写";
+    const peakWindow = chronotypePeaks[text(overall.chronotype)] || "未填写";
+
     return [
-      "Build a day plan.",
+      "【角色设定】",
+      "你是我的私人执行助理。现在请为我安排【今日/明日】的具体执行计划。",
       "",
-      `Target day: ${form.horizon} / ${form.date || "Not filled"}`,
-      `Body: ${form.body || "3"}/5`,
-      `Mood: ${form.mood || "3"}/5`,
-      `Focus: ${form.focus || "3"}/5`,
+      "【我的当前状态】",
+      `日期：${dailyDate}`,
+      `能量得分：身体 ${body}/5 · 情绪 ${mood}/5 · 专注力 ${focus}/5`,
+      `综合平均分：${averageText}/5`,
       "",
-      "MITs:",
-      `1. ${form.mit1 || "Not filled"} (${form.mit1Duration || state.defaultDuration} min)`,
-      `2. ${form.mit2 || "Not filled"} (${form.mit2Duration || state.defaultDuration} min)`,
-      `3. ${form.mit3 || "Not filled"} (${form.mit3Duration || state.defaultDuration} min)`,
+      "【今日待办池】",
+      "三大核心任务 (MITs)：",
+      `${text(daily.mit1)} (预计 ${text(daily.mit1Duration, String(state.defaultDuration || 30))} min)`,
+      `${text(daily.mit2)} (预计 ${text(daily.mit2Duration, String(state.defaultDuration || 30))} min)`,
+      `${text(daily.mit3)} (预计 ${text(daily.mit3Duration, String(state.defaultDuration || 30))} min)`,
+      `启动任务：${text(daily.quickTask, "无")}`,
+      `专注窗口：${focusWindows}`,
+      `干扰源及对策：${text(daily.distraction, "无")} -> ${text(daily.strategy, "无")}`,
       "",
-      `Other tasks: ${form.otherTasks || "None"}`,
-      `Time windows: ${form.windows || "Not filled"}`,
-      `Quick start task: ${form.quickTask || "None"}`,
-      `Likely distraction: ${form.distraction || "None"}`,
-      `Counter move: ${form.strategy || "None"}`,
-      "",
-      "Output request:",
-      "- Return a clean hourly plan",
-      "- Put the hardest MIT first",
-      "- Add buffers and recovery space",
-      "- Keep wording concise and import-friendly",
-      "- Prefer one task per line in the form HH:MM Task - 25 min",
+      "【你的助理任务】",
+      "状态自适应规划（核心）：",
+      `如果平均分 ≥ 4：请催促我立刻开始 MIT1，并安排在我的高峰时段 ${peakWindow}。`,
+      "如果平均分在 2-3：请建议我先做“启动任务”，然后只攻克 MIT1，其余任务灵活调整。",
+      "如果平均分 ≤ 1：请温柔地劝我休息，或者只做一些机械性的行政琐事。",
+      "确认提问：",
+      "请问我：‘除了这三件事，今天还有什么绝对不能漏掉的杂事（琐碎但必须做）吗？’",
+      "输出要求：",
+      "在我回答后，请输出：",
+      "小时级时间块安排表。",
+      "三个 MIT 的 if-then 实施意图。",
+      "今日“完成标准”（一句话总结，达到什么状态今天就算成功）。",
+      renderJsonFooter("daily"),
     ].join("\n");
   };
 
@@ -13864,6 +14105,269 @@ if (!window.__cleanAdventureUiFinalPass) {
         }, 1400);
       }
     }
+  };
+
+  const AI_IMPORT_COLOR_MAP = {
+    阿宝蓝: "#A2D2FF",
+    老皮黄: "#FFD6A5",
+    泡泡糖粉: "#FFADAD",
+    BMO绿: "#CAFFBF",
+    团块紫: "#BDB2FF",
+    火焰橘: "#FFC3A0",
+    柠檬绿: "#D4F1BE",
+    薄荷红: "#FF8B8B",
+    玛瑟琳暗紫: "#9D81BA",
+    寒冰蓝: "#BDE0FE",
+  };
+  const normalizeAiImportKey = (value) => String(value ?? "").trim().toLowerCase();
+  const cleanAiJsonText = (value) => {
+    const source = String(value ?? "").trim();
+    const fenced = source.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    return fenced ? fenced[1].trim() : source;
+  };
+  const getAiImportDate = () => {
+    const cycle = state.ai.cycle || "overall";
+    if (cycle === "daily") return state.ai.daily.date || formatInputDate(new Date());
+    if (cycle === "weekly") return state.ai.weekly.start || formatInputDate(new Date());
+    return null;
+  };
+
+  const legacyParseAiPlanText = parseAiPlanText;
+  const findAiImportResolution = (item) => {
+    const folderName = String(item.folderName ?? "").trim();
+    const categoryName = String(item.categoryName ?? "").trim();
+    const templateName = String(item.templateName ?? "").trim();
+    const colorName = String(item.colorName ?? "").trim();
+    const colorHex = AI_IMPORT_COLOR_MAP[colorName] || item.colorHex || CATEGORY_COLORS[0];
+
+    const folderKey = normalizeAiImportKey(folderName);
+    const categoryKey = normalizeAiImportKey(categoryName);
+    const templateKey = normalizeAiImportKey(templateName || item.title);
+
+    let folder = null;
+    let category = null;
+    let template = null;
+
+    if (folderKey) folder = state.folders.find((entry) => normalizeAiImportKey(entry.name) === folderKey) || null;
+
+    if (folder && categoryKey) {
+      category = (folder.categories || []).find((entry) => normalizeAiImportKey(entry.name) === categoryKey) || null;
+    } else if (!folder && categoryKey) {
+      const globalMatches = state.folders.flatMap((entry) =>
+        (entry.categories || [])
+          .filter((categoryEntry) => normalizeAiImportKey(categoryEntry.name) === categoryKey)
+          .map((categoryEntry) => ({ folder: entry, category: categoryEntry }))
+      );
+      if (globalMatches.length === 1) {
+        folder = globalMatches[0].folder;
+        category = globalMatches[0].category;
+      }
+    }
+
+    if (category && templateKey) {
+      template = (category.templates || []).find((entry) => normalizeAiImportKey(entry.name) === templateKey) || null;
+    }
+
+    if (folder && category) {
+      return {
+        ...item,
+        folderName: folder.name,
+        categoryName: category.name,
+        folderId: folder.id,
+        categoryId: category.id,
+        templateId: template?.id || null,
+        colorHex: category.color || colorHex,
+        status: "matched",
+        statusLabel: "Matched",
+      };
+    }
+
+    if (folderName && categoryName) {
+      return {
+        ...item,
+        colorHex,
+        status: "create",
+        statusLabel: "Create path",
+      };
+    }
+
+    return {
+      ...item,
+      colorHex,
+      status: "review",
+      statusLabel: "Needs review",
+    };
+  };
+
+  parseAiPlanText = function (rawText) {
+    const source = String(rawText ?? "").trim();
+    if (!source) return [];
+
+    try {
+      const payload = JSON.parse(cleanAiJsonText(source));
+      if (payload && typeof payload === "object" && Array.isArray(payload.tasks)) {
+        return payload.tasks
+          .map((task, index) =>
+            findAiImportResolution({
+              id: `ai-json-${index}`,
+              title: String(task?.title ?? "").trim() || `Untitled ${index + 1}`,
+              folderName: String(task?.folder ?? "").trim(),
+              categoryName: String(task?.category ?? "").trim(),
+              templateName: task?.template == null ? "" : String(task.template).trim(),
+              colorName: String(task?.color ?? "").trim(),
+              colorHex: "",
+              durationMin: Number(task?.duration) > 0 ? Math.round(Number(task.duration)) : state.defaultDuration,
+              time:
+                typeof task?.startTime === "string" && /^([01]\d|2[0-3]):([0-5]\d)$/.test(task.startTime.trim())
+                  ? task.startTime.trim()
+                  : "",
+              isImportant: Boolean(task?.isImportant),
+              selected: true,
+            })
+          )
+          .filter((item) => item.title);
+      }
+    } catch {
+      // fall back to legacy plain-text parsing
+    }
+
+    return legacyParseAiPlanText(source).map((item, index) =>
+      findAiImportResolution({
+        id: `ai-legacy-${index}`,
+        title: item.name,
+        folderName: "",
+        categoryName: "",
+        templateName: "",
+        colorName: "",
+        colorHex: "",
+        durationMin: item.durationMin,
+        time: item.time || "",
+        isImportant: false,
+        selected: true,
+      })
+    );
+  };
+
+  renderAiPreview = function (items) {
+    if (!dom.aiPreviewList) return;
+    if (!items.length) {
+      dom.aiPreviewList.innerHTML = `<p class="empty-note">No importable items yet.</p>`;
+      return;
+    }
+
+    const importDate = getAiImportDate();
+    dom.aiPreviewList.innerHTML = items
+      .map(
+        (item, index) => `
+          <label class="ai-preview-row ai-preview-row-rich ${item.selected === false ? "is-off" : ""}">
+            <input class="ai-preview-check" type="checkbox" data-ai-preview-index="${index}" ${item.selected === false ? "" : "checked"} />
+            <div class="ai-preview-main">
+              <span class="ai-preview-name">${escapeHtml(item.title)}${item.isImportant ? ' <span class="ai-preview-important" aria-hidden="true">★</span>' : ""}</span>
+              <span class="ai-preview-meta">${escapeHtml(item.folderName || "No folder")} / ${escapeHtml(item.categoryName || "No category")} · ${escapeHtml(importDate || item.time || "Any date")} · ${item.durationMin} min</span>
+            </div>
+            <span class="ai-preview-status ai-preview-status-${item.status}">${escapeHtml(item.statusLabel)}</span>
+          </label>
+        `
+      )
+      .join("");
+
+    dom.aiPreviewList.querySelectorAll("[data-ai-preview-index]").forEach((input) => {
+      input.onchange = () => {
+        const index = Number(input.dataset.aiPreviewIndex);
+        if (!Number.isFinite(index) || !Array.isArray(state.ui.aiPreviewItems) || !state.ui.aiPreviewItems[index]) return;
+        state.ui.aiPreviewItems[index].selected = Boolean(input.checked);
+        persistState();
+      };
+    });
+  };
+
+  handleAiPreviewImport = function () {
+    const source = dom.aiResultInput?.value || state.ai.resultText || "";
+    state.ui.aiPreviewItems = parseAiPlanText(source).filter((item) => item.title);
+    renderAiPreview(state.ui.aiPreviewItems);
+    persistState();
+  };
+
+  handleAiImportPlan = function () {
+    if (!Array.isArray(state.ui.aiPreviewItems) || !state.ui.aiPreviewItems.length) handleAiPreviewImport();
+    const items = Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems.filter((item) => item.selected !== false) : [];
+    if (!items.length) return;
+
+    const importDate = getAiImportDate();
+
+    items
+      .slice()
+      .reverse()
+      .forEach((item) => {
+        let folder = item.folderId ? state.folders.find((entry) => entry.id === item.folderId) || null : null;
+        let category = folder && item.categoryId ? (folder.categories || []).find((entry) => entry.id === item.categoryId) || null : null;
+
+        if ((!folder || !category) && item.folderName && item.categoryName) {
+          const folderKey = normalizeAiImportKey(item.folderName);
+          const categoryKey = normalizeAiImportKey(item.categoryName);
+
+          folder = state.folders.find((entry) => normalizeAiImportKey(entry.name) === folderKey) || null;
+          if (!folder) {
+            folder = {
+              id: makeId("folder"),
+              name: item.folderName,
+              expanded: true,
+              categories: [],
+            };
+            state.folders.push(folder);
+          }
+
+          category = (folder.categories || []).find((entry) => normalizeAiImportKey(entry.name) === categoryKey) || null;
+          if (!category) {
+            category = {
+              id: makeId("cat"),
+              name: item.categoryName,
+              color: item.colorHex || CATEGORY_COLORS[0],
+              expanded: true,
+              templates: [],
+            };
+            folder.categories.push(category);
+          }
+        }
+
+        const template =
+          category && (category.templates || []).length
+            ? (category.templates || []).find((entry) => normalizeAiImportKey(entry.name) === normalizeAiImportKey(item.templateName || item.title)) || null
+            : null;
+
+        state.tasks.unshift({
+          id: makeId("task"),
+          createdAt: new Date().toISOString(),
+          completed: false,
+          completedAt: null,
+          note: "",
+          manualOrder: -1,
+          name: item.title,
+          scheduledDate: importDate,
+          scheduledMinutes: item.time ? parseTimeString(item.time) : null,
+          durationMin: item.durationMin || state.defaultDuration,
+          important: Boolean(item.isImportant),
+          repeatMode: "none",
+          weekdays: [],
+          timerMode: "up",
+          folderId: folder?.id || null,
+          categoryId: category?.id || null,
+          templateId: template?.id || null,
+        });
+      });
+
+    if (typeof reindexTaskOrder === "function") reindexTaskOrder();
+
+    state.ui.aiPreviewItems = [];
+    state.ai.resultText = "";
+    state.ai.promptText = "";
+    if (dom.aiResultInput) dom.aiResultInput.value = "";
+    if (dom.aiPromptOutput) dom.aiPromptOutput.value = "";
+    renderAiPreview([]);
+    saveAiPlannerMemory();
+    renderAll();
+    persistState();
+    window.alert("🎉 计划已同步！");
   };
 
   ensureStatsCascadeSelection();
@@ -14081,6 +14585,42 @@ if (!window.__aiPlannerLayoutAndIconPass) {
     }
   };
 
+  const AI_PLANNER_LAYOUT = "forms-v2";
+  const AI_IMPORT_COLOR_MAP = {
+    阿宝蓝: "#A2D2FF",
+    老皮黄: "#FFD6A5",
+    泡泡糖粉: "#FFADAD",
+    BMO绿: "#CAFFBF",
+    团块紫: "#BDB2FF",
+    火焰橘: "#FFC3A0",
+    柠檬绿: "#D4F1BE",
+    薄荷红: "#FF8B8B",
+    玛瑟琳暗紫: "#9D81BA",
+    寒冰蓝: "#BDE0FE",
+  };
+  const normalizeAiImportKey = (value) => String(value ?? "").trim().toLowerCase();
+  const cleanAiJsonText = (value) => {
+    const source = String(value ?? "").trim();
+    const fenced = source.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    return fenced ? fenced[1].trim() : source;
+  };
+  const getAiImportDate = () => {
+    const cycle = state.ai.cycle || "overall";
+    if (cycle === "daily") return state.ai.daily.date || formatInputDate(new Date());
+    if (cycle === "weekly") return state.ai.weekly.start || formatInputDate(new Date());
+    return null;
+  };
+  const syncAiPlannerPageShell = () => {
+    const aiPage = document.querySelector('[data-page="ai-planner"]');
+    if (!aiPage) return;
+    const cycle = state.ai.cycle || "overall";
+    const cycleSelect = aiPage.querySelector("#ai-cycle-select");
+    if (cycleSelect) cycleSelect.value = cycle;
+    aiPage.querySelectorAll("[data-ai-panel]").forEach((panel) => {
+      panel.classList.toggle("is-active", panel.dataset.aiPanel === cycle);
+    });
+  };
+
   ensureAiPlannerPage = function () {
     let aiPage = document.querySelector('[data-page="ai-planner"]');
     const settingsPage = document.querySelector('[data-page="settings"]');
@@ -14092,7 +14632,14 @@ if (!window.__aiPlannerLayoutAndIconPass) {
       settingsPage.insertAdjacentElement("afterend", aiPage);
     }
 
-    aiPage.innerHTML = `
+    const needsRebuild =
+      aiPage.dataset.aiPlannerLayout !== AI_PLANNER_LAYOUT ||
+      !aiPage.querySelector('[data-ai-panel="overall"]') ||
+      !aiPage.querySelector("#ai-cycle-select");
+
+    if (needsRebuild) {
+      aiPage.dataset.aiPlannerLayout = AI_PLANNER_LAYOUT;
+      aiPage.innerHTML = `
       <header class="page-hero ai-page-hero">
         <div class="ai-page-topbar">
           <button class="sheet-back ai-page-back" id="ai-page-back" type="button" aria-label="Back">
@@ -14176,6 +14723,9 @@ if (!window.__aiPlannerLayoutAndIconPass) {
         </section>
       </section>
     `;
+    }
+
+    syncAiPlannerPageShell();
   };
 
   bindAiQuestionnaireFields = function () {
@@ -14230,11 +14780,7 @@ if (!window.__aiPlannerLayoutAndIconPass) {
     dom.aiCycleSelect = document.getElementById("ai-cycle-select");
     if (!dom.aiCycleSelect || !dom.aiQuestionnaire) return;
 
-    const cycle = state.ai.cycle || "overall";
-    dom.aiCycleSelect.value = cycle;
-    dom.aiQuestionnaire.querySelectorAll("[data-ai-panel]").forEach((panel) => {
-      panel.classList.toggle("is-active", panel.dataset.aiPanel === cycle);
-    });
+    syncAiPlannerPageShell();
 
     dom.aiCycleSelect.onchange = () => {
       state.ai.cycle = dom.aiCycleSelect.value || "overall";
@@ -14270,6 +14816,14 @@ if (!window.__aiPlannerLayoutAndIconPass) {
     renderAiPreview(Array.isArray(state.ui.aiPreviewItems) ? state.ui.aiPreviewItems : []);
   };
 
+  handleAiPromptGenerate = function () {
+    const value = buildAiPromptText();
+    state.ai.promptText = value;
+    if (dom.aiPromptOutput) dom.aiPromptOutput.value = value;
+    saveAiPlannerMemory();
+    persistState();
+  };
+
   const baseRenderTasksTreeWithPencil = renderTasksTree;
   renderTasksTree = function () {
     baseRenderTasksTreeWithPencil();
@@ -14285,6 +14839,7 @@ if (!window.__aiPlannerLayoutAndIconPass) {
   const baseRenderAllWithPencil = renderAll;
   renderAll = function () {
     baseRenderAllWithPencil();
+    if (state.currentPage === "ai-planner") renderAiPlanner();
     applyPhosphorEditIcons();
   };
 
@@ -14517,10 +15072,685 @@ if (!window.__settingsAdventureMinimalPass) {
     }
   };
 
+  ensureSettingsStructure = function () {
+    const settingsPage = document.querySelector('.page[data-page="settings"]');
+    const settingsSheet = settingsPage?.querySelector(".settings-sheet");
+    if (!settingsSheet) return;
+
+    const heroDate = settingsPage.querySelector(".hero-date");
+    const heroNote = settingsPage.querySelector(".hero-note");
+    if (heroDate) heroDate.textContent = "";
+    if (heroNote) heroNote.remove();
+
+    settingsSheet.dataset.layout = "v8";
+    settingsSheet.classList.add("settings-sheet-clean", "settings-sheet-candy");
+    settingsSheet.innerHTML = `
+      <section class="settings-group settings-group-planning">
+        <div class="settings-group-title">Planning</div>
+        <div class="settings-list-block">
+          <button class="settings-row settings-row-link" id="ai-planner-link" data-icon="\uD83E\uDD16" data-tilt="a" type="button">
+            <span class="settings-row-label">\u0041\u0049 \u751F\u6210\u65E5\u7A0B</span>
+            <span class="settings-row-arrow" aria-hidden="true">&rsaquo;</span>
+          </button>
+          <label class="settings-row settings-row-toggle" data-icon="\u23F3" data-tilt="b">
+            <span class="settings-row-label">\u4F18\u5148\u6700\u8FD1\u65F6\u95F4\u4EFB\u52A1</span>
+            <input type="checkbox" id="next-time-priority-toggle" />
+          </label>
+          <label class="settings-row settings-row-toggle" data-icon="\u2B50" data-tilt="c">
+            <span class="settings-row-label">\u4F18\u5148\u91CD\u8981\u4EFB\u52A1</span>
+            <input type="checkbox" id="next-important-priority-toggle" />
+          </label>
+          <label class="settings-row settings-row-toggle" data-icon="\u2705" data-tilt="d">
+            <span class="settings-row-label">Completed \u9ED8\u8BA4\u5C55\u5F00</span>
+            <input type="checkbox" id="completed-default-toggle" />
+          </label>
+          <button class="settings-row settings-row-link" id="default-duration-row" data-icon="\u23F1\uFE0F" data-tilt="a" type="button">
+            <span class="settings-row-label">\u9ED8\u8BA4\u4EFB\u52A1\u65F6\u957F</span>
+            <span class="settings-row-trail">
+              <span id="default-duration-value">25 min</span>
+              <span class="settings-row-arrow" aria-hidden="true">&rsaquo;</span>
+            </span>
+          </button>
+          <button class="settings-row settings-row-link" id="day-start-row" data-icon="\uD83C\uDF18" data-tilt="b" type="button">
+            <span class="settings-row-label">\u4E00\u5929\u5F00\u59CB\u65F6\u95F4</span>
+            <span class="settings-row-trail">
+              <span id="day-start-value">00:00</span>
+              <span class="settings-row-arrow" aria-hidden="true">&rsaquo;</span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section class="settings-group settings-group-appearance">
+        <div class="settings-group-title">Appearance</div>
+        <div class="settings-list-block settings-theme-block">
+          <div class="settings-subtitle">Theme</div>
+          <div class="settings-theme-grid" id="theme-grid"></div>
+          <div class="settings-upload-wrap">
+            <button class="settings-upload-button" id="custom-background-row" type="button">
+              <span aria-hidden="true">\uD83D\uDDBC\uFE0F</span>
+              <span>\u4E0A\u4F20\u80CC\u666F\u56FE</span>
+            </button>
+          </div>
+          <input class="settings-hidden-file" id="custom-background-input" type="file" accept="image/*" />
+        </div>
+      </section>
+
+      <section class="settings-group settings-group-app">
+        <div class="settings-group-title">App</div>
+        <div class="settings-list-block">
+          <div class="settings-install-actions settings-install-actions-grid">
+            <button class="settings-install-button settings-install-row" id="pwa-install-button" data-icon="\uD83D\uDCF1" data-tilt="a" type="button">
+              <span class="settings-row-label">Add to Home</span>
+            </button>
+            <button class="settings-row settings-row-link settings-install-row" id="apk-download-button" data-icon="\uD83D\uDCE6" data-tilt="b" type="button">
+              <span class="settings-row-label">Download APK</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div class="settings-hidden-controls" aria-hidden="true">
+        <input type="time" id="day-start-input" />
+        <select id="default-duration-select">
+          <option value="15">15 min</option>
+          <option value="20">20 min</option>
+          <option value="25">25 min</option>
+          <option value="30">30 min</option>
+          <option value="45">45 min</option>
+        </select>
+      </div>
+    `;
+  };
+
+  const settingsAdventureFinalRender = renderSettings;
+  renderSettings = function () {
+    settingsAdventureFinalRender();
+
+    const textureToggleRow = dom.reduceTextureToggle?.closest(".settings-row");
+    if (textureToggleRow) {
+      textureToggleRow.dataset.icon = String.fromCodePoint(0x1F4CF);
+    }
+
+    if (dom.themeGrid) {
+      dom.themeGrid.innerHTML = [
+        { id: "adventure", label: "\uD83D\uDDE1\uFE0F \u82F1\u96C4\u5192\u9669", tilt: "a" },
+        { id: "minimalist", label: "\u2601\uFE0F \u6781\u7B80\u900F\u660E", tilt: "b" },
+      ]
+        .map(
+          (theme) => `
+            <button
+              class="settings-theme-option ${state.theme === theme.id ? "is-active" : ""}"
+              data-theme-card="${theme.id}"
+              data-tilt="${theme.tilt}"
+              type="button"
+            >
+              <span class="settings-theme-copy"><strong>${escapeHtml(theme.label)}</strong></span>
+              <span class="settings-theme-radio" aria-hidden="true"></span>
+            </button>
+          `
+        )
+        .join("");
+
+      dom.themeGrid.querySelectorAll("[data-theme-card]").forEach((button) => {
+        button.onclick = () => {
+          state.theme = button.dataset.themeCard;
+          applyTheme();
+          renderSettings();
+          persistState();
+        };
+      });
+    }
+  };
+
   applyTheme();
   ensureSettingsStructure();
   refreshDynamicDomRefs();
   renderSettings();
+}
+
+if (!window.__settingsBackupPass) {
+  window.__settingsBackupPass = true;
+
+  function buildBackupPayload() {
+    return {
+      backupFormat: "colorful-time-backup",
+      backupVersion: 1,
+      schemaVersion: STATE_SCHEMA_VERSION,
+      exportedAt: new Date().toISOString(),
+      appVersion: "local-web",
+      state,
+    };
+  }
+
+  function restoreBackupState(candidate) {
+    const seed = createSeedState();
+    const source = candidate?.backupFormat === "colorful-time-backup" && candidate?.state
+      ? candidate.state
+      : candidate?.state && typeof candidate.state === "object"
+        ? candidate.state
+        : candidate;
+
+    if (!source || typeof source !== "object") {
+      throw new Error("Backup payload is empty.");
+    }
+
+    if (!Array.isArray(source.folders) || !Array.isArray(source.tasks) || !Array.isArray(source.sessions)) {
+      throw new Error("Backup payload is missing folders, tasks, or sessions.");
+    }
+
+    const restored = upgradeState({
+      ...seed,
+      ...source,
+      ui: {
+        ...seed.ui,
+        ...(source.ui || {}),
+        customRange: {
+          ...seed.ui.customRange,
+          ...(source.ui?.customRange || {}),
+        },
+      },
+    });
+
+    restored.currentPage = "settings";
+    restored.ui.openSheet = null;
+    restored.ui.treeEditor = null;
+    restored.ui.selectedSegment = null;
+    restored.ui.categoryTrail = Array.isArray(restored.ui.categoryTrail) ? restored.ui.categoryTrail : [];
+    return restored;
+  }
+
+  function handleBackupExport() {
+    try {
+      const payload = buildBackupPayload();
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `colorful-time-backup-${stamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("Backup export failed", error);
+      window.alert("导出备份失败，请重试。");
+    }
+  }
+
+  function handleBackupImportFile(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || ""));
+        if (!window.confirm("导入备份会覆盖当前设备上的本地数据，是否继续？")) {
+          event.target.value = "";
+          return;
+        }
+
+        state = restoreBackupState(parsed);
+        closeAllSheets(false);
+        applyTheme();
+        ensureSettingsStructure();
+        ensureAiPlannerPage();
+        refreshDynamicDomRefs();
+        renderAll();
+        persistState();
+        window.alert("备份已导入。");
+      } catch (error) {
+        console.error("Backup import failed", error);
+        window.alert("导入失败：文件格式不正确，或不是此应用的备份。");
+      } finally {
+        event.target.value = "";
+      }
+    };
+    reader.onerror = () => {
+      console.error("Backup file read failed", reader.error);
+      window.alert("读取备份文件失败。");
+      event.target.value = "";
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  const settingsBackupBaseRefresh = refreshDynamicDomRefs;
+  refreshDynamicDomRefs = function () {
+    settingsBackupBaseRefresh();
+    dom.backupExportButton = document.getElementById("backup-export-button");
+    dom.backupImportButton = document.getElementById("backup-import-button");
+    dom.backupImportInput = document.getElementById("backup-import-input");
+  };
+
+  const settingsBackupBaseEnsure = ensureSettingsStructure;
+  ensureSettingsStructure = function () {
+    settingsBackupBaseEnsure();
+
+    const appBlock = document.querySelector(".settings-group-app .settings-list-block");
+    if (!appBlock || appBlock.querySelector(".settings-backup-actions")) return;
+
+    const backupActions = document.createElement("div");
+    backupActions.className = "settings-install-actions settings-install-actions-grid settings-backup-actions";
+    backupActions.innerHTML = `
+      <button class="settings-row settings-row-link settings-install-row" id="backup-export-button" data-icon="馃捀" data-tilt="c" type="button">
+        <span class="settings-row-label">导出备份</span>
+      </button>
+      <button class="settings-row settings-row-link settings-install-row" id="backup-import-button" data-icon="馃搶" data-tilt="d" type="button">
+        <span class="settings-row-label">导入备份</span>
+      </button>
+      <input class="settings-hidden-file" id="backup-import-input" type="file" accept="application/json,.json" />
+    `;
+    appBlock.appendChild(backupActions);
+
+    const backupNote = document.createElement("p");
+    backupNote.className = "settings-weak-note settings-backup-note";
+    backupNote.textContent = "包含分类结构、颜色、任务、时间记录与本地设置。";
+    appBlock.appendChild(backupNote);
+  };
+
+  const settingsBackupBaseRender = renderSettings;
+  renderSettings = function () {
+    settingsBackupBaseRender();
+    refreshDynamicDomRefs();
+
+    if (dom.backupExportButton) {
+      dom.backupExportButton.onclick = handleBackupExport;
+    }
+
+    if (dom.backupImportButton) {
+      dom.backupImportButton.onclick = () => {
+        if (!dom.backupImportInput) return;
+        dom.backupImportInput.value = "";
+        dom.backupImportInput.click();
+      };
+    }
+
+    if (dom.backupImportInput) {
+      dom.backupImportInput.onchange = handleBackupImportFile;
+    }
+  };
+
+  ensureSettingsStructure();
+  refreshDynamicDomRefs();
+  if (state.currentPage === "settings") {
+    renderSettings();
+  }
+}
+
+if (!window.__settingsBackupPagePass) {
+  window.__settingsBackupPagePass = true;
+
+  function buildBackupPayloadV2() {
+    return {
+      backupFormat: "colorful-time-backup",
+      backupVersion: 1,
+      schemaVersion: STATE_SCHEMA_VERSION,
+      exportedAt: new Date().toISOString(),
+      appVersion: "local-web",
+      state,
+    };
+  }
+
+  function restoreBackupStateV2(candidate) {
+    const seed = createSeedState();
+    const source = candidate?.backupFormat === "colorful-time-backup" && candidate?.state
+      ? candidate.state
+      : candidate?.state && typeof candidate.state === "object"
+        ? candidate.state
+        : candidate;
+
+    if (!source || typeof source !== "object") {
+      throw new Error("Backup payload is empty.");
+    }
+
+    if (!Array.isArray(source.folders) || !Array.isArray(source.tasks) || !Array.isArray(source.sessions)) {
+      throw new Error("Backup payload is missing folders, tasks, or sessions.");
+    }
+
+    const restored = upgradeState({
+      ...seed,
+      ...source,
+      ui: {
+        ...seed.ui,
+        ...(source.ui || {}),
+        customRange: {
+          ...seed.ui.customRange,
+          ...(source.ui?.customRange || {}),
+        },
+      },
+    });
+
+    restored.currentPage = "backup";
+    restored.ui.openSheet = null;
+    restored.ui.treeEditor = null;
+    restored.ui.selectedSegment = null;
+    restored.ui.categoryTrail = Array.isArray(restored.ui.categoryTrail) ? restored.ui.categoryTrail : [];
+    return restored;
+  }
+
+  function ensureBackupPage() {
+    let backupPage = document.querySelector('[data-page="backup"]');
+    const anchorPage =
+      document.querySelector('[data-page="ai-planner"]') ||
+      document.querySelector('[data-page="settings"]');
+    if (!anchorPage) return;
+
+    if (!backupPage) {
+      backupPage = document.createElement("section");
+      backupPage.className = "page";
+      backupPage.dataset.page = "backup";
+      anchorPage.insertAdjacentElement("afterend", backupPage);
+    }
+
+    backupPage.innerHTML = `
+      <header class="page-hero backup-page-hero">
+        <div class="backup-page-topbar">
+          <button class="sheet-back backup-page-back" id="backup-page-back" type="button" aria-label="Back">&lt;</button>
+          <div class="hero-heading">
+            <div><h1>Backup</h1></div>
+          </div>
+        </div>
+      </header>
+
+      <section class="paper-sheet backup-page-sheet">
+        <div class="settings-list-block backup-actions-stack">
+          <button class="settings-row settings-row-link backup-action-row" id="backup-page-export" data-icon="" data-tilt="a" type="button">
+            <span class="settings-row-label">导出备份</span>
+          </button>
+          <button class="settings-row settings-row-link backup-action-row" id="backup-page-import" data-icon="" data-tilt="b" type="button">
+            <span class="settings-row-label">导入备份</span>
+          </button>
+          <input class="settings-hidden-file" id="backup-page-import-input" type="file" accept="application/json,.json" />
+        </div>
+      </section>
+    `;
+  }
+
+  function syncSettingsBackupEntry() {
+    const appBlock = document.querySelector(".settings-group-app .settings-list-block");
+    if (!appBlock) return;
+
+    appBlock.querySelectorAll(".settings-backup-actions, .settings-backup-note, #backup-export-button, #backup-import-button, #backup-import-input").forEach((node) => {
+      const holder = node.closest(".settings-backup-actions");
+      if (holder) holder.remove();
+      else node.remove();
+    });
+
+    let backupEntry = document.getElementById("backup-center-link");
+    if (!backupEntry) {
+      backupEntry = document.createElement("button");
+      backupEntry.className = "settings-row settings-row-link settings-backup-entry";
+      backupEntry.id = "backup-center-link";
+      backupEntry.type = "button";
+      backupEntry.dataset.icon = "";
+      backupEntry.dataset.tilt = "c";
+      backupEntry.innerHTML = `
+        <span class="settings-row-label">备份与恢复</span>
+        <span class="settings-row-trail">
+          <span class="settings-row-arrow" aria-hidden="true">›</span>
+        </span>
+      `;
+      appBlock.appendChild(backupEntry);
+    }
+
+    backupEntry.onclick = () => {
+      state.currentPage = "backup";
+      renderAll();
+      persistState();
+    };
+  }
+
+  function handleBackupExportV2() {
+    try {
+      const payload = buildBackupPayloadV2();
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `colorful-time-backup-${stamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("Backup export failed", error);
+      window.alert("导出备份失败，请重试。");
+    }
+  }
+
+  function handleBackupImportFileV2(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || ""));
+        if (!window.confirm("导入备份会覆盖当前设备上的本地数据，是否继续？")) {
+          event.target.value = "";
+          return;
+        }
+
+        state = restoreBackupStateV2(parsed);
+        closeAllSheets(false);
+        ensureSettingsStructure();
+        ensureAiPlannerPage();
+        ensureBackupPage();
+        refreshDynamicDomRefs();
+        applyTheme();
+        renderAll();
+        persistState();
+        window.alert("备份已导入。");
+      } catch (error) {
+        console.error("Backup import failed", error);
+        window.alert("导入失败：文件格式不正确，或不是此应用的备份。");
+      } finally {
+        event.target.value = "";
+      }
+    };
+    reader.onerror = () => {
+      console.error("Backup file read failed", reader.error);
+      window.alert("读取备份文件失败。");
+      event.target.value = "";
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  function ensureBackupPage() {
+    let backupPage = document.querySelector('[data-page="backup"]');
+    const anchorPage =
+      document.querySelector('[data-page="ai-planner"]') ||
+      document.querySelector('[data-page="settings"]');
+    if (!anchorPage) return;
+
+    if (!backupPage) {
+      backupPage = document.createElement("section");
+      backupPage.className = "page";
+      backupPage.dataset.page = "backup";
+      anchorPage.insertAdjacentElement("afterend", backupPage);
+    }
+
+    backupPage.innerHTML = `
+      <header class="page-hero backup-page-hero">
+        <div class="ai-page-topbar backup-page-topbar">
+          <button class="sheet-back ai-page-back backup-page-back" id="backup-page-back" type="button" aria-label="Back">
+            <span class="ai-page-back-symbol">&lt;</span>
+          </button>
+          <h1 class="ai-page-title">\uD83D\uDCBE \u5907\u4EFD\u4E0E\u6062\u590D</h1>
+        </div>
+      </header>
+
+      <section class="backup-page-sheet">
+        <section class="settings-group backup-settings-group">
+          <div class="settings-group-title">\u672C\u5730\u5907\u4EFD</div>
+          <div class="settings-list-block backup-actions-stack">
+            <button class="settings-row settings-row-link backup-action-row" id="backup-page-export" data-icon="\uD83D\uDCE4" data-tilt="a" type="button">
+              <span class="settings-row-label">\u5BFC\u51FA\u5907\u4EFD</span>
+            </button>
+            <button class="settings-row settings-row-link backup-action-row" id="backup-page-import" data-icon="\uD83D\uDCE5" data-tilt="b" type="button">
+              <span class="settings-row-label">\u5BFC\u5165\u5907\u4EFD</span>
+            </button>
+            <input class="settings-hidden-file" id="backup-page-import-input" type="file" accept="application/json,.json" />
+          </div>
+        </section>
+      </section>
+    `;
+  }
+
+  function syncSettingsBackupEntry() {
+    const appBlock = document.querySelector(".settings-group-app .settings-list-block");
+    if (!appBlock) return;
+
+    appBlock
+      .querySelectorAll(".settings-backup-actions, .settings-backup-note, #backup-export-button, #backup-import-button, #backup-import-input")
+      .forEach((node) => {
+        const holder = node.closest(".settings-backup-actions");
+        if (holder) holder.remove();
+        else node.remove();
+      });
+
+    let backupEntry = document.getElementById("backup-center-link");
+    if (!backupEntry) {
+      backupEntry = document.createElement("button");
+      backupEntry.className = "settings-row settings-row-link settings-backup-entry";
+      backupEntry.id = "backup-center-link";
+      backupEntry.type = "button";
+      backupEntry.dataset.tilt = "c";
+      appBlock.appendChild(backupEntry);
+    }
+
+    backupEntry.dataset.icon = String.fromCodePoint(0x1F4BE);
+    backupEntry.innerHTML = `
+      <span class="settings-row-label">\u5907\u4EFD\u4E0E\u6062\u590D</span>
+      <span class="settings-row-trail">
+        <span class="settings-row-arrow" aria-hidden="true">&rsaquo;</span>
+      </span>
+    `;
+    backupEntry.onclick = () => {
+      state.currentPage = "backup";
+      renderAll();
+      persistState();
+    };
+  }
+
+  function handleBackupExportV2() {
+    try {
+      const payload = buildBackupPayloadV2();
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `colorful-time-backup-${stamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("Backup export failed", error);
+      window.alert("\u5BFC\u51FA\u5907\u4EFD\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5\u3002");
+    }
+  }
+
+  function handleBackupImportFileV2(event) {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || ""));
+        if (!window.confirm("\u5BFC\u5165\u5907\u4EFD\u4F1A\u8986\u76D6\u5F53\u524D\u8BBE\u5907\u4E0A\u7684\u672C\u5730\u6570\u636E\uFF0C\u662F\u5426\u7EE7\u7EED\uFF1F")) {
+          event.target.value = "";
+          return;
+        }
+
+        state = restoreBackupStateV2(parsed);
+        closeAllSheets(false);
+        ensureSettingsStructure();
+        ensureAiPlannerPage();
+        ensureBackupPage();
+        refreshDynamicDomRefs();
+        applyTheme();
+        renderAll();
+        persistState();
+        window.alert("\u5907\u4EFD\u5DF2\u5BFC\u5165\u3002");
+      } catch (error) {
+        console.error("Backup import failed", error);
+        window.alert("\u5BFC\u5165\u5931\u8D25\uFF1A\u6587\u4EF6\u683C\u5F0F\u4E0D\u6B63\u786E\uFF0C\u6216\u4E0D\u662F\u6B64\u5E94\u7528\u7684\u5907\u4EFD\u3002");
+      } finally {
+        event.target.value = "";
+      }
+    };
+    reader.onerror = () => {
+      console.error("Backup file read failed", reader.error);
+      window.alert("\u8BFB\u53D6\u5907\u4EFD\u6587\u4EF6\u5931\u8D25\u3002");
+      event.target.value = "";
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  function renderBackupPage() {
+    if (!dom.backupPageBack) return;
+
+    dom.backupPageBack.onclick = () => {
+      state.currentPage = "settings";
+      renderAll();
+      persistState();
+    };
+
+    if (dom.backupPageExport) {
+      dom.backupPageExport.onclick = handleBackupExportV2;
+    }
+
+    if (dom.backupPageImport) {
+      dom.backupPageImport.onclick = () => {
+        if (!dom.backupPageImportInput) return;
+        dom.backupPageImportInput.value = "";
+        dom.backupPageImportInput.click();
+      };
+    }
+
+    if (dom.backupPageImportInput) {
+      dom.backupPageImportInput.onchange = handleBackupImportFileV2;
+    }
+  }
+
+  const backupPageBaseRefresh = refreshDynamicDomRefs;
+  refreshDynamicDomRefs = function () {
+    backupPageBaseRefresh();
+    dom.backupCenterLink = document.getElementById("backup-center-link");
+    dom.backupPageBack = document.getElementById("backup-page-back");
+    dom.backupPageExport = document.getElementById("backup-page-export");
+    dom.backupPageImport = document.getElementById("backup-page-import");
+    dom.backupPageImportInput = document.getElementById("backup-page-import-input");
+  };
+
+  const backupPageBaseRenderSettings = renderSettings;
+  renderSettings = function () {
+    backupPageBaseRenderSettings();
+    refreshDynamicDomRefs();
+    syncSettingsBackupEntry();
+  };
+
+  const backupPageBaseRenderAll = renderAll;
+  renderAll = function () {
+    ensureBackupPage();
+    refreshDynamicDomRefs();
+    backupPageBaseRenderAll();
+    if (state.currentPage === "backup") {
+      renderBackupPage();
+    }
+  };
+
+  ensureBackupPage();
+  refreshDynamicDomRefs();
+  if (state.currentPage === "settings") {
+    syncSettingsBackupEntry();
+  }
 }
 
 if (!window.__homeTimerAndStatusLogicPass) {

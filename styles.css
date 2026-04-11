@@ -8066,6 +8066,47 @@ body.theme-minimalist {
   transition: opacity 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
 }
 
+.settings-backup-actions {
+  margin-top: 12px;
+}
+
+.settings-backup-note {
+  padding-top: 10px !important;
+}
+
+.settings-backup-entry {
+  margin-top: 12px !important;
+}
+
+.page[data-page="backup"] .page-hero {
+  padding-top: 18px !important;
+  margin-bottom: 22px !important;
+}
+
+.backup-page-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.backup-page-sheet {
+  display: grid;
+  gap: 18px;
+  padding: 0 16px 18px !important;
+}
+
+.page[data-page="backup"] .settings-group {
+  margin: 0;
+}
+
+.backup-actions-stack {
+  gap: 0 !important;
+}
+
+.backup-action-row {
+  width: 100%;
+}
+
 .settings-upload-button.is-enabled {
   background: rgba(255, 255, 255, 0.72) !important;
   border-color: rgba(115, 210, 255, 0.9) !important;
@@ -9093,4 +9134,298 @@ body.theme-minimalist #tree-editor-sheet .color-swatch[aria-pressed="true"] {
   background: #e0e0e0 !important;
   border-color: rgba(0, 0, 0, 0.14) !important;
   color: #444444 !important;
+}
+
+/* AI planner preview selection */
+.ai-preview-row-rich {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.ai-preview-check {
+  width: 18px;
+  height: 18px;
+  accent-color: #4A3728;
+}
+
+.ai-preview-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ai-preview-row-rich .ai-preview-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-preview-important {
+  color: #b85c38;
+}
+
+.ai-preview-status {
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 55, 40, 0.18);
+  white-space: nowrap;
+}
+
+.ai-preview-status-matched {
+  background: rgba(115, 210, 255, 0.16);
+}
+
+.ai-preview-status-create {
+  background: rgba(255, 204, 51, 0.18);
+}
+
+.ai-preview-status-review {
+  background: rgba(255, 173, 173, 0.18);
+}
+
+.ai-preview-row-rich.is-off {
+  opacity: 0.56;
+}
+
+/* Home timer + todo edit alignment */
+.page[data-page="home"] .timer-strip {
+  width: auto !important;
+  max-width: none !important;
+  margin-left: 16px !important;
+  margin-right: 16px !important;
+}
+
+.page[data-page="home"] .timer-strip-shell {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.page[data-page="home"] #todo-sort-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--muted) !important;
+}
+
+.page[data-page="home"] #todo-sort-toggle.is-active {
+  color: rgba(67, 80, 104, 0.96) !important;
+}
+
+/* FAB refresh */
+.fab,
+#fab-button {
+  background: #FF85A1 !important;
+  border: 3px solid #4A3728 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  color: #4A3728 !important;
+  font-weight: 700 !important;
+  transition: transform 0.14s ease, background-color 0.14s ease !important;
+}
+
+.fab:active,
+#fab-button:active {
+  transform: scale(0.9) rotate(5deg) !important;
+}
+
+/* Important ruby marker */
+.task-star {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 14px !important;
+  height: 16px !important;
+  flex: 0 0 14px !important;
+  margin-left: 2px !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  color: transparent !important;
+  vertical-align: middle !important;
+}
+
+.task-star::before {
+  content: "" !important;
+  display: block !important;
+  width: 14px !important;
+  height: 16px !important;
+  box-sizing: border-box !important;
+  border: 2px solid #4A3728 !important;
+  background: linear-gradient(180deg, #ffcad7 0%, #ff5b87 36%, #d01d56 74%, #91173d 100%) !important;
+  clip-path: polygon(50% 0, 86% 20%, 100% 56%, 50% 100%, 0 56%, 14% 20%) !important;
+}
+
+.task-star::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 2px !important;
+  left: 3px !important;
+  width: 6px !important;
+  height: 10px !important;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.96) 50%, rgba(255, 255, 255, 0) 100%) !important;
+  clip-path: polygon(35% 0, 70% 0, 100% 100%, 0 100%) !important;
+  opacity: 0 !important;
+  transform: translateX(-180%) rotate(-18deg) !important;
+  animation: ruby-shimmer 3.2s ease-in-out infinite !important;
+  pointer-events: none !important;
+}
+
+@keyframes ruby-shimmer {
+  0%, 74%, 100% {
+    opacity: 0;
+    transform: translateX(-180%) rotate(-18deg);
+  }
+
+  79% {
+    opacity: 1;
+  }
+
+  88% {
+    opacity: 0.82;
+    transform: translateX(125%) rotate(-18deg);
+  }
+}
+
+/* Stats picker cleanup + adventure icon refresh */
+#stats-picker-sheet .stats-picker-levels,
+#stats-picker-sheet .stats-picker-crumbs,
+#stats-picker-sheet .stats-picker-current {
+  display: none !important;
+}
+
+#stats-picker-sheet .stats-picker-toolbar {
+  justify-content: flex-start !important;
+  margin-bottom: 12px !important;
+}
+
+#stats-picker-sheet .stats-picker-back[disabled] {
+  opacity: 0.38 !important;
+  color: rgba(74, 55, 40, 0.46) !important;
+  border-color: rgba(74, 55, 40, 0.24) !important;
+  pointer-events: none !important;
+}
+
+body:not(.theme-minimalist) .task-star {
+  position: relative !important;
+  display: inline-block !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 auto !important;
+  margin-left: 6px !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  color: transparent !important;
+  vertical-align: middle !important;
+  transition: none !important;
+}
+
+body:not(.theme-minimalist) .task-star::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 2px !important;
+  border: 2px solid var(--comic-border) !important;
+  border-radius: 4px !important;
+  background: linear-gradient(180deg, #d37cff, #965cff) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  clip-path: none !important;
+  transform: rotate(45deg) !important;
+  animation: heroic-ruby 3s infinite !important;
+}
+
+body:not(.theme-minimalist) .task-star::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 3px !important;
+  right: 2px !important;
+  width: 4px !important;
+  height: 4px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: none !important;
+}
+
+body:not(.theme-minimalist) .fab,
+body:not(.theme-minimalist) #fab-button {
+  background: #FFD6A5 !important;
+  border: 3px solid #4A3728 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  font-weight: 700 !important;
+  transition: transform 0.14s ease, background-color 0.14s ease !important;
+}
+
+body:not(.theme-minimalist) .fab::before,
+body:not(.theme-minimalist) #fab-button::before {
+  content: none !important;
+}
+
+body:not(.theme-minimalist) .fab::after,
+body:not(.theme-minimalist) #fab-button::after {
+  content: "+" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  color: #ffffff !important;
+  font-size: 1.9rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  pointer-events: none !important;
+}
+
+body:not(.theme-minimalist) .fab:hover,
+body:not(.theme-minimalist) .fab:active,
+body:not(.theme-minimalist) #fab-button:hover,
+body:not(.theme-minimalist) #fab-button:active {
+  transform: scale(0.9) rotate(5deg) !important;
+}
+
+/* Final important icon cleanup: match preview star */
+.task-star,
+.task-important-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  margin-left: 4px !important;
+  color: #b85c38 !important;
+  font-size: 0.92rem !important;
+  line-height: 1 !important;
+  font-weight: 700 !important;
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  clip-path: none !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+.task-star::before,
+.task-star::after,
+.task-important-badge::before,
+.task-important-badge::after {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
 }
