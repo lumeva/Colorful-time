@@ -205,6 +205,8 @@ const dom = {
 let state = loadState();
 let clockTicker = null;
 let deferredPromptEvent = null;
+let taskTimeSheetMode = "draft";
+let taskTimeSheetTaskId = null;
 
 state = upgradeState(state);
 
@@ -801,7 +803,214 @@ function renderAll() {
   renderLogSuggestions();
   renderTaskAdvancedControls();
   updateTaskTimeSummary();
+  renderTaskTimeWheel();
+  bindTaskTimeSheetControls();
   updateLogDuration();
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  ensureUiCopy();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderAiPlanner();
+  renderDraftDrawer();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  renderTaskTimeWheel();
+  bindTaskTimeSheetControls();
+  updateLogDuration();
+}
+
+function renderTaskRow(task, isCompleted = false) {
+  const visual = getTaskVisual(task);
+  const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+  const sortMode = state.ui.todoSortMode && !isCompleted;
+  const timeText = task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes);
+  const timeMarkup = isCompleted
+    ? `<div class="task-time-block">${timeText}</div>`
+    : `
+        <button
+          class="task-time-edit ${task.scheduledMinutes == null ? "is-empty" : ""}"
+          data-task-time="${task.id}"
+          type="button"
+          aria-label="Set time for ${escapeHtml(task.name)}"
+        >
+          ${timeText}
+        </button>
+      `;
+
+  return `
+    <article
+      class="task-row ${isCompleted ? "is-completed" : ""} ${isLive ? "is-running" : ""} ${sortMode ? "is-sortable" : ""}"
+      data-task-row="${task.id}"
+      ${sortMode ? 'draggable="true"' : ""}
+    >
+      <label class="task-check">
+        <input type="checkbox" data-task-check="${task.id}" ${task.completed ? "checked" : ""} />
+        <span></span>
+      </label>
+      ${timeMarkup}
+      <div class="task-main">
+        <div class="task-title-row task-title-inline">
+          <h4 class="task-name">${escapeHtml(task.name)}</h4>
+          <span class="mini-pill inline-tag" style="background:${alphaColor(visual.color, 0.14)};">${escapeHtml(visual.categoryName)}</span>
+          ${task.important ? '<span class="task-star" aria-hidden="true">★</span>' : ""}
+        </div>
+        <div class="task-subline">
+          <span class="task-duration">${task.durationMin || state.defaultDuration} min</span>
+          ${renderTaskNote(task)}
+        </div>
+      </div>
+      <div class="task-side">
+        ${!task.completed ? `<button class="flat-start ${isLive ? "is-live" : ""}" data-task-start="${task.id}" type="button" ${isLive ? "disabled" : ""}>Start</button>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderTodoGroups() {
+  const groups = getGroupedTasks();
+  if (dom.todoSortToggle) {
+    dom.todoSortToggle.innerHTML = `<span aria-hidden="true">鉁?/span><span class="sr-only">Sort</span>`;
+    dom.todoSortToggle.setAttribute("aria-label", state.ui.todoSortMode ? "Done sorting" : "Sort tasks");
+    dom.todoSortToggle.classList.toggle("is-active", Boolean(state.ui.todoSortMode));
+    dom.todoSortToggle.onclick = () => {
+      state.ui.todoSortMode = !state.ui.todoSortMode;
+      state.ui.editingTaskNoteId = null;
+      renderHome();
+      persistState();
+    };
+  }
+
+  dom.todoGroups.innerHTML = [
+    renderTaskGroup("overdue", "Overdue", groups.overdue),
+    renderTaskGroup("today", "Today", groups.today),
+    renderTaskGroup("flexible", "Flexible", groups.flexible),
+    renderTaskGroup("completed", "Completed", groups.completed, true),
+  ].join("");
+
+  dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
+    input.onchange = () => toggleTaskComplete(input.dataset.taskCheck);
+  });
+  dom.todoGroups.querySelectorAll("[data-task-start]").forEach((button) => {
+    if (!button.disabled) button.onclick = () => startTimerForTask(button.dataset.taskStart);
+  });
+  dom.todoGroups.querySelectorAll("[data-toggle-group]").forEach((button) => {
+    button.onclick = () => {
+      const groupKey = button.dataset.toggleGroup;
+      state.ui.groupOpen[groupKey] = !state.ui.groupOpen[groupKey];
+      renderHome();
+      persistState();
+    };
+  });
+  dom.todoGroups.querySelectorAll("[data-task-time]").forEach((button) => {
+    button.onclick = () => openTaskTimeSheet("inline", button.dataset.taskTime);
+  });
+  dom.todoGroups.querySelectorAll("[data-note-open]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.editingTaskNoteId = button.dataset.noteOpen;
+      renderHome();
+      persistState();
+    };
+  });
+  dom.todoGroups.querySelectorAll("[data-task-note-input]").forEach((input) => {
+    input.onclick = (event) => event.stopPropagation();
+    input.onkeydown = (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveTaskNote(input.dataset.taskNoteInput, input.value);
+      }
+      if (event.key === "Escape") {
+        state.ui.editingTaskNoteId = null;
+        renderHome();
+      }
+    };
+    input.onblur = () => saveTaskNote(input.dataset.taskNoteInput, input.value);
+  });
+
+  if (state.ui.todoSortMode) {
+    dom.todoGroups.querySelectorAll("[data-task-row]").forEach((row) => {
+      row.ondragstart = (event) => {
+        draggedTodoTaskId = row.dataset.taskRow;
+        row.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+      };
+      row.ondragover = (event) => {
+        event.preventDefault();
+        row.classList.add("is-drop-target");
+      };
+      row.ondragleave = () => row.classList.remove("is-drop-target");
+      row.ondragend = () => {
+        draggedTodoTaskId = null;
+        row.classList.remove("is-dragging");
+        row.classList.remove("is-drop-target");
+      };
+      row.ondrop = (event) => {
+        event.preventDefault();
+        row.classList.remove("is-drop-target");
+        if (!draggedTodoTaskId || draggedTodoTaskId === row.dataset.taskRow) return;
+        moveTaskBefore(draggedTodoTaskId, row.dataset.taskRow);
+        renderHome();
+        persistState();
+      };
+    });
+  }
+
+  bindTaskRowLongPress();
+}
+
+function renderTaskRow(task, isCompleted = false) {
+  const visual = getTaskVisual(task);
+  const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+  const sortMode = state.ui.todoSortMode && !isCompleted;
+  const timeText = task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes);
+  const timeMarkup = isCompleted
+    ? `<div class="task-time-block">${timeText}</div>`
+    : `
+        <button
+          class="task-time-edit ${task.scheduledMinutes == null ? "is-empty" : ""}"
+          data-task-time="${task.id}"
+          type="button"
+          aria-label="Set time for ${escapeHtml(task.name)}"
+        >
+          ${timeText}
+        </button>
+      `;
+
+  return `
+    <article
+      class="task-row ${isCompleted ? "is-completed" : ""} ${isLive ? "is-running" : ""} ${sortMode ? "is-sortable" : ""}"
+      data-task-row="${task.id}"
+      ${sortMode ? 'draggable="true"' : ""}
+    >
+      <label class="task-check">
+        <input type="checkbox" data-task-check="${task.id}" ${task.completed ? "checked" : ""} />
+        <span></span>
+      </label>
+      ${timeMarkup}
+      <div class="task-main">
+        <div class="task-title-row task-title-inline">
+          <h4 class="task-name">${escapeHtml(task.name)}</h4>
+          <span class="mini-pill inline-tag" style="background:${alphaColor(visual.color, 0.14)};">${escapeHtml(visual.categoryName)}</span>
+          ${task.important ? '<span class="task-star" aria-hidden="true">&#9733;</span>' : ""}
+        </div>
+        <div class="task-subline">
+          <span class="task-duration">${task.durationMin || state.defaultDuration} min</span>
+          ${renderTaskNote(task)}
+        </div>
+      </div>
+      <div class="task-side">
+        ${!task.completed ? `<button class="flat-start ${isLive ? "is-live" : ""}" data-task-start="${task.id}" type="button" ${isLive ? "disabled" : ""}>Start</button>` : ""}
+      </div>
+    </article>
+  `;
 }
 
 function getAiPathValue(path) {
@@ -1481,6 +1690,8 @@ function renderAll() {
   renderLogSuggestions();
   renderTaskAdvancedControls();
   updateTaskTimeSummary();
+  renderTaskTimeWheel();
+  bindTaskTimeSheetControls();
   updateLogDuration();
 }
 
@@ -8432,9 +8643,19 @@ function renderTaskRow(task, isCompleted = false) {
   const visual = getTaskVisual(task);
   const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
   const sortMode = state.ui.todoSortMode && !isCompleted;
-  const timeMarkup = sortMode
-    ? `<input class="task-time-edit" data-task-time="${task.id}" type="time" value="${task.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : ""}" />`
-    : `<div class="task-time-block">${task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes)}</div>`;
+  const timeText = task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes);
+  const timeMarkup = isCompleted
+    ? `<div class="task-time-block">${timeText}</div>`
+    : `
+        <button
+          class="task-time-edit ${task.scheduledMinutes == null ? "is-empty" : ""}"
+          data-task-time="${task.id}"
+          type="button"
+          aria-label="Set time for ${escapeHtml(task.name)}"
+        >
+          ${timeText}
+        </button>
+      `;
 
   return `
     <article
@@ -8451,7 +8672,7 @@ function renderTaskRow(task, isCompleted = false) {
         <div class="task-title-row task-title-inline">
           <h4 class="task-name">${escapeHtml(task.name)}</h4>
           <span class="mini-pill inline-tag" style="background:${alphaColor(visual.color, 0.14)};">${escapeHtml(visual.categoryName)}</span>
-          ${task.important ? '<span class="task-star">★</span>' : ""}
+          ${task.important ? '<span class="task-star" aria-hidden="true">★</span>' : ""}
         </div>
         <div class="task-subline">
           <span class="task-duration">${task.durationMin || state.defaultDuration} min</span>
@@ -8567,14 +8788,8 @@ function renderTodoGroups() {
     };
   });
 
-  dom.todoGroups.querySelectorAll("[data-task-time]").forEach((input) => {
-    input.onchange = () => {
-      const task = state.tasks.find((entry) => entry.id === input.dataset.taskTime);
-      if (!task) return;
-      task.scheduledMinutes = parseTimeString(input.value);
-      renderHome();
-      persistState();
-    };
+  dom.todoGroups.querySelectorAll("[data-task-time]").forEach((button) => {
+    button.onclick = () => openTaskTimeSheet("inline", button.dataset.taskTime);
   });
 
   dom.todoGroups.querySelectorAll("[data-note-open]").forEach((button) => {
@@ -8627,6 +8842,196 @@ function renderTodoGroups() {
   }
 
   bindTaskRowLongPress();
+}
+
+function getTaskTimeSheetElement() {
+  return document.getElementById("time-sheet");
+}
+
+function getTaskTimeSheetTitleElement() {
+  return document.querySelector("#time-sheet .sheet-header h2");
+}
+
+function getTaskTimeWheelElement() {
+  return document.getElementById("task-time-wheel");
+}
+
+function getDefaultTaskTimeMinutes() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function scrollSelectedTaskTimeOptions() {
+  document.querySelectorAll(".time-wheel-option.is-selected").forEach((option) => {
+    option.scrollIntoView({ block: "center", inline: "nearest" });
+  });
+}
+
+function setTaskTimeWheelValue(totalMinutes, options = {}) {
+  const shouldScroll = options.scroll !== false;
+  const nextValue = totalMinutes == null ? "" : formatInputTime((totalMinutes + 1440) % 1440);
+  dom.taskTimeInput.value = nextValue;
+  updateTaskTimeSummary();
+  renderTaskTimeWheel();
+  if (shouldScroll) requestAnimationFrame(scrollSelectedTaskTimeOptions);
+}
+
+function adjustTaskTimeWheel(deltaMinutes) {
+  const baseMinutes = parseTimeString(dom.taskTimeInput.value);
+  const nextMinutes = (baseMinutes == null ? getDefaultTaskTimeMinutes() : baseMinutes) + deltaMinutes;
+  setTaskTimeWheelValue(((nextMinutes % 1440) + 1440) % 1440);
+}
+
+function renderTaskTimeWheel() {
+  const wheel = getTaskTimeWheelElement();
+  if (!wheel || !dom.taskTimeInput) return;
+
+  const selectedMinutes = parseTimeString(dom.taskTimeInput.value);
+  const selectedHour = selectedMinutes == null ? null : Math.floor(selectedMinutes / 60);
+  const selectedMinute = selectedMinutes == null ? null : selectedMinutes % 60;
+
+  const hourItems = Array.from({ length: 24 }, (_, hour) => {
+    const active = hour === selectedHour;
+    return `
+      <button
+        class="time-wheel-option ${active ? "is-selected" : ""}"
+        data-time-unit="hour"
+        data-time-value="${hour}"
+        type="button"
+      >
+        ${String(hour).padStart(2, "0")}
+      </button>
+    `;
+  }).join("");
+
+  const minuteItems = Array.from({ length: 60 }, (_, minute) => {
+    const active = minute === selectedMinute;
+    return `
+      <button
+        class="time-wheel-option ${active ? "is-selected" : ""}"
+        data-time-unit="minute"
+        data-time-value="${minute}"
+        type="button"
+      >
+        ${String(minute).padStart(2, "0")}
+      </button>
+    `;
+  }).join("");
+
+  wheel.innerHTML = `
+    <div class="time-wheel-shell">
+      <div class="time-wheel-column" data-time-column="hour">${hourItems}</div>
+      <div class="time-wheel-divider" aria-hidden="true">:</div>
+      <div class="time-wheel-column" data-time-column="minute">${minuteItems}</div>
+    </div>
+  `;
+
+  wheel.querySelectorAll("[data-time-unit]").forEach((button) => {
+    button.onclick = () => {
+      const unit = button.dataset.timeUnit;
+      const value = Number(button.dataset.timeValue);
+      const currentMinutes = parseTimeString(dom.taskTimeInput.value);
+      const currentHour = currentMinutes == null ? new Date().getHours() : Math.floor(currentMinutes / 60);
+      const currentMinute = currentMinutes == null ? new Date().getMinutes() : currentMinutes % 60;
+      const nextHour = unit === "hour" ? value : currentHour;
+      const nextMinute = unit === "minute" ? value : currentMinute;
+      setTaskTimeWheelValue(nextHour * 60 + nextMinute, { scroll: true });
+    };
+  });
+
+  requestAnimationFrame(scrollSelectedTaskTimeOptions);
+}
+
+function openTaskTimeSheet(mode = "draft", taskId = null) {
+  const sheet = getTaskTimeSheetElement();
+  if (!sheet || !dom.taskTimeInput) return;
+
+  taskTimeSheetMode = mode;
+  taskTimeSheetTaskId = taskId;
+  sheet.classList.toggle("is-inline-time-context", mode === "inline");
+
+  const title = getTaskTimeSheetTitleElement();
+  if (title) title.textContent = mode === "inline" ? "Set time" : "Choose when";
+
+  if (mode === "inline") {
+    const task = state.tasks.find((entry) => entry.id === taskId);
+    if (!task) return;
+    dom.taskTimeInput.value = task.scheduledMinutes != null ? formatInputTime(task.scheduledMinutes) : "";
+  }
+
+  updateTaskTimeSummary();
+  renderTaskTimeWheel();
+  openSheet("time-sheet");
+}
+
+function clearTaskTimeSelection() {
+  if (taskTimeSheetMode === "inline" && taskTimeSheetTaskId) {
+    const task = state.tasks.find((entry) => entry.id === taskTimeSheetTaskId);
+    if (task) task.scheduledMinutes = null;
+    taskTimeSheetMode = "draft";
+    taskTimeSheetTaskId = null;
+    closeAllSheets();
+    renderHome();
+    persistState();
+    return;
+  }
+
+  dom.taskDateInput.value = "";
+  dom.taskTimeInput.value = "";
+  getTaskDurationInputElement().value = "";
+  state.ui.taskDatePreset = "none";
+  updateTaskTimeSummary();
+  renderTaskTimeWheel();
+  openSheet("task-sheet");
+}
+
+function applyTaskTimeSelection() {
+  if (taskTimeSheetMode === "inline" && taskTimeSheetTaskId) {
+    const task = state.tasks.find((entry) => entry.id === taskTimeSheetTaskId);
+    if (task) task.scheduledMinutes = parseTimeString(dom.taskTimeInput.value);
+    taskTimeSheetMode = "draft";
+    taskTimeSheetTaskId = null;
+    closeAllSheets();
+    renderHome();
+    persistState();
+    return;
+  }
+
+  updateTaskTimeSummary();
+  renderTaskTimeWheel();
+  openSheet("task-sheet");
+}
+
+function bindTaskTimeSheetControls() {
+  const timeBack = document.getElementById("time-back-button");
+  if (timeBack) {
+    timeBack.onclick = () => {
+      if (taskTimeSheetMode === "inline") {
+        taskTimeSheetMode = "draft";
+        taskTimeSheetTaskId = null;
+        closeAllSheets();
+        renderHome();
+        return;
+      }
+      openSheet("task-sheet");
+    };
+  }
+
+  if (dom.taskTimeButton) {
+    dom.taskTimeButton.onclick = () => openTaskTimeSheet("draft");
+  }
+
+  if (dom.taskTimeClear) {
+    dom.taskTimeClear.onclick = () => clearTaskTimeSelection();
+  }
+
+  if (dom.taskTimeApply) {
+    dom.taskTimeApply.onclick = () => applyTaskTimeSelection();
+  }
+
+  document.querySelectorAll("[data-time-step]").forEach((button) => {
+    button.onclick = () => adjustTaskTimeWheel(Number(button.dataset.timeStep || 0));
+  });
 }
 
 function renderTaskAdvancedControls() {
@@ -15903,4 +16308,162 @@ if (!window.__homeTimerAndStatusLogicPass) {
       openSheet("quick-sheet");
     });
   };
+}
+
+function renderAll() {
+  applyTheme();
+  applyBodyFlags();
+  ensureUiCopy();
+  renderNavigation();
+  renderHome();
+  renderStats();
+  renderTasksTree();
+  renderSettings();
+  renderAiPlanner();
+  renderDraftDrawer();
+  renderQuickSuggestions();
+  renderLogSuggestions();
+  renderTaskAdvancedControls();
+  updateTaskTimeSummary();
+  renderTaskTimeWheel();
+  bindTaskTimeSheetControls();
+  updateLogDuration();
+}
+
+function renderTaskRow(task, isCompleted = false) {
+  const visual = getTaskVisual(task);
+  const isLive = state.activeTimer?.taskId === task.id && state.activeTimer.running;
+  const sortMode = state.ui.todoSortMode && !isCompleted;
+  const timeText = task.scheduledMinutes == null ? "--:--" : formatMinutes(task.scheduledMinutes);
+  const timeMarkup = isCompleted
+    ? `<div class="task-time-block">${timeText}</div>`
+    : `
+        <button
+          class="task-time-edit ${task.scheduledMinutes == null ? "is-empty" : ""}"
+          data-task-time="${task.id}"
+          type="button"
+          aria-label="Set time for ${escapeHtml(task.name)}"
+        >
+          ${timeText}
+        </button>
+      `;
+
+  return `
+    <article
+      class="task-row ${isCompleted ? "is-completed" : ""} ${isLive ? "is-running" : ""} ${sortMode ? "is-sortable" : ""}"
+      data-task-row="${task.id}"
+      ${sortMode ? 'draggable="true"' : ""}
+    >
+      <label class="task-check">
+        <input type="checkbox" data-task-check="${task.id}" ${task.completed ? "checked" : ""} />
+        <span></span>
+      </label>
+      ${timeMarkup}
+      <div class="task-main">
+        <div class="task-title-row task-title-inline">
+          <h4 class="task-name">${escapeHtml(task.name)}</h4>
+          <span class="mini-pill inline-tag" style="background:${alphaColor(visual.color, 0.14)};">${escapeHtml(visual.categoryName)}</span>
+          ${task.important ? '<span class="task-star" aria-hidden="true"></span>' : ""}
+        </div>
+        <div class="task-subline">
+          <span class="task-duration">${task.durationMin || state.defaultDuration} min</span>
+          ${renderTaskNote(task)}
+        </div>
+      </div>
+      <div class="task-side">
+        ${!task.completed ? `<button class="flat-start ${isLive ? "is-live" : ""}" data-task-start="${task.id}" type="button" ${isLive ? "disabled" : ""}>Start</button>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderTodoGroups() {
+  const groups = getGroupedTasks();
+  if (dom.todoSortToggle) {
+    dom.todoSortToggle.innerHTML = `<span aria-hidden="true">✎</span><span class="sr-only">Sort</span>`;
+    dom.todoSortToggle.setAttribute("aria-label", state.ui.todoSortMode ? "Done sorting" : "Sort tasks");
+    dom.todoSortToggle.classList.toggle("is-active", Boolean(state.ui.todoSortMode));
+    dom.todoSortToggle.onclick = () => {
+      state.ui.todoSortMode = !state.ui.todoSortMode;
+      state.ui.editingTaskNoteId = null;
+      renderHome();
+      persistState();
+    };
+  }
+
+  dom.todoGroups.innerHTML = [
+    renderTaskGroup("overdue", "Overdue", groups.overdue),
+    renderTaskGroup("today", "Today", groups.today),
+    renderTaskGroup("flexible", "Flexible", groups.flexible),
+    renderTaskGroup("completed", "Completed", groups.completed, true),
+  ].join("");
+
+  dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
+    input.onchange = () => toggleTaskComplete(input.dataset.taskCheck);
+  });
+  dom.todoGroups.querySelectorAll("[data-task-start]").forEach((button) => {
+    if (!button.disabled) button.onclick = () => startTimerForTask(button.dataset.taskStart);
+  });
+  dom.todoGroups.querySelectorAll("[data-toggle-group]").forEach((button) => {
+    button.onclick = () => {
+      const groupKey = button.dataset.toggleGroup;
+      state.ui.groupOpen[groupKey] = !state.ui.groupOpen[groupKey];
+      renderHome();
+      persistState();
+    };
+  });
+  dom.todoGroups.querySelectorAll("[data-task-time]").forEach((button) => {
+    button.onclick = () => openTaskTimeSheet("inline", button.dataset.taskTime);
+  });
+  dom.todoGroups.querySelectorAll("[data-note-open]").forEach((button) => {
+    button.onclick = () => {
+      state.ui.editingTaskNoteId = button.dataset.noteOpen;
+      renderHome();
+      persistState();
+    };
+  });
+  dom.todoGroups.querySelectorAll("[data-task-note-input]").forEach((input) => {
+    input.onclick = (event) => event.stopPropagation();
+    input.onkeydown = (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveTaskNote(input.dataset.taskNoteInput, input.value);
+      }
+      if (event.key === "Escape") {
+        state.ui.editingTaskNoteId = null;
+        renderHome();
+      }
+    };
+    input.onblur = () => saveTaskNote(input.dataset.taskNoteInput, input.value);
+  });
+
+  if (state.ui.todoSortMode) {
+    dom.todoGroups.querySelectorAll("[data-task-row]").forEach((row) => {
+      row.ondragstart = (event) => {
+        draggedTodoTaskId = row.dataset.taskRow;
+        row.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+      };
+      row.ondragover = (event) => {
+        event.preventDefault();
+        row.classList.add("is-drop-target");
+      };
+      row.ondragleave = () => row.classList.remove("is-drop-target");
+      row.ondragend = () => {
+        draggedTodoTaskId = null;
+        row.classList.remove("is-dragging");
+        row.classList.remove("is-drop-target");
+      };
+      row.ondrop = (event) => {
+        event.preventDefault();
+        row.classList.remove("is-drop-target");
+        if (!draggedTodoTaskId || draggedTodoTaskId === row.dataset.taskRow) return;
+        moveTaskBefore(draggedTodoTaskId, row.dataset.taskRow);
+        renderHome();
+        persistState();
+      };
+    });
+  }
+
+  bindTaskRowLongPress();
 }

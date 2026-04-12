@@ -302,7 +302,7 @@
           <small id="task-date-label">Today</small>
         </button>
         <label class="toggle-row important-row plain-line">
-          <span>⭐ Important</span>
+          <span>Important</span>
           <input type="checkbox" id="task-important-input" name="taskImportant" />
         </label>
         <button class="collapse-button task-more-toggle plain-line" id="task-more-toggle" type="button">
@@ -341,19 +341,25 @@
         <button class="sheet-close" data-close-sheet type="button">×</button>
       </div>
       <div class="sheet-form when-sheet-form">
-        <div class="line-field plain-group">
+        <div class="line-field plain-group time-draft-only">
           <span>When</span>
           <div class="quick-option-grid" id="task-date-quick-grid"></div>
         </div>
-        <label class="line-field" id="task-custom-date-field">
+        <label class="line-field time-draft-only" id="task-custom-date-field">
           <span>Date</span>
           <input type="date" id="task-date-input" />
         </label>
         <label class="line-field" id="task-time-field">
           <span>Time</span>
-          <input type="time" id="task-time-input" name="taskTime" />
+          <input type="hidden" id="task-time-input" name="taskTime" />
+          <div class="time-wheel-picker" id="task-time-wheel" aria-label="Time picker"></div>
+          <div class="time-quick-steps" id="task-time-quick-steps">
+            <button class="quick-chip" data-time-step="15" type="button">+15m</button>
+            <button class="quick-chip" data-time-step="30" type="button">+30m</button>
+            <button class="quick-chip" data-time-step="60" type="button">+1h</button>
+          </div>
         </label>
-        <label class="line-field" id="task-duration-field">
+        <label class="line-field time-draft-only" id="task-duration-field">
           <span>Duration</span>
           <input
             type="number"
