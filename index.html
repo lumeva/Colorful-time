@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -27,10 +27,10 @@
           <div class="hero-heading">
             <div>
               <h1>Today</h1>
-              <p class="hero-note">按时间排开，也给临时灵感留空位。</p>
+              <p class="hero-note">Plan by time and still leave room for spontaneous ideas.</p>
             </div>
             <button class="hero-mini" id="today-refresh" type="button">
-              重新抽取
+              閲嶆柊鎶藉彇
             </button>
           </div>
         </header>
@@ -59,7 +59,7 @@
           <div class="hero-heading">
             <div>
               <h1 id="stats-title">Today's Color</h1>
-              <p class="hero-note">时间被分给了什么，也会留下颜色。</p>
+              <p class="hero-note">See where your time goes and what color it leaves.</p>
             </div>
           </div>
         </header>
@@ -91,7 +91,7 @@
           <div class="stats-breakdown" id="stats-breakdown"></div>
           <button class="trend-toggle" id="trend-toggle" type="button">
             <span>Show weekly trend</span>
-            <span class="trend-arrow">›</span>
+            <span class="trend-arrow">▾</span>
           </button>
           <div class="trend-panel" id="trend-panel" hidden></div>
         </section>
@@ -99,16 +99,16 @@
 
       <section class="page" data-page="tasks">
         <header class="page-hero">
-          <p class="hero-date">分类树会把颜色一路带到计时与统计。</p>
+          <p class="hero-date">鍒嗙被鏍戜細鎶婇鑹蹭竴璺甫鍒拌鏃朵笌缁熻銆</p>
           <div class="hero-heading">
             <div>
               <h1>Tasks</h1>
-              <p class="hero-note">一级收纳，二级着色，三级作为任务模板。</p>
+              <p class="hero-note">Level 1 folders, level 2 categories, and level 3 task templates.</p>
             </div>
             <div class="page-actions">
               <button class="hero-mini" id="tasks-edit-toggle" type="button" aria-label="Edit tasks">✎</button>
               <button class="hero-mini accent" id="add-folder-button" type="button" aria-label="New folder">
-                ＋
+                +
               </button>
             </div>
           </div>
@@ -121,11 +121,11 @@
 
       <section class="page" data-page="settings">
         <header class="page-hero">
-          <p class="hero-date">先把骨架写稳，后面主题就能自然生长。</p>
+          <p class="hero-date">鍏堟妸楠ㄦ灦鍐欑ǔ锛屽悗闈富棰樺氨鑳借嚜鐒剁敓闀裤€</p>
           <div class="hero-heading">
             <div>
               <h1>Settings</h1>
-              <p class="hero-note">这里先放主题、节奏和显示偏好的底层控制。</p>
+              <p class="hero-note">Tune theme, rhythm, and display preferences here.</p>
             </div>
           </div>
         </header>
@@ -134,25 +134,25 @@
           <div class="settings-block">
             <div class="settings-head">
               <h2>Install</h2>
-              <p>把网页装进手机主屏幕，之后我们就能顺着这套骨架继续做 APK。</p>
+              <p>鎶婄綉椤佃杩涙墜鏈轰富灞忓箷锛屼箣鍚庢垜浠氨鑳介『鐫€杩欏楠ㄦ灦缁х画鍋?APK銆</p>
             </div>
             <button class="primary-button settings-install" id="pwa-install-button" type="button">
               Install app
             </button>
-            <p class="inline-note" id="pwa-install-note">当前设备还没有暴露安装提示。</p>
+            <p class="inline-note" id="pwa-install-note">If no prompt appears, open browser menu and choose Add to Home Screen.</p>
           </div>
 
           <div class="settings-block">
             <div class="settings-head">
               <h2>Next</h2>
-              <p>首页不解释逻辑，这里才是抽取规则以后要细调的地方。</p>
+              <p>Rules used to pick and sort the next task cards.</p>
             </div>
             <label class="toggle-row">
-              <span>优先最近时间任务</span>
+              <span>浼樺厛鏈€杩戞椂闂翠换鍔</span>
               <input type="checkbox" id="next-time-priority-toggle" checked />
             </label>
             <label class="toggle-row">
-              <span>优先重要任务</span>
+              <span>浼樺厛閲嶈浠诲姟</span>
               <input type="checkbox" id="next-important-priority-toggle" checked />
             </label>
           </div>
@@ -160,7 +160,7 @@
           <div class="settings-block">
             <div class="settings-head">
               <h2>Theme</h2>
-              <p>现在就把主题系统埋好，之后能扩成更完整的动漫感版本。</p>
+              <p>Choose your visual style and background controls.</p>
             </div>
             <div class="theme-grid" id="theme-grid"></div>
           </div>
@@ -190,11 +190,11 @@
               <h2>Display</h2>
             </div>
             <label class="toggle-row">
-              <span>Completed 默认展开</span>
+              <span>Completed 榛樿灞曞紑</span>
               <input type="checkbox" id="completed-default-toggle" />
             </label>
             <label class="toggle-row">
-              <span>减少纸张纹理</span>
+              <span>鍑忓皯绾稿紶绾圭悊</span>
               <input type="checkbox" id="reduce-texture-toggle" />
             </label>
           </div>
@@ -203,46 +203,44 @@
     </main>
 
     <button class="draft-tab" id="draft-tab" type="button" aria-controls="draft-drawer" aria-expanded="false">
-      草稿
+      鑽夌
     </button>
 
-    <aside class="draft-drawer" id="draft-drawer" hidden aria-label="草稿纸">
+    <aside class="draft-drawer" id="draft-drawer" hidden aria-label="Draft drawer">
       <div class="draft-drawer-head">
         <div>
           <p class="sheet-kicker">Draft</p>
-          <h2>草稿纸</h2>
+          <h2>Draft Notes</h2>
         </div>
-        <button class="sheet-close" id="draft-close" type="button" aria-label="Close draft">×</button>
+        <button class="sheet-close" id="draft-close" type="button" aria-label="Close draft">脳</button>
       </div>
       <form class="draft-compose" id="draft-form">
         <label class="draft-input-wrap" for="draft-input">
           <span class="sr-only">Draft note</span>
-          <textarea id="draft-input" placeholder="临时想法，随手写在这里……" rows="2"></textarea>
+          <textarea id="draft-input" placeholder="Write a quick draft..." rows="2"></textarea>
         </label>
-        <button class="ghost-button draft-save" type="submit">添加</button>
+        <button class="ghost-button draft-save" type="submit">娣诲姞</button>
       </form>
       <div class="draft-list" id="draft-list"></div>
     </aside>
 
-    <button class="fab" id="fab-button" type="button" aria-label="Add">
-      ＋
-    </button>
+      <button class="fab" id="fab-button" type="button" aria-label="Add">+</button>
 
     <nav class="bottom-nav" aria-label="Main navigation">
       <button class="nav-item is-active" data-target="home" type="button">
-        <span class="nav-icon">⌂</span>
+        <span class="nav-icon" aria-hidden="true"><i class="ph-bold ph-house"></i></span>
         <span>Home</span>
       </button>
       <button class="nav-item" data-target="stats" type="button">
-        <span class="nav-icon">◔</span>
+        <span class="nav-icon" aria-hidden="true"><i class="ph-bold ph-chart-pie-slice"></i></span>
         <span>Stats</span>
       </button>
       <button class="nav-item" data-target="tasks" type="button">
-        <span class="nav-icon">≡</span>
+        <span class="nav-icon" aria-hidden="true"><i class="ph-bold ph-list"></i></span>
         <span>Tasks</span>
       </button>
       <button class="nav-item" data-target="settings" type="button">
-        <span class="nav-icon">⚙</span>
+        <span class="nav-icon" aria-hidden="true"><i class="ph-bold ph-gear"></i></span>
         <span>Settings</span>
       </button>
     </nav>
@@ -253,20 +251,20 @@
       <div class="sheet-handle"></div>
       <div class="sheet-header">
         <h2>Add</h2>
-        <button class="sheet-close" data-close-sheet type="button">×</button>
+        <button class="sheet-close" data-close-sheet type="button">脳</button>
       </div>
       <div class="action-grid">
         <button class="action-card" data-open-sheet="task-sheet" type="button">
           <strong>Create Task</strong>
-          <span>按时间、分类和重要度收进今天。</span>
+          <span>Sort by time, category, and importance.</span>
         </button>
         <button class="action-card" data-open-sheet="quick-sheet" type="button">
           <strong>Quick Start</strong>
-          <span>输入一个名字，马上开始计时。</span>
+          <span>Enter one task name and start immediately.</span>
         </button>
         <button class="action-card" data-open-sheet="log-sheet" type="button">
           <strong>Log Time</strong>
-          <span>把已经做过的时间补回来。</span>
+          <span>Backfill time you have already done.</span>
         </button>
       </div>
     </section>
@@ -278,7 +276,7 @@
           <p class="sheet-kicker">Task</p>
           <h2 id="task-sheet-title">Create Task</h2>
         </div>
-        <button class="sheet-close" data-close-sheet type="button">×</button>
+        <button class="sheet-close" data-close-sheet type="button">脳</button>
       </div>
       <form class="sheet-form task-form-plain" id="task-form">
         <label class="line-field plain-line task-name-line">
@@ -338,7 +336,7 @@
           <p class="sheet-kicker">Time & Date</p>
           <h2>Choose when</h2>
         </div>
-        <button class="sheet-close" data-close-sheet type="button">×</button>
+        <button class="sheet-close" data-close-sheet type="button">脳</button>
       </div>
       <div class="sheet-form when-sheet-form">
         <div class="line-field plain-group time-draft-only">
@@ -352,7 +350,31 @@
         <label class="line-field" id="task-time-field">
           <span>Time</span>
           <input type="hidden" id="task-time-input" name="taskTime" />
-          <div class="time-wheel-picker" id="task-time-wheel" aria-label="Time picker"></div>
+          <div class="time-inline-wrap" aria-label="Time picker">
+            <input
+              type="number"
+              id="task-time-hour-input"
+              class="time-inline-input"
+              inputmode="numeric"
+              min="0"
+              max="23"
+              step="1"
+              placeholder="HH"
+              aria-label="Hour"
+            />
+            <span class="time-inline-sep" aria-hidden="true">:</span>
+            <input
+              type="number"
+              id="task-time-minute-input"
+              class="time-inline-input"
+              inputmode="numeric"
+              min="0"
+              max="59"
+              step="1"
+              placeholder="MM"
+              aria-label="Minute"
+            />
+          </div>
           <div class="time-quick-steps" id="task-time-quick-steps">
             <button class="quick-chip" data-time-step="15" type="button">+15m</button>
             <button class="quick-chip" data-time-step="30" type="button">+30m</button>
@@ -383,7 +405,7 @@
           <p class="sheet-kicker">Quick Start</p>
           <h2>Start right now</h2>
         </div>
-        <button class="sheet-close" data-close-sheet type="button">×</button>
+        <button class="sheet-close" data-close-sheet type="button">脳</button>
       </div>
       <form class="sheet-form" id="quick-form">
         <label class="line-field">
@@ -407,9 +429,9 @@
       <div class="sheet-header">
         <div>
           <p class="sheet-kicker">Log Time</p>
-          <h2>补录一段时间</h2>
+          <h2>Log Time</h2>
         </div>
-        <button class="sheet-close" data-close-sheet type="button">×</button>
+        <button class="sheet-close" data-close-sheet type="button">脳</button>
       </div>
       <form class="sheet-form" id="log-form">
         <label class="line-field">
@@ -446,7 +468,7 @@
           <p class="sheet-kicker">Categories</p>
           <h2 id="category-sheet-title">Choose category</h2>
         </div>
-        <button class="sheet-close" data-close-sheet type="button">×</button>
+        <button class="sheet-close" data-close-sheet type="button">脳</button>
       </div>
       <div class="category-breadcrumb" id="category-breadcrumb"></div>
       <div class="category-list" id="category-list"></div>
@@ -459,7 +481,7 @@
           <p class="sheet-kicker">Stats</p>
           <h2 id="stats-picker-title">Choose category path</h2>
         </div>
-        <button class="sheet-close" data-close-sheet type="button">×</button>
+        <button class="sheet-close" data-close-sheet type="button">脳</button>
       </div>
       <div class="stats-picker-breadcrumb" id="stats-picker-breadcrumb"></div>
       <div class="stats-picker-list" id="stats-picker-list"></div>
@@ -472,7 +494,7 @@
           <p class="sheet-kicker">Tasks</p>
           <h2 id="tree-editor-title">New Category</h2>
         </div>
-        <button class="sheet-close" data-close-sheet type="button">×</button>
+        <button class="sheet-close" data-close-sheet type="button">脳</button>
       </div>
       <form class="sheet-form" id="tree-editor-form">
         <label class="line-field">
@@ -508,3 +530,6 @@
     <script src="./app.js"></script>
   </body>
 </html>
+
+
+

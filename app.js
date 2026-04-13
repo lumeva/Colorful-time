@@ -1,4 +1,4 @@
-const STORAGE_KEY = "colorful-time-state-v1";
+﻿const STORAGE_KEY = "colorful-time-state-v1";
 const STATE_SCHEMA_VERSION = 2;
 
 const CATEGORY_COLORS = [
@@ -53,6 +53,90 @@ const AI_WORKSTYLE_OPTIONS = [
 ];
 const AI_PROCRASTINATION_OPTIONS = ["任务模糊", "怕做错", "太无聊", "太有压力", "不知从哪开始"];
 const AI_VALUE_OPTIONS = ["事业成就", "身体健康", "亲密关系", "个人成长", "财务自由", "创意表达", "社会贡献"];
+
+const UI_TEXT = {
+  zh: {
+    "nav.home": "\u9996\u9875",
+    "nav.stats": "\u7EDF\u8BA1",
+    "nav.tasks": "\u4EFB\u52A1",
+    "nav.settings": "\u8BBE\u7F6E",
+    "group.overdue": "\u903E\u671F",
+    "group.today": "\u4ECA\u5929",
+    "group.flexible": "\u7075\u6D3B",
+    "group.completed": "\u5DF2\u5B8C\u6210",
+    "todo.sort.start": "\u6392\u5E8F\u4EFB\u52A1",
+    "todo.sort.done": "\u5B8C\u6210\u6392\u5E8F",
+    "settings.group.planning": "\u8BA1\u5212",
+    "settings.group.appearance": "\u5916\u89C2",
+    "settings.group.app": "\u5E94\u7528",
+    "settings.theme": "\u4E3B\u9898",
+    "settings.language": "\u8BED\u8A00",
+    "settings.language.zh": "\u4E2D\u6587",
+    "settings.language.en": "English",
+    "settings.uploadBg": "\u4E0A\u4F20\u80CC\u666F\u56FE",
+    "settings.aiPlanner": "\u0041\u0049 \u751F\u6210\u65E5\u7A0B",
+    "settings.downloadApk": "\u4E0B\u8F7D APK",
+    "settings.paperLines": "\u663E\u793A\u7EB8\u5F20\u7EB9\u7406",
+    "pwa.installed": "\u5DF2\u5B89\u88C5",
+    "pwa.install": "\u6DFB\u52A0\u5230\u4E3B\u5C4F\u5E55",
+    "pwa.note.installed": "\u5DF2\u5B89\u88C5\u5728\u5F53\u524D\u8BBE\u5907\u3002",
+    "pwa.note.direct": "\u53EF\u76F4\u63A5\u4ECE\u8FD9\u91CC\u5B89\u88C5\u3002",
+    "pwa.note.manual":
+      "\u82E5\u672A\u5F39\u51FA\u5B89\u88C5\u63D0\u793A\uFF0C\u8BF7\u5728\u6D4F\u89C8\u5668\u83DC\u5355\u4E2D\u9009\u62E9\u201C\u6DFB\u52A0\u5230\u4E3B\u5C4F\u5E55\u201D\u3002",
+    "pwa.manualAlert":
+      "\u5F53\u524D\u672A\u89E6\u53D1\u5B89\u88C5\u63D0\u793A\u3002\u8BF7\u6253\u5F00\u6D4F\u89C8\u5668\u83DC\u5355\uFF0C\u9009\u62E9\u201C\u6DFB\u52A0\u5230\u4E3B\u5C4F\u5E55\u201D\u3002",
+  },
+  en: {
+    "nav.home": "Home",
+    "nav.stats": "Stats",
+    "nav.tasks": "Tasks",
+    "nav.settings": "Settings",
+    "group.overdue": "Overdue",
+    "group.today": "Today",
+    "group.flexible": "Flexible",
+    "group.completed": "Completed",
+    "todo.sort.start": "Sort tasks",
+    "todo.sort.done": "Done sorting",
+    "settings.group.planning": "Planning",
+    "settings.group.appearance": "Appearance",
+    "settings.group.app": "App",
+    "settings.theme": "Theme",
+    "settings.language": "Language",
+    "settings.language.zh": "\u4E2D\u6587",
+    "settings.language.en": "English",
+    "settings.uploadBg": "Upload Background",
+    "settings.aiPlanner": "AI Planner",
+    "settings.downloadApk": "Download APK",
+    "settings.paperLines": "Show paper lines",
+    "pwa.installed": "Installed",
+    "pwa.install": "Add to Home",
+    "pwa.note.installed": "Already installed on this device.",
+    "pwa.note.direct": "Install directly from here.",
+    "pwa.note.manual": "If no prompt appears, open the browser menu and choose Add to Home Screen.",
+    "pwa.manualAlert": "No install prompt is available right now. Open the browser menu and choose Add to Home Screen.",
+  },
+};
+
+function getUiLanguage() {
+  const current = state?.ui?.language;
+  if (current === "zh" || current === "en") return current;
+  return String(navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+function setUiLanguage(language) {
+  state.ui = state.ui || {};
+  state.ui.language = language === "en" ? "en" : "zh";
+  document.documentElement.lang = state.ui.language === "zh" ? "zh-CN" : "en";
+}
+
+function uiText(key, fallback = "") {
+  const lang = getUiLanguage();
+  return UI_TEXT[lang]?.[key] || UI_TEXT.zh?.[key] || fallback || key;
+}
+
+function syncDocumentLanguage() {
+  document.documentElement.lang = getUiLanguage() === "zh" ? "zh-CN" : "en";
+}
 
 function createDefaultAiState() {
   const today = new Date();
@@ -878,8 +962,11 @@ function renderTaskRow(task, isCompleted = false) {
 function renderTodoGroups() {
   const groups = getGroupedTasks();
   if (dom.todoSortToggle) {
-    dom.todoSortToggle.innerHTML = `<span aria-hidden="true">鉁?/span><span class="sr-only">Sort</span>`;
-    dom.todoSortToggle.setAttribute("aria-label", state.ui.todoSortMode ? "Done sorting" : "Sort tasks");
+    const sortActionLabel = state.ui.todoSortMode
+      ? uiText("todo.sort.done", "Done sorting")
+      : uiText("todo.sort.start", "Sort tasks");
+    dom.todoSortToggle.innerHTML = renderPencilIconMarkup(sortActionLabel);
+    dom.todoSortToggle.setAttribute("aria-label", sortActionLabel);
     dom.todoSortToggle.classList.toggle("is-active", Boolean(state.ui.todoSortMode));
     dom.todoSortToggle.onclick = () => {
       state.ui.todoSortMode = !state.ui.todoSortMode;
@@ -890,10 +977,10 @@ function renderTodoGroups() {
   }
 
   dom.todoGroups.innerHTML = [
-    renderTaskGroup("overdue", "Overdue", groups.overdue),
-    renderTaskGroup("today", "Today", groups.today),
-    renderTaskGroup("flexible", "Flexible", groups.flexible),
-    renderTaskGroup("completed", "Completed", groups.completed, true),
+    renderTaskGroup("overdue", uiText("group.overdue", "Overdue"), groups.overdue),
+    renderTaskGroup("today", uiText("group.today", "Today"), groups.today),
+    renderTaskGroup("flexible", uiText("group.flexible", "Flexible"), groups.flexible),
+    renderTaskGroup("completed", uiText("group.completed", "Completed"), groups.completed, true),
   ].join("");
 
   dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
@@ -4940,6 +5027,9 @@ function bindEvents() {
 }
 
 function registerPwa() {
+  if (window.__pwaListenersBound) return;
+  window.__pwaListenersBound = true;
+
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
@@ -5062,10 +5152,10 @@ function renderNextTasks() {
 function renderTodoGroups() {
   const groups = getGroupedTasks();
   dom.todoGroups.innerHTML = [
-    renderTaskGroup("overdue", "Overdue", groups.overdue),
-    renderTaskGroup("today", "Today", groups.today),
-    renderTaskGroup("flexible", "Flexible", groups.flexible),
-    renderTaskGroup("completed", "Completed", groups.completed, true),
+    renderTaskGroup("overdue", uiText("group.overdue", "Overdue"), groups.overdue),
+    renderTaskGroup("today", uiText("group.today", "Today"), groups.today),
+    renderTaskGroup("flexible", uiText("group.flexible", "Flexible"), groups.flexible),
+    renderTaskGroup("completed", uiText("group.completed", "Completed"), groups.completed, true),
   ].join("");
 
   dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
@@ -5632,7 +5722,23 @@ async function handlePwaInstall() {
     return;
   }
 
-  window.alert("If your browser does not show an install prompt, open the browser menu and tap Add to Home Screen.");
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || "");
+  if (isIos) {
+    window.alert(
+      uiText(
+        "pwa.manualAlert",
+        "Open the browser Share menu and choose Add to Home Screen."
+      )
+    );
+    return;
+  }
+
+  if (!window.isSecureContext && !/^(localhost|127\.0\.0\.1)$/i.test(location.hostname)) {
+    window.alert("Install prompt is unavailable on non-HTTPS pages. Please open this site over HTTPS.");
+    return;
+  }
+
+  window.alert(uiText("pwa.manualAlert", "If your browser does not show an install prompt, open the browser menu and tap Add to Home Screen."));
 }
 
 function buildAiPromptText() {
@@ -6526,10 +6632,10 @@ function renderNextTasks() {
 function renderTodoGroups() {
   const groups = getGroupedTasks();
   dom.todoGroups.innerHTML = [
-    renderTaskGroup("overdue", "Overdue", groups.overdue),
-    renderTaskGroup("today", "Today", groups.today),
-    renderTaskGroup("flexible", "Flexible", groups.flexible),
-    renderTaskGroup("completed", "Completed", groups.completed, true),
+    renderTaskGroup("overdue", uiText("group.overdue", "Overdue"), groups.overdue),
+    renderTaskGroup("today", uiText("group.today", "Today"), groups.today),
+    renderTaskGroup("flexible", uiText("group.flexible", "Flexible"), groups.flexible),
+    renderTaskGroup("completed", uiText("group.completed", "Completed"), groups.completed, true),
   ].join("");
 
   dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
@@ -8560,6 +8666,12 @@ function renderNavigation() {
   });
   dom.navItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.target === state.currentPage);
+    const labelNode = item.querySelector("span:last-child");
+    if (!labelNode) return;
+    if (item.dataset.target === "home") labelNode.textContent = uiText("nav.home", "Home");
+    if (item.dataset.target === "stats") labelNode.textContent = uiText("nav.stats", "Stats");
+    if (item.dataset.target === "tasks") labelNode.textContent = uiText("nav.tasks", "Tasks");
+    if (item.dataset.target === "settings") labelNode.textContent = uiText("nav.settings", "Settings");
   });
   dom.fab.hidden = state.currentPage !== "home";
   updateOverlayState();
@@ -8612,7 +8724,7 @@ function renderTaskGroup(groupKey, title, tasks, completed = false) {
         open
           ? tasks.length
             ? `<div class="task-list">${tasks.map((task) => renderTaskRow(task, completed)).join("")}</div>`
-            : `<p class="empty-note">${title === "Flexible" ? "No flexible tasks." : "This section is empty right now."}</p>`
+            : `<p class="empty-note">${groupKey === "flexible" ? "No flexible tasks." : "This section is empty right now."}</p>`
           : ""
       }
     </section>
@@ -8764,10 +8876,10 @@ function renderTodoGroups() {
   }
 
   dom.todoGroups.innerHTML = [
-    renderTaskGroup("overdue", "Overdue", groups.overdue),
-    renderTaskGroup("today", "Today", groups.today),
-    renderTaskGroup("flexible", "Flexible", groups.flexible),
-    renderTaskGroup("completed", "Completed", groups.completed, true),
+    renderTaskGroup("overdue", uiText("group.overdue", "Overdue"), groups.overdue),
+    renderTaskGroup("today", uiText("group.today", "Today"), groups.today),
+    renderTaskGroup("flexible", uiText("group.flexible", "Flexible"), groups.flexible),
+    renderTaskGroup("completed", uiText("group.completed", "Completed"), groups.completed, true),
   ].join("");
 
   dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
@@ -11532,6 +11644,12 @@ function upgradeState(current) {
   next.ui.taskTimerMode = next.ui.taskTimerMode || "up";
   next.ui.taskDatePreset = next.ui.taskDatePreset || "none";
   next.ui.aiPreviewItems = Array.isArray(next.ui.aiPreviewItems) ? next.ui.aiPreviewItems : [];
+  next.ui.language =
+    next.ui.language === "zh" || next.ui.language === "en"
+      ? next.ui.language
+      : String(navigator.language || "").toLowerCase().startsWith("zh")
+        ? "zh"
+        : "en";
   next.ui.customRange = next.ui.customRange || {
     start: formatInputDate(shiftDate(today, -6)),
     end: formatInputDate(today),
@@ -12173,6 +12291,19 @@ function bindActionCardsFinal() {
 
 function ensureUiCopy() {
   bindActionCardsFinal();
+  syncDocumentLanguage();
+
+  const navTextByPage = {
+    home: uiText("nav.home", "Home"),
+    stats: uiText("nav.stats", "Stats"),
+    tasks: uiText("nav.tasks", "Tasks"),
+    settings: uiText("nav.settings", "Settings"),
+  };
+  dom.navItems.forEach((item) => {
+    const labelNode = item.querySelector("span:last-child");
+    const text = navTextByPage[item.dataset.target];
+    if (labelNode && text) labelNode.textContent = text;
+  });
 
   document.querySelectorAll("#action-sheet .action-card span").forEach((node) => node.remove());
 
@@ -12281,8 +12412,11 @@ function ensureUiCopy() {
   }
 
   if (dom.todoSortToggle) {
-    dom.todoSortToggle.innerHTML = `<span aria-hidden="true">✎</span><span class="sr-only">Sort</span>`;
-    dom.todoSortToggle.setAttribute("aria-label", state.ui.todoSortMode ? "Done sorting" : "Sort tasks");
+    const sortActionLabel = state.ui.todoSortMode
+      ? uiText("todo.sort.done", "Done sorting")
+      : uiText("todo.sort.start", "Sort tasks");
+    dom.todoSortToggle.innerHTML = renderPencilIconMarkup(sortActionLabel);
+    dom.todoSortToggle.setAttribute("aria-label", sortActionLabel);
     dom.todoSortToggle.classList.toggle("is-active", Boolean(state.ui.todoSortMode));
   }
 
@@ -12531,7 +12665,7 @@ function renderTaskGroup(groupKey, title, tasks, completed = false) {
         open
           ? tasks.length
             ? `<div class="task-list">${tasks.map((task) => renderTaskRow(task, completed)).join("")}</div>`
-            : `<p class="empty-note">${title === "Flexible" ? "No flexible tasks." : "This section is empty right now."}</p>`
+            : `<p class="empty-note">${groupKey === "flexible" ? "No flexible tasks." : "This section is empty right now."}</p>`
           : ""
       }
     </section>
@@ -12655,10 +12789,10 @@ function renderTodoGroups() {
   }
 
   dom.todoGroups.innerHTML = [
-    renderTaskGroup("overdue", "Overdue", groups.overdue),
-    renderTaskGroup("today", "Today", groups.today),
-    renderTaskGroup("flexible", "Flexible", groups.flexible),
-    renderTaskGroup("completed", "Completed", groups.completed, true),
+    renderTaskGroup("overdue", uiText("group.overdue", "Overdue"), groups.overdue),
+    renderTaskGroup("today", uiText("group.today", "Today"), groups.today),
+    renderTaskGroup("flexible", uiText("group.flexible", "Flexible"), groups.flexible),
+    renderTaskGroup("completed", uiText("group.completed", "Completed"), groups.completed, true),
   ].join("");
 
   dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
@@ -13058,8 +13192,11 @@ function ensureUiCopy() {
   }
 
   if (dom.todoSortToggle) {
-    dom.todoSortToggle.innerHTML = `<span aria-hidden="true">✎</span><span class="sr-only">Sort</span>`;
-    dom.todoSortToggle.setAttribute("aria-label", state.ui.todoSortMode ? "Done sorting" : "Sort tasks");
+    const sortActionLabel = state.ui.todoSortMode
+      ? uiText("todo.sort.done", "Done sorting")
+      : uiText("todo.sort.start", "Sort tasks");
+    dom.todoSortToggle.innerHTML = renderPencilIconMarkup(sortActionLabel);
+    dom.todoSortToggle.setAttribute("aria-label", sortActionLabel);
     dom.todoSortToggle.classList.toggle("is-active", Boolean(state.ui.todoSortMode));
   }
 
@@ -13327,8 +13464,11 @@ function bindTaskRowLongPress() {
 function renderTodoGroups() {
   const groups = getGroupedTasks();
   if (dom.todoSortToggle) {
-    dom.todoSortToggle.innerHTML = `<span aria-hidden="true">✎</span><span class="sr-only">Sort</span>`;
-    dom.todoSortToggle.setAttribute("aria-label", state.ui.todoSortMode ? "Done sorting" : "Sort tasks");
+    const sortActionLabel = state.ui.todoSortMode
+      ? uiText("todo.sort.done", "Done sorting")
+      : uiText("todo.sort.start", "Sort tasks");
+    dom.todoSortToggle.innerHTML = renderPencilIconMarkup(sortActionLabel);
+    dom.todoSortToggle.setAttribute("aria-label", sortActionLabel);
     dom.todoSortToggle.classList.toggle("is-active", Boolean(state.ui.todoSortMode));
     dom.todoSortToggle.onclick = () => {
       state.ui.todoSortMode = !state.ui.todoSortMode;
@@ -13339,10 +13479,10 @@ function renderTodoGroups() {
   }
 
   dom.todoGroups.innerHTML = [
-    renderTaskGroup("overdue", "Overdue", groups.overdue),
-    renderTaskGroup("today", "Today", groups.today),
-    renderTaskGroup("flexible", "Flexible", groups.flexible),
-    renderTaskGroup("completed", "Completed", groups.completed, true),
+    renderTaskGroup("overdue", uiText("group.overdue", "Overdue"), groups.overdue),
+    renderTaskGroup("today", uiText("group.today", "Today"), groups.today),
+    renderTaskGroup("flexible", uiText("group.flexible", "Flexible"), groups.flexible),
+    renderTaskGroup("completed", uiText("group.completed", "Completed"), groups.completed, true),
   ].join("");
 
   dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
@@ -15264,6 +15404,82 @@ if (!window.__settingsAdventureMinimalPass) {
     return "adventure";
   };
 
+  const setSettingsRowLabel = (rowNode, text) => {
+    if (!rowNode) return;
+    const labelNode = rowNode.querySelector(".settings-row-label");
+    if (labelNode) labelNode.textContent = text;
+    else rowNode.innerHTML = `<span class="settings-row-label">${escapeHtml(text)}</span>`;
+  };
+
+  const buildThemeCardsByLanguage = () => {
+    const isZh = getUiLanguage() === "zh";
+    return [
+      {
+        id: "adventure",
+        label: isZh ? "\uD83D\uDDE1\uFE0F \u82F1\u96C4\u5192\u9669" : "\uD83D\uDDE1\uFE0F Adventure",
+        tilt: "a",
+      },
+      {
+        id: "minimalist",
+        label: isZh ? "\u2601\uFE0F \u6781\u7B80\u900F\u660E" : "\u2601\uFE0F Minimalist",
+        tilt: "b",
+      },
+    ];
+  };
+
+  const syncPwaInstallUi = () => {
+    if (!dom.pwaInstallButton) return;
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+    setSettingsRowLabel(dom.pwaInstallButton, isStandalone ? uiText("pwa.installed", "Installed") : uiText("pwa.install", "Add to Home"));
+    dom.pwaInstallButton.disabled = isStandalone;
+    dom.pwaInstallButton.onclick = handlePwaInstall;
+
+    if (dom.pwaInstallNote) {
+      if (isStandalone) dom.pwaInstallNote.textContent = uiText("pwa.note.installed", "Already installed on this device.");
+      else if (deferredPromptEvent) dom.pwaInstallNote.textContent = uiText("pwa.note.direct", "Install directly from here.");
+      else dom.pwaInstallNote.textContent = uiText("pwa.note.manual", "If no prompt appears, open the browser menu and choose Add to Home Screen.");
+    }
+  };
+
+  const syncSettingsLanguageUi = () => {
+    syncDocumentLanguage();
+
+    const setText = (selector, text) => {
+      const node = document.querySelector(selector);
+      if (node) node.textContent = text;
+    };
+
+    setText(".settings-group-planning .settings-group-title", uiText("settings.group.planning", "Planning"));
+    setText(".settings-group-appearance .settings-group-title", uiText("settings.group.appearance", "Appearance"));
+    setText(".settings-group-app .settings-group-title", uiText("settings.group.app", "App"));
+    setText(".settings-group-appearance .settings-subtitle", uiText("settings.theme", "Theme"));
+    setText("#ui-language-label", uiText("settings.language", "Language"));
+    setText("#custom-background-row span:last-child", uiText("settings.uploadBg", "Upload Background"));
+
+    setSettingsRowLabel(dom.aiPlannerLink, uiText("settings.aiPlanner", "AI Planner"));
+    setSettingsRowLabel(dom.apkDownloadButton, uiText("settings.downloadApk", "Download APK"));
+
+    const reduceTextureLabel = dom.reduceTextureToggle?.closest(".settings-row")?.querySelector(".settings-row-label");
+    if (reduceTextureLabel) reduceTextureLabel.textContent = uiText("settings.paperLines", "Show paper lines");
+
+    const languageValue = document.getElementById("ui-language-value");
+    if (languageValue) {
+      languageValue.textContent =
+        getUiLanguage() === "zh" ? uiText("settings.language.zh", "\u4E2D\u6587") : uiText("settings.language.en", "English");
+    }
+
+    const languageRow = document.getElementById("ui-language-row");
+    if (languageRow) {
+      languageRow.onclick = () => {
+        setUiLanguage(getUiLanguage() === "zh" ? "en" : "zh");
+        renderAll();
+        persistState();
+      };
+    }
+
+    syncPwaInstallUi();
+  };
+
   applyTheme = function () {
     const visualTheme = normalizeSettingsTheme();
     state.theme = visualTheme;
@@ -15438,12 +15654,7 @@ if (!window.__settingsAdventureMinimalPass) {
       });
     }
 
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
-    if (dom.pwaInstallButton) {
-      dom.pwaInstallButton.textContent = isStandalone ? "Installed" : "Add to Home";
-      dom.pwaInstallButton.disabled = isStandalone;
-      dom.pwaInstallButton.onclick = handlePwaInstall;
-    }
+    syncPwaInstallUi();
 
     if (dom.apkDownloadButton) {
       dom.apkDownloadButton.onclick = () => {
@@ -15537,6 +15748,13 @@ if (!window.__settingsAdventureMinimalPass) {
               <span>\u4E0A\u4F20\u80CC\u666F\u56FE</span>
             </button>
           </div>
+          <button class="settings-row settings-row-link" id="ui-language-row" data-icon="\uD83C\uDF10" data-tilt="d" type="button">
+            <span class="settings-row-label" id="ui-language-label">\u8BED\u8A00</span>
+            <span class="settings-row-trail">
+              <span id="ui-language-value">\u4E2D\u6587</span>
+              <span class="settings-row-arrow" aria-hidden="true">&rsaquo;</span>
+            </span>
+          </button>
           <input class="settings-hidden-file" id="custom-background-input" type="file" accept="image/*" />
         </div>
       </section>
@@ -15552,6 +15770,7 @@ if (!window.__settingsAdventureMinimalPass) {
               <span class="settings-row-label">Download APK</span>
             </button>
           </div>
+          <p class="settings-weak-note" id="pwa-install-note"></p>
         </div>
       </section>
 
@@ -15578,10 +15797,7 @@ if (!window.__settingsAdventureMinimalPass) {
     }
 
     if (dom.themeGrid) {
-      dom.themeGrid.innerHTML = [
-        { id: "adventure", label: "\uD83D\uDDE1\uFE0F \u82F1\u96C4\u5192\u9669", tilt: "a" },
-        { id: "minimalist", label: "\u2601\uFE0F \u6781\u7B80\u900F\u660E", tilt: "b" },
-      ]
+      dom.themeGrid.innerHTML = buildThemeCardsByLanguage()
         .map(
           (theme) => `
             <button
@@ -15606,6 +15822,8 @@ if (!window.__settingsAdventureMinimalPass) {
         };
       });
     }
+
+    syncSettingsLanguageUi();
   };
 
   applyTheme();
@@ -16380,8 +16598,11 @@ function renderTaskRow(task, isCompleted = false) {
 function renderTodoGroups() {
   const groups = getGroupedTasks();
   if (dom.todoSortToggle) {
-    dom.todoSortToggle.innerHTML = `<span aria-hidden="true">✎</span><span class="sr-only">Sort</span>`;
-    dom.todoSortToggle.setAttribute("aria-label", state.ui.todoSortMode ? "Done sorting" : "Sort tasks");
+    const sortActionLabel = state.ui.todoSortMode
+      ? uiText("todo.sort.done", "Done sorting")
+      : uiText("todo.sort.start", "Sort tasks");
+    dom.todoSortToggle.innerHTML = renderPencilIconMarkup(sortActionLabel);
+    dom.todoSortToggle.setAttribute("aria-label", sortActionLabel);
     dom.todoSortToggle.classList.toggle("is-active", Boolean(state.ui.todoSortMode));
     dom.todoSortToggle.onclick = () => {
       state.ui.todoSortMode = !state.ui.todoSortMode;
@@ -16392,10 +16613,10 @@ function renderTodoGroups() {
   }
 
   dom.todoGroups.innerHTML = [
-    renderTaskGroup("overdue", "Overdue", groups.overdue),
-    renderTaskGroup("today", "Today", groups.today),
-    renderTaskGroup("flexible", "Flexible", groups.flexible),
-    renderTaskGroup("completed", "Completed", groups.completed, true),
+    renderTaskGroup("overdue", uiText("group.overdue", "Overdue"), groups.overdue),
+    renderTaskGroup("today", uiText("group.today", "Today"), groups.today),
+    renderTaskGroup("flexible", uiText("group.flexible", "Flexible"), groups.flexible),
+    renderTaskGroup("completed", uiText("group.completed", "Completed"), groups.completed, true),
   ].join("");
 
   dom.todoGroups.querySelectorAll("[data-task-check]").forEach((input) => {
@@ -16467,3 +16688,6 @@ function renderTodoGroups() {
 
   bindTaskRowLongPress();
 }
+
+
+

@@ -1,10 +1,12 @@
-const CACHE_NAME = "colorful-time-v13";
+const CACHE_NAME = "colorful-time-v14";
 const APP_ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
   "./icons/icon.svg",
 ];
 
@@ -31,7 +33,16 @@ self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
   const isAppShellAsset =
     requestUrl.origin === self.location.origin &&
-    ["/", "/index.html", "/styles.css", "/app.js", "/manifest.webmanifest", "/icons/icon.svg"].includes(requestUrl.pathname);
+    [
+      "/",
+      "/index.html",
+      "/styles.css",
+      "/app.js",
+      "/manifest.webmanifest",
+      "/icons/icon-192.png",
+      "/icons/icon-512.png",
+      "/icons/icon.svg",
+    ].includes(requestUrl.pathname);
 
   if (isAppShellAsset) {
     event.respondWith(
