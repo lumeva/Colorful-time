@@ -4637,19 +4637,48 @@ function getAllCategories() {
 
 function ensureCategoryTemplates(category) {
   if (!category) return [];
-  if (Array.isArray(category.templates)) return category.templates;
+  const toArray = (value) => {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") return Object.values(value);
+    return [];
+  };
 
-  const fallback = Array.isArray(category.children)
-    ? category.children
-    : Array.isArray(category.items)
-      ? category.items
-      : [];
+  const normalizeTemplate = (template) => ({
+    id: template?.id ?? makeId("tpl"),
+    name: template?.name || template?.label || template?.title || template?.text || "Template",
+    durationMin:
+      Number(template?.durationMin) ||
+      Number(template?.duration) ||
+      Number(template?.minutes) ||
+      state.defaultDuration,
+  });
 
-  category.templates = fallback.map((template) => ({
-    id: template?.id || makeId("tpl"),
-    name: template?.name || template?.label || "Template",
-    durationMin: Number(template?.durationMin) || state.defaultDuration,
-  }));
+  const directTemplates = toArray(category.templates);
+  if (directTemplates.length) {
+    category.templates = directTemplates.map(normalizeTemplate);
+    return category.templates;
+  }
+
+  const fallbackSeed = [
+    ...toArray(category.children),
+    ...toArray(category.items),
+    ...toArray(category.subcategories),
+    ...toArray(category.nodes),
+    ...toArray(category.templateList),
+    ...toArray(category.templatesList),
+  ];
+
+  const flattened = fallbackSeed.flatMap((entry) => {
+    const nestedTemplates = toArray(entry?.templates);
+    if (nestedTemplates.length) return nestedTemplates;
+    const nestedItems = toArray(entry?.items);
+    if (nestedItems.length) return nestedItems;
+    const nestedChildren = toArray(entry?.children);
+    if (nestedChildren.length) return nestedChildren;
+    return [entry];
+  });
+
+  category.templates = flattened.map(normalizeTemplate).filter((template) => template.name);
   return category.templates;
 }
 
@@ -8694,14 +8723,34 @@ function renderCategoryStackItem(folder, category) {
 }
 
 function bindTreeEvents() {
+  const sameId = (left, right) => String(left ?? "") === String(right ?? "");
+  const toggleCategory = (folderId, categoryId) => {
+    let category = null;
+    if (folderId) {
+      const folder = state.folders.find((item) => sameId(item.id, folderId));
+      category = folder?.categories.find((item) => sameId(item.id, categoryId)) || null;
+    }
+    if (!category) {
+      category = getAllCategories().find((item) => sameId(item.id, categoryId)) || null;
+    }
+    if (!category) return;
+    category.expanded = !category.expanded;
+    renderTasksTree();
+    persistState();
+  };
+
+  const toggleFolder = (folderId) => {
+    const folder = state.folders.find((item) => sameId(item.id, folderId));
+    if (!folder) return;
+    folder.expanded = !folder.expanded;
+    renderTasksTree();
+    persistState();
+  };
+
   dom.tasksTree.querySelectorAll("[data-toggle-folder-row]").forEach((row) => {
     row.onclick = (event) => {
-      if (event.target.closest("button")) return;
-      const folder = state.folders.find((item) => item.id === row.dataset.toggleFolderRow);
-      if (!folder) return;
-      folder.expanded = !folder.expanded;
-      renderTasksTree();
-      persistState();
+      if (event.target.closest("[data-toggle-folder],[data-toggle-category],[data-add-child],[data-edit-node]")) return;
+      toggleFolder(row.dataset.toggleFolderRow);
     };
     row.onkeydown = (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
@@ -8712,30 +8761,33 @@ function bindTreeEvents() {
 
   dom.tasksTree.querySelectorAll("[data-toggle-category-row]").forEach((row) => {
     row.onclick = (event) => {
-      if (event.target.closest("button")) return;
-      let category = null;
+      if (event.target.closest("[data-toggle-folder],[data-toggle-category],[data-add-child],[data-edit-node]")) return;
       const key = row.dataset.categoryKey || "";
       if (key.includes("::")) {
         const [folderId, categoryId] = key.split("::");
-        const folder = state.folders.find((item) => item.id === folderId);
-        category = folder?.categories.find((item) => item.id === categoryId) || null;
+        toggleCategory(folderId, categoryId);
+        return;
       }
-      if (!category) {
-        const folder = state.folders.find((item) => item.id === row.dataset.parentFolder);
-        category = folder?.categories.find((item) => item.id === row.dataset.toggleCategoryRow) || null;
-      }
-      if (!category) {
-        category = getAllCategories().find((item) => item.id === row.dataset.toggleCategoryRow) || null;
-      }
-      if (!category) return;
-      category.expanded = !category.expanded;
-      renderTasksTree();
-      persistState();
+      toggleCategory(row.dataset.parentFolder, row.dataset.toggleCategoryRow);
     };
     row.onkeydown = (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       row.click();
+    };
+  });
+
+  dom.tasksTree.querySelectorAll("[data-toggle-folder]").forEach((button) => {
+    button.onclick = (event) => {
+      event.stopPropagation();
+      toggleFolder(button.dataset.toggleFolder);
+    };
+  });
+
+  dom.tasksTree.querySelectorAll("[data-toggle-category]").forEach((button) => {
+    button.onclick = (event) => {
+      event.stopPropagation();
+      toggleCategory(button.dataset.parentFolder, button.dataset.toggleCategory);
     };
   });
 
