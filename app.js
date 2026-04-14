@@ -54,7 +54,9 @@ const AI_WORKSTYLE_OPTIONS = [
 const AI_PROCRASTINATION_OPTIONS = ["任务模糊", "怕做错", "太无聊", "太有压力", "不知从哪开始"];
 const AI_VALUE_OPTIONS = ["事业成就", "身体健康", "亲密关系", "个人成长", "财务自由", "创意表达", "社会贡献"];
 
-const UI_TEXT = {
+const UI_LANGUAGE_STORAGE_KEY = "colorful-time-ui-language";
+
+const LANGUAGE_CONFIG = {
   zh: {
     "nav.home": "\u9996\u9875",
     "nav.stats": "\u7EDF\u8BA1",
@@ -66,6 +68,16 @@ const UI_TEXT = {
     "group.completed": "\u5DF2\u5B8C\u6210",
     "todo.sort.start": "\u6392\u5E8F\u4EFB\u52A1",
     "todo.sort.done": "\u5B8C\u6210\u6392\u5E8F",
+    "stats.tab.today": "\u4ECA\u65E5",
+    "stats.tab.week": "\u672C\u5468",
+    "stats.tab.month": "\u672C\u6708",
+    "stats.tab.custom": "\u81EA\u5B9A\u4E49",
+    "stats.title.today": "\u4ECA\u65E5\u8272\u5F69",
+    "stats.title.week": "\u672C\u5468\u8272\u5F69",
+    "stats.title.month": "\u672C\u6708\u8272\u5F69",
+    "stats.title.custom": "\u81EA\u5B9A\u4E49\u8272\u5F69",
+    "stats.view": "\u89C6\u56FE",
+    "stats.category": "\u5206\u7C7B",
     "settings.group.planning": "\u8BA1\u5212",
     "settings.group.appearance": "\u5916\u89C2",
     "settings.group.app": "\u5E94\u7528",
@@ -77,6 +89,33 @@ const UI_TEXT = {
     "settings.aiPlanner": "\u0041\u0049 \u751F\u6210\u65E5\u7A0B",
     "settings.downloadApk": "\u4E0B\u8F7D APK",
     "settings.paperLines": "\u663E\u793A\u7EB8\u5F20\u7EB9\u7406",
+    "settings.prioritizeTime": "\u4F18\u5148\u6700\u8FD1\u65F6\u95F4\u4EFB\u52A1",
+    "settings.prioritizeImportant": "\u4F18\u5148\u91CD\u8981\u4EFB\u52A1",
+    "settings.completedDefault": "Completed \u9ED8\u8BA4\u5C55\u5F00",
+    "settings.defaultDuration": "\u9ED8\u8BA4\u4EFB\u52A1\u65F6\u957F",
+    "settings.dayStart": "\u4E00\u5929\u5F00\u59CB\u65F6\u95F4",
+    "ai.title": "AI\u751F\u6210\u65E5\u7A0B",
+    "ai.horizon": "\u89C4\u5212\u5C42\u7EA7",
+    "ai.horizon.pick": "\u9009\u62E9\u89C4\u5212\u5C42\u7EA7",
+    "ai.horizon.overall": "\u5168\u5C40\u89C4\u5212\uff08\u5B63\u5EA6/\u5E74\u5EA6\uff09",
+    "ai.horizon.weekly": "\u6708/\u5468\u89C4\u5212",
+    "ai.horizon.daily": "\u4ECA\u65E5/\u660E\u65E5\u89C4\u5212",
+    "ai.section.questionnaire": "\u95EE\u5377",
+    "ai.section.generate": "\u751F\u6210 Prompt",
+    "ai.section.paste": "\u7C98\u8D34 AI \u7ED3\u679C",
+    "ai.section.preview": "\u9884\u89C8\u5BFC\u5165",
+    "ai.panel.overall.title": "\u5168\u5C40\u89C4\u5212",
+    "ai.panel.overall.note": "\u9002\u7528\u4E8E\u9700\u8981\u5B63\u5EA6/\u5E74\u5EA6\u65B9\u5411\u7684\u60C5\u5883\u3002",
+    "ai.panel.weekly.title": "\u6708/\u5468\u89C4\u5212",
+    "ai.panel.weekly.note": "\u9002\u7528\u4E8E\u77ED\u5468\u671F\u590D\u76D8\u4E0E\u6267\u884C\u8BA1\u5212\u3002",
+    "ai.panel.daily.title": "\u4ECA\u65E5/\u660E\u65E5\u89C4\u5212",
+    "ai.panel.daily.note": "\u9002\u7528\u4E8E\u4E00\u5929\u5185\u7684\u4F18\u5148\u7EA7\u4E0E\u65F6\u95F4\u5206\u914D\u3002",
+    "ai.button.generate": "\u751F\u6210 Prompt",
+    "ai.button.copy": "\u590D\u5236 Prompt",
+    "ai.button.preview": "\u9884\u89C8",
+    "ai.button.import": "\u5BFC\u5165",
+    "ai.placeholder.prompt": "Prompt \u4F1A\u51FA\u73B0\u5728\u8FD9\u91CC\u3002",
+    "ai.placeholder.result": "\u5728\u8FD9\u91CC\u7C98\u8D34 AI \u8FD4\u56DE\u7684\u7ED3\u679C\u3002",
     "pwa.installed": "\u5DF2\u5B89\u88C5",
     "pwa.install": "\u6DFB\u52A0\u5230\u4E3B\u5C4F\u5E55",
     "pwa.note.installed": "\u5DF2\u5B89\u88C5\u5728\u5F53\u524D\u8BBE\u5907\u3002",
@@ -97,6 +136,16 @@ const UI_TEXT = {
     "group.completed": "Completed",
     "todo.sort.start": "Sort tasks",
     "todo.sort.done": "Done sorting",
+    "stats.tab.today": "Today",
+    "stats.tab.week": "Week",
+    "stats.tab.month": "Month",
+    "stats.tab.custom": "Custom",
+    "stats.title.today": "Today's Color",
+    "stats.title.week": "Weekly Color",
+    "stats.title.month": "Monthly Color",
+    "stats.title.custom": "Custom Color",
+    "stats.view": "View",
+    "stats.category": "Category",
     "settings.group.planning": "Planning",
     "settings.group.appearance": "Appearance",
     "settings.group.app": "App",
@@ -108,6 +157,33 @@ const UI_TEXT = {
     "settings.aiPlanner": "AI Planner",
     "settings.downloadApk": "Download APK",
     "settings.paperLines": "Show paper lines",
+    "settings.prioritizeTime": "Prioritize nearest-time tasks",
+    "settings.prioritizeImportant": "Prioritize important tasks",
+    "settings.completedDefault": "Expand Completed by default",
+    "settings.defaultDuration": "Default task duration",
+    "settings.dayStart": "Day starts at",
+    "ai.title": "AI Planner",
+    "ai.horizon": "Planning horizon",
+    "ai.horizon.pick": "Choose a planning level",
+    "ai.horizon.overall": "Overall planning (Quarter / Year)",
+    "ai.horizon.weekly": "Month / Week planning",
+    "ai.horizon.daily": "Today / Tomorrow planning",
+    "ai.section.questionnaire": "Questionnaire",
+    "ai.section.generate": "Generate Prompt",
+    "ai.section.paste": "Paste AI Result",
+    "ai.section.preview": "Preview Import",
+    "ai.panel.overall.title": "Overall planning",
+    "ai.panel.overall.note": "Use this when you want quarter or year level direction.",
+    "ai.panel.weekly.title": "Month / Week planning",
+    "ai.panel.weekly.note": "Use this when you want a short-cycle review and execution plan.",
+    "ai.panel.daily.title": "Today / Tomorrow planning",
+    "ai.panel.daily.note": "Use this for day-level prioritization and time windows.",
+    "ai.button.generate": "Generate Prompt",
+    "ai.button.copy": "Copy Prompt",
+    "ai.button.preview": "Preview",
+    "ai.button.import": "Import",
+    "ai.placeholder.prompt": "Prompt output will appear here.",
+    "ai.placeholder.result": "Paste the AI result here.",
     "pwa.installed": "Installed",
     "pwa.install": "Add to Home",
     "pwa.note.installed": "Already installed on this device.",
@@ -117,8 +193,16 @@ const UI_TEXT = {
   },
 };
 
+const UI_TEXT = LANGUAGE_CONFIG;
+
 function getUiLanguage() {
-  const current = state?.ui?.language;
+  let saved = null;
+  try {
+    saved = window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
+  } catch {
+    // ignore storage read failures
+  }
+  const current = saved || state?.ui?.language;
   if (current === "zh" || current === "en") return current;
   return String(navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en";
 }
@@ -126,6 +210,11 @@ function getUiLanguage() {
 function setUiLanguage(language) {
   state.ui = state.ui || {};
   state.ui.language = language === "en" ? "en" : "zh";
+  try {
+    window.localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, state.ui.language);
+  } catch {
+    // ignore storage write failures
+  }
   document.documentElement.lang = state.ui.language === "zh" ? "zh-CN" : "en";
 }
 
@@ -584,6 +673,54 @@ function renderAiPlanner() {
 }
 
 function buildAiQuestionnaire(cycle) {
+  if (getUiLanguage() === "en") {
+    if (cycle === "overall") {
+      return `
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-period">Time period</label>
+        <select class="ai-input" id="ai-overall-period" data-ai-field="overall.period">
+          <option value="quarter">Quarter</option>
+          <option value="year">Year</option>
+        </select>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-mbti">Q1 · Personality type</label>
+        <select class="ai-input" id="ai-overall-mbti" data-ai-field="overall.mbti">
+          ${AI_MBTI_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
+        </select>
+      </div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-overall-stage">Current life/work stage</label><textarea class="ai-input ai-textarea" id="ai-overall-stage" rows="3" data-ai-field="overall.lifeStage" placeholder="For example: student / job search / early startup"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-overall-challenge">Main challenge</label><textarea class="ai-input ai-textarea" id="ai-overall-challenge" rows="3" data-ai-field="overall.challenge" placeholder="For example: too many tasks, unstable rhythm, energy fluctuations"></textarea></div>
+      <div class="ai-field"><div class="ai-field-label">Target domains</div><div class="ai-domain-stack"><div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain1Name" placeholder="Domain 1" /><input class="ai-input" data-ai-field="overall.domain1Goal" placeholder="Goal direction" /></div><div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain2Name" placeholder="Domain 2" /><input class="ai-input" data-ai-field="overall.domain2Goal" placeholder="Goal direction" /></div><div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain3Name" placeholder="Domain 3 (optional)" /><input class="ai-input" data-ai-field="overall.domain3Goal" placeholder="Goal direction (optional)" /></div></div></div>
+    `;
+    }
+
+    if (cycle === "weekly") {
+      return `
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-period">Planning period</label><select class="ai-input" id="ai-weekly-period" data-ai-field="weekly.period"><option value="week">Week</option><option value="month">Month</option></select></div>
+      <div class="ai-field"><div class="ai-field-label">Date range</div><div class="ai-two-grid"><input class="ai-input" type="date" data-ai-field="weekly.start" /><input class="ai-input" type="date" data-ai-field="weekly.end" /></div></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-win">Q1 · What went better than expected</label><textarea class="ai-input ai-textarea" id="ai-weekly-win" rows="3" data-ai-field="weekly.win"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-missed">Q1 · What you planned but missed</label><textarea class="ai-input ai-textarea" id="ai-weekly-missed" rows="3" data-ai-field="weekly.missed"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-reason">Reason analysis</label><textarea class="ai-input ai-textarea" id="ai-weekly-reason" rows="3" data-ai-field="weekly.reason"></textarea></div>
+      <div class="ai-field"><div class="ai-field-label">Q2 · Core tasks (3)</div><div class="ai-three-stack"><input class="ai-input" data-ai-field="weekly.core1" placeholder="Core task 1" /><input class="ai-input" data-ai-field="weekly.core2" placeholder="Core task 2" /><input class="ai-input" data-ai-field="weekly.core3" placeholder="Core task 3" /></div></div>
+      <div class="ai-field"><div class="ai-field-label">Q3 · Energy forecast</div><div class="ai-range-row"><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="weekly.energy" /><span class="ai-range-value" data-ai-display="weekly.energy"></span></div><textarea class="ai-input ai-textarea" rows="3" data-ai-field="weekly.special" placeholder="Travel / major meetings / family events, etc."></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-commitments">Q4 · Fixed commitments</label><textarea class="ai-input ai-textarea" id="ai-weekly-commitments" rows="3" data-ai-field="weekly.commitments" placeholder="Meetings, appointments, deadlines..."></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-obstacle">Q5 · Potential obstacles</label><textarea class="ai-input ai-textarea" id="ai-weekly-obstacle" rows="3" data-ai-field="weekly.obstacle"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-response">Planned response</label><textarea class="ai-input ai-textarea" id="ai-weekly-response" rows="3" data-ai-field="weekly.response"></textarea></div>
+    `;
+    }
+
+    return `
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-horizon">Planning target</label><select class="ai-input" id="ai-daily-horizon" data-ai-field="daily.horizon"><option value="today">Today</option><option value="tomorrow">Tomorrow</option></select></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-date">Date</label><input class="ai-input" id="ai-daily-date" type="date" data-ai-field="daily.date" /></div>
+    <div class="ai-field"><div class="ai-field-label">Q1 · Current energy state</div><div class="ai-meter-stack"><label class="ai-range-block"><span>Body</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.body" /><span class="ai-range-value" data-ai-display="daily.body"></span></label><label class="ai-range-block"><span>Mood</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.mood" /><span class="ai-range-value" data-ai-display="daily.mood"></span></label><label class="ai-range-block"><span>Focus</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.focus" /><span class="ai-range-value" data-ai-display="daily.focus"></span></label></div></div>
+    <div class="ai-field"><div class="ai-field-label">Q2 · Three MITs</div><div class="ai-mit-stack">${[1, 2, 3].map((index) => `<div class="ai-mit-row"><input class="ai-input" data-ai-field="daily.mit${index}" placeholder="MIT ${index}" /><input class="ai-input ai-duration-input" type="number" min="5" step="5" data-ai-field="daily.mit${index}Duration" placeholder="Minutes" /></div>`).join("")}</div><textarea class="ai-input ai-textarea" rows="3" data-ai-field="daily.otherTasks" placeholder="Pending but non-urgent"></textarea></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-windows">Q3 · Time windows</label><textarea class="ai-input ai-textarea" id="ai-daily-windows" rows="3" data-ai-field="daily.windows" placeholder="For example: 09:00-11:00 (2h) · 15:00-16:30 (1.5h)"></textarea></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-quick">Q4 · Quick-start task</label><input class="ai-input" id="ai-daily-quick" data-ai-field="daily.quickTask" placeholder="A task you can finish within 5 minutes (optional)" /></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-distraction">Q5 · Distraction forecast</label><textarea class="ai-input ai-textarea" id="ai-daily-distraction" rows="3" data-ai-field="daily.distraction" placeholder="What is most likely to interrupt you today?"></textarea><textarea class="ai-input ai-textarea" rows="3" data-ai-field="daily.strategy" placeholder="How will you respond?"></textarea></div>
+  `;
+  }
+
   if (cycle === "overall") {
     return `
       <div class="ai-field"><label class="ai-field-label" for="ai-overall-period">时间周期</label><select class="ai-input" id="ai-overall-period" data-ai-field="overall.period"><option value="quarter">季度</option><option value="year">年度</option></select></div>
@@ -1193,6 +1330,122 @@ function renderAiPlanner() {
 }
 
 function buildAiQuestionnaire(cycle) {
+  const isEn = getUiLanguage() === "en";
+
+  if (isEn && cycle === "overall") {
+    return `
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-period">Time period</label>
+        <select class="ai-input" id="ai-overall-period" data-ai-field="overall.period">
+          <option value="quarter">Quarter</option>
+          <option value="year">Year</option>
+        </select>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-mbti">Q1 · Personality type</label>
+        <select class="ai-input" id="ai-overall-mbti" data-ai-field="overall.mbti">
+          ${AI_MBTI_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
+        </select>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q2 · Chronotype preference</div>
+        <div class="ai-choice-grid">
+          ${AI_CHRONOTYPE_OPTIONS.map((option) => `
+            <label class="ai-choice-chip">
+              <input type="radio" name="ai-overall-chronotype" data-ai-field="overall.chronotype" value="${option}" />
+              <span>${option}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q3 · Work style</div>
+        <div class="ai-choice-stack">
+          ${AI_WORKSTYLE_OPTIONS.map((option) => `
+            <label class="ai-choice-line">
+              <input type="radio" name="ai-overall-workstyle" data-ai-field="overall.workStyle" value="${option.label}" />
+              <span>${option.id}. ${option.label}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q4 · Procrastination triggers</div>
+        <div class="ai-choice-stack">
+          ${AI_PROCRASTINATION_OPTIONS.map((option) => `
+            <label class="ai-choice-line">
+              <input type="checkbox" data-ai-list="overall.procrastination" value="${option}" />
+              <span>${option}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Q5 · Core values ranking</div>
+        <div class="ai-three-grid">
+          <select class="ai-input" data-ai-field="overall.value1"><option value="">Priority 1</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+          <select class="ai-input" data-ai-field="overall.value2"><option value="">Priority 2</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+          <select class="ai-input" data-ai-field="overall.value3"><option value="">Priority 3</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+        </div>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-stage">Current life/work stage</label>
+        <textarea class="ai-input ai-textarea" id="ai-overall-stage" rows="3" data-ai-field="overall.lifeStage" placeholder="For example: student / job search / early startup"></textarea>
+      </div>
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-overall-challenge">Main challenge</label>
+        <textarea class="ai-input ai-textarea" id="ai-overall-challenge" rows="3" data-ai-field="overall.challenge" placeholder="For example: too many tasks, unstable rhythm, energy fluctuations"></textarea>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Target domains</div>
+        <div class="ai-domain-stack">
+          <div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain1Name" placeholder="Domain 1" /><input class="ai-input" data-ai-field="overall.domain1Goal" placeholder="Goal direction" /></div>
+          <div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain2Name" placeholder="Domain 2" /><input class="ai-input" data-ai-field="overall.domain2Goal" placeholder="Goal direction" /></div>
+          <div class="ai-domain-row"><input class="ai-input" data-ai-field="overall.domain3Name" placeholder="Domain 3 (optional)" /><input class="ai-input" data-ai-field="overall.domain3Goal" placeholder="Goal direction (optional)" /></div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (isEn && cycle === "weekly") {
+    return `
+      <div class="ai-field">
+        <label class="ai-field-label" for="ai-weekly-period">Planning period</label>
+        <select class="ai-input" id="ai-weekly-period" data-ai-field="weekly.period">
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+        </select>
+      </div>
+      <div class="ai-field">
+        <div class="ai-field-label">Date range</div>
+        <div class="ai-two-grid">
+          <input class="ai-input" type="date" data-ai-field="weekly.start" />
+          <input class="ai-input" type="date" data-ai-field="weekly.end" />
+        </div>
+      </div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-win">Q1 · What went better than expected</label><textarea class="ai-input ai-textarea" id="ai-weekly-win" rows="3" data-ai-field="weekly.win"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-missed">Q1 · What you planned but missed</label><textarea class="ai-input ai-textarea" id="ai-weekly-missed" rows="3" data-ai-field="weekly.missed"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-reason">Reason analysis</label><textarea class="ai-input ai-textarea" id="ai-weekly-reason" rows="3" data-ai-field="weekly.reason"></textarea></div>
+      <div class="ai-field"><div class="ai-field-label">Q2 · Core tasks (3)</div><div class="ai-three-stack"><input class="ai-input" data-ai-field="weekly.core1" placeholder="Core task 1" /><input class="ai-input" data-ai-field="weekly.core2" placeholder="Core task 2" /><input class="ai-input" data-ai-field="weekly.core3" placeholder="Core task 3" /></div></div>
+      <div class="ai-field"><div class="ai-field-label">Q3 · Energy forecast</div><div class="ai-range-row"><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="weekly.energy" /><span class="ai-range-value" data-ai-display="weekly.energy"></span></div><textarea class="ai-input ai-textarea" rows="3" data-ai-field="weekly.special" placeholder="Travel / major meetings / family events, etc."></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-commitments">Q4 · Fixed commitments</label><textarea class="ai-input ai-textarea" id="ai-weekly-commitments" rows="3" data-ai-field="weekly.commitments" placeholder="Meetings, appointments, deadlines..."></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-obstacle">Q5 · Potential obstacles</label><textarea class="ai-input ai-textarea" id="ai-weekly-obstacle" rows="3" data-ai-field="weekly.obstacle"></textarea></div>
+      <div class="ai-field"><label class="ai-field-label" for="ai-weekly-response">Planned response</label><textarea class="ai-input ai-textarea" id="ai-weekly-response" rows="3" data-ai-field="weekly.response"></textarea></div>
+    `;
+  }
+
+  if (isEn) {
+    return `
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-horizon">Planning target</label><select class="ai-input" id="ai-daily-horizon" data-ai-field="daily.horizon"><option value="today">Today</option><option value="tomorrow">Tomorrow</option></select></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-date">Date</label><input class="ai-input" id="ai-daily-date" type="date" data-ai-field="daily.date" /></div>
+    <div class="ai-field"><div class="ai-field-label">Q1 · Current energy state</div><div class="ai-meter-stack"><label class="ai-range-block"><span>Body</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.body" /><span class="ai-range-value" data-ai-display="daily.body"></span></label><label class="ai-range-block"><span>Mood</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.mood" /><span class="ai-range-value" data-ai-display="daily.mood"></span></label><label class="ai-range-block"><span>Focus</span><input class="ai-range" type="range" min="1" max="5" step="1" data-ai-field="daily.focus" /><span class="ai-range-value" data-ai-display="daily.focus"></span></label></div></div>
+    <div class="ai-field"><div class="ai-field-label">Q2 · Three MITs</div><div class="ai-mit-stack">${[1, 2, 3].map((index) => `<div class="ai-mit-row"><input class="ai-input" data-ai-field="daily.mit${index}" placeholder="MIT ${index}" /><input class="ai-input ai-duration-input" type="number" min="5" step="5" data-ai-field="daily.mit${index}Duration" placeholder="Minutes" /></div>`).join("")}</div><textarea class="ai-input ai-textarea" rows="3" data-ai-field="daily.otherTasks" placeholder="Pending but non-urgent"></textarea></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-windows">Q3 · Time windows</label><textarea class="ai-input ai-textarea" id="ai-daily-windows" rows="3" data-ai-field="daily.windows" placeholder="For example: 09:00-11:00 (2h) · 15:00-16:30 (1.5h)"></textarea></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-quick">Q4 · Quick-start task</label><input class="ai-input" id="ai-daily-quick" data-ai-field="daily.quickTask" placeholder="A task you can finish within 5 minutes (optional)" /></div>
+    <div class="ai-field"><label class="ai-field-label" for="ai-daily-distraction">Q5 · Distraction forecast</label><textarea class="ai-input ai-textarea" id="ai-daily-distraction" rows="3" data-ai-field="daily.distraction" placeholder="What is most likely to interrupt you today?"></textarea><textarea class="ai-input ai-textarea" rows="3" data-ai-field="daily.strategy" placeholder="How will you respond?"></textarea></div>
+  `;
+  }
+
   if (cycle === "overall") {
     return `
       <div class="ai-field">
@@ -2562,9 +2815,15 @@ function prepareTaskDraft(taskId = null) {
   const durationInput = getTaskDurationInputElement();
 
   state.ui.editingTaskId = taskId;
-  state.ui.createTaskSelection = task
-    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
-    : null;
+  if (task) {
+    state.ui.createTaskSelection = {
+      folderId: task.folderId,
+      categoryId: task.categoryId,
+      templateId: task.templateId,
+    };
+  } else if (!state.ui.createTaskSelection) {
+    state.ui.createTaskSelection = null;
+  }
 
   dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
   dom.taskNameInput.value = task?.name || "";
@@ -3029,10 +3288,11 @@ function renderTasksTree() {
 }
 
 function renderCategoryStackItem(folder, category) {
+  const templates = ensureCategoryTemplates(category);
   const templateMarkup = category.expanded
     ? `
       <div class="template-list-flat">
-        ${category.templates
+        ${templates
           .map(
             (template) => `
               <div class="template-row-flat">
@@ -3518,9 +3778,15 @@ function updateLogDuration() {
 function prepareTaskDraft(taskId = null) {
   const task = taskId ? state.tasks.find((item) => item.id === taskId) : null;
   state.ui.editingTaskId = taskId;
-  state.ui.createTaskSelection = task
-    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
-    : null;
+  if (task) {
+    state.ui.createTaskSelection = {
+      folderId: task.folderId,
+      categoryId: task.categoryId,
+      templateId: task.templateId,
+    };
+  } else if (!state.ui.createTaskSelection) {
+    state.ui.createTaskSelection = null;
+  }
 
   dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
   dom.taskNameInput.value = task?.name || "";
@@ -3541,10 +3807,12 @@ function updateTaskCategoryLabel() {
 }
 
 function renderCategorySheet() {
+  if (state.ui.categoryTrail.length > 1) {
+    state.ui.categoryTrail = state.ui.categoryTrail.slice(0, 1);
+  }
   const trail = state.ui.categoryTrail;
   const level = trail.length;
-  dom.categorySheetTitle.textContent =
-    level === 0 ? "Choose folder" : level === 1 ? "Choose category" : "Choose template";
+  dom.categorySheetTitle.textContent = level === 0 ? "Choose folder" : "Choose category";
 
   dom.categoryBreadcrumb.innerHTML = [
     `<button class="quick-chip" data-category-root type="button">Root</button>`,
@@ -3560,7 +3828,7 @@ function renderCategorySheet() {
       return `
         <button class="category-item" data-category-item="${item.id}" data-category-kind="${item.kind}" type="button">
           <span>${colorDot}${escapeHtml(item.label)}</span>
-          <strong>${item.kind === "template" ? "Use" : "›"}</strong>
+          <strong>${item.kind === "folder" ? "›" : "Use"}</strong>
         </button>
       `;
     })
@@ -3581,17 +3849,17 @@ function renderCategorySheet() {
     button.addEventListener("click", () => {
       const item = items.find((entry) => entry.id === button.dataset.categoryItem);
       if (!item) return;
-      if (item.kind === "use-category") {
+      if (item.kind === "category" || item.kind === "use-category") {
         state.ui.createTaskSelection = {
           folderId: item.folderId,
-          categoryId: item.categoryId,
+          categoryId: item.categoryId || item.id,
           templateId: null,
         };
         updateTaskCategoryLabel();
         openSheet("task-sheet");
         return;
       }
-      if (item.kind === "folder" || item.kind === "category") {
+      if (item.kind === "folder") {
         state.ui.categoryTrail = [...state.ui.categoryTrail, item];
         renderCategorySheet();
         return;
@@ -3846,15 +4114,16 @@ function handleTreeEditorSubmit(event) {
   if (config.type === "template") {
     const category = findCategory(config.parentFolderId, config.parentCategoryId);
     if (!category) return;
+    const templates = ensureCategoryTemplates(category);
     const duration = Number(dom.treeDurationInput.value) || state.defaultDuration;
     if (config.mode === "edit") {
-      const template = category.templates.find((entry) => entry.id === config.nodeId);
+      const template = templates.find((entry) => entry.id === config.nodeId);
       if (template) {
         template.name = name;
         template.durationMin = duration;
       }
     } else {
-      category.templates.push({ id: makeId("tpl"), name, durationMin: duration });
+      templates.push({ id: makeId("tpl"), name, durationMin: duration });
       category.expanded = true;
     }
   }
@@ -3895,7 +4164,8 @@ function handleTreeDelete() {
     }
     const category = findCategory(config.parentFolderId, config.parentCategoryId);
     if (category) {
-      category.templates = category.templates.filter((template) => template.id !== config.nodeId);
+      const templates = ensureCategoryTemplates(category);
+      category.templates = templates.filter((template) => template.id !== config.nodeId);
     }
   }
 
@@ -4365,10 +4635,28 @@ function getAllCategories() {
   return state.folders.flatMap((folder) => folder.categories);
 }
 
+function ensureCategoryTemplates(category) {
+  if (!category) return [];
+  if (Array.isArray(category.templates)) return category.templates;
+
+  const fallback = Array.isArray(category.children)
+    ? category.children
+    : Array.isArray(category.items)
+      ? category.items
+      : [];
+
+  category.templates = fallback.map((template) => ({
+    id: template?.id || makeId("tpl"),
+    name: template?.name || template?.label || "Template",
+    durationMin: Number(template?.durationMin) || state.defaultDuration,
+  }));
+  return category.templates;
+}
+
 function getAllTemplates() {
   return state.folders.flatMap((folder) =>
     folder.categories.flatMap((category) =>
-      category.templates.map((template) => ({ ...template, categoryId: category.id, folderId: folder.id }))
+      ensureCategoryTemplates(category).map((template) => ({ ...template, categoryId: category.id, folderId: folder.id }))
     )
   );
 }
@@ -5575,9 +5863,15 @@ function formatTaskDateNote(dateValue) {
 function prepareTaskDraft(taskId = null) {
   const task = taskId ? state.tasks.find((item) => item.id === taskId) : null;
   state.ui.editingTaskId = taskId;
-  state.ui.createTaskSelection = task
-    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
-    : null;
+  if (task) {
+    state.ui.createTaskSelection = {
+      folderId: task.folderId,
+      categoryId: task.categoryId,
+      templateId: task.templateId,
+    };
+  } else if (!state.ui.createTaskSelection) {
+    state.ui.createTaskSelection = null;
+  }
 
   dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
   dom.taskNameInput.value = task?.name || "";
@@ -5885,7 +6179,13 @@ function renderStats() {
   const range = state.ui.statsRange;
   const stats = buildStatsDataset(range);
   dom.statsTitle.textContent =
-    range === "today" ? "Today's Color" : range === "week" ? "Weekly Color" : range === "month" ? "Monthly Color" : "Custom Color";
+    range === "today"
+      ? uiText("stats.title.today", "Today's Color")
+      : range === "week"
+        ? uiText("stats.title.week", "Weekly Color")
+        : range === "month"
+          ? uiText("stats.title.month", "Monthly Color")
+          : uiText("stats.title.custom", "Custom Color");
   dom.statsRangeNote.textContent = stats.note;
   dom.customRangeRow.hidden = range !== "custom";
   dom.customStartDate.value = state.ui.customRange.start;
@@ -6109,10 +6409,11 @@ function renderTasksTree() {
 }
 
 function renderCategoryStackItem(folder, category) {
+  const templates = ensureCategoryTemplates(category);
   const templateMarkup = category.expanded
     ? `
       <div class="template-list-flat">
-        ${category.templates
+        ${templates
           .map(
             (template) => `
               <div class="template-row-flat">
@@ -6173,10 +6474,10 @@ function renderStats() {
 
 function renderStatsTabs() {
   const rangeOptions = [
-    { id: "today", label: "Today" },
-    { id: "week", label: "Week" },
-    { id: "month", label: "Month" },
-    { id: "custom", label: "Custom" },
+    { id: "today", label: uiText("stats.tab.today", "Today") },
+    { id: "week", label: uiText("stats.tab.week", "Week") },
+    { id: "month", label: uiText("stats.tab.month", "Month") },
+    { id: "custom", label: uiText("stats.tab.custom", "Custom") },
   ];
 
   dom.statsRangeTabs.className = "range-switch";
@@ -6190,7 +6491,7 @@ function renderStatsTabs() {
     )
     .join("");
 
-  dom.statsModeTabs.innerHTML = `<span>View:</span><strong>Category</strong>`;
+  dom.statsModeTabs.innerHTML = `<span>${uiText("stats.view", "View")}:</span><strong>${uiText("stats.category", "Category")}</strong>`;
 
   dom.statsRangeTabs.querySelectorAll("[data-stats-range]").forEach((button) => {
     button.onclick = () => {
@@ -7338,9 +7639,15 @@ function prepareTaskDraft(taskId = null) {
   const tomorrow = formatInputDate(shiftDate(new Date(), 1));
 
   state.ui.editingTaskId = taskId;
-  state.ui.createTaskSelection = task
-    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
-    : null;
+  if (task) {
+    state.ui.createTaskSelection = {
+      folderId: task.folderId,
+      categoryId: task.categoryId,
+      templateId: task.templateId,
+    };
+  } else if (!state.ui.createTaskSelection) {
+    state.ui.createTaskSelection = null;
+  }
 
   dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
   dom.taskNameInput.value = task?.name || "";
@@ -8348,10 +8655,11 @@ function renderTasksTree() {
 }
 
 function renderCategoryStackItem(folder, category) {
+  const templates = ensureCategoryTemplates(category);
   const templateMarkup = category.expanded
     ? `
       <div class="template-list-flat">
-        ${category.templates
+        ${templates
           .map(
             (template) => `
               <div class="template-row-flat">
@@ -8370,7 +8678,7 @@ function renderCategoryStackItem(folder, category) {
 
   return `
     <section class="category-stack-item" style="--tree-color:${category.color};">
-      <div class="category-line" data-toggle-category-row="${category.id}" role="button" tabindex="0">
+      <div class="category-line" data-toggle-category-row="${category.id}" data-parent-folder="${folder.id}" data-category-key="${folder.id}::${category.id}" role="button" tabindex="0">
         <div class="category-toggle-line">
           <span class="category-color-bar"></span>
           <span class="category-title">${escapeHtml(category.name)}</span>
@@ -8405,7 +8713,20 @@ function bindTreeEvents() {
   dom.tasksTree.querySelectorAll("[data-toggle-category-row]").forEach((row) => {
     row.onclick = (event) => {
       if (event.target.closest("button")) return;
-      const category = getAllCategories().find((item) => item.id === row.dataset.toggleCategoryRow);
+      let category = null;
+      const key = row.dataset.categoryKey || "";
+      if (key.includes("::")) {
+        const [folderId, categoryId] = key.split("::");
+        const folder = state.folders.find((item) => item.id === folderId);
+        category = folder?.categories.find((item) => item.id === categoryId) || null;
+      }
+      if (!category) {
+        const folder = state.folders.find((item) => item.id === row.dataset.parentFolder);
+        category = folder?.categories.find((item) => item.id === row.dataset.toggleCategoryRow) || null;
+      }
+      if (!category) {
+        category = getAllCategories().find((item) => item.id === row.dataset.toggleCategoryRow) || null;
+      }
       if (!category) return;
       category.expanded = !category.expanded;
       renderTasksTree();
@@ -11644,12 +11965,7 @@ function upgradeState(current) {
   next.ui.taskTimerMode = next.ui.taskTimerMode || "up";
   next.ui.taskDatePreset = next.ui.taskDatePreset || "none";
   next.ui.aiPreviewItems = Array.isArray(next.ui.aiPreviewItems) ? next.ui.aiPreviewItems : [];
-  next.ui.language =
-    next.ui.language === "zh" || next.ui.language === "en"
-      ? next.ui.language
-      : String(navigator.language || "").toLowerCase().startsWith("zh")
-        ? "zh"
-        : "en";
+  next.ui.language = next.ui.language === "zh" || next.ui.language === "en" ? next.ui.language : getUiLanguage();
   next.ui.customRange = next.ui.customRange || {
     start: formatInputDate(shiftDate(today, -6)),
     end: formatInputDate(today),
@@ -12189,9 +12505,15 @@ function prepareTaskDraft(taskId = null) {
   const tomorrow = formatInputDate(shiftDate(new Date(), 1));
 
   state.ui.editingTaskId = taskId;
-  state.ui.createTaskSelection = task
-    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
-    : null;
+  if (task) {
+    state.ui.createTaskSelection = {
+      folderId: task.folderId,
+      categoryId: task.categoryId,
+      templateId: task.templateId,
+    };
+  } else if (!state.ui.createTaskSelection) {
+    state.ui.createTaskSelection = null;
+  }
 
   dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
   dom.taskNameInput.value = task?.name || "";
@@ -12984,9 +13306,15 @@ function prepareTaskDraft(taskId = null) {
   const tomorrow = formatInputDate(shiftDate(new Date(), 1));
 
   state.ui.editingTaskId = taskId;
-  state.ui.createTaskSelection = task
-    ? { folderId: task.folderId, categoryId: task.categoryId, templateId: task.templateId }
-    : null;
+  if (task) {
+    state.ui.createTaskSelection = {
+      folderId: task.folderId,
+      categoryId: task.categoryId,
+      templateId: task.templateId,
+    };
+  } else if (!state.ui.createTaskSelection) {
+    state.ui.createTaskSelection = null;
+  }
 
   dom.taskSheetTitle.textContent = task ? "Edit Task" : "Create Task";
   dom.taskNameInput.value = task?.name || "";
@@ -13189,6 +13517,11 @@ function ensureUiCopy() {
   if (timeBack) {
     timeBack.textContent = "<";
     timeBack.onclick = () => openSheet("task-sheet");
+  }
+  const categoryBack = document.getElementById("category-back-button");
+  if (categoryBack) {
+    categoryBack.textContent = "<";
+    categoryBack.onclick = () => openSheet("task-sheet");
   }
 
   if (dom.todoSortToggle) {
@@ -14108,7 +14441,20 @@ if (!window.__cleanAdventureUiFinalPass) {
     `;
   };
 
+  const buildAiQuestionnaireZh = buildAiQuestionnaire;
   buildAiQuestionnaire = function (cycle) {
+    if (getUiLanguage() === "zh") {
+      return buildAiQuestionnaireZh(cycle);
+    }
+    const EN_MBTI_OPTIONS = ["I don't know", "INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP", "ISTJ", "ISFJ", "ESTJ", "ESFJ", "ISTP", "ISFP", "ESTP", "ESFP"];
+    const EN_CHRONOTYPE_OPTIONS = ["Early morning", "Morning", "Afternoon", "Dusk", "Night"];
+    const EN_WORKSTYLE_OPTIONS = [
+      { id: "A", label: "Deep focus on one task until completion" },
+      { id: "B", label: "Switch between tasks to keep momentum" },
+      { id: "C", label: "Fixed time blocks + Pomodoro rhythm" },
+    ];
+    const EN_PROCRASTINATION_OPTIONS = ["Task is unclear", "Fear of doing it wrong", "Too boring", "Too much pressure", "No clear starting point"];
+    const EN_VALUE_OPTIONS = ["Career achievement", "Health", "Relationships", "Personal growth", "Financial freedom", "Creative expression", "Social contribution"];
     if (cycle === "overall") {
       return `
         <div class="ai-field">
@@ -14123,7 +14469,7 @@ if (!window.__cleanAdventureUiFinalPass) {
           <div class="ai-question-copy">Choose the closest profile if you know it. If not, pick "I don't know" and move on.</div>
           <div class="ai-question-note">Theory note: personality preference can shape how goals feel motivating or draining.</div>
           <select class="ai-input" id="ai-overall-mbti" data-ai-field="overall.mbti">
-            ${AI_MBTI_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
+            ${EN_MBTI_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}
           </select>
         </div>
         <div class="ai-field">
@@ -14131,7 +14477,7 @@ if (!window.__cleanAdventureUiFinalPass) {
           <div class="ai-question-copy">When do you usually feel the most mentally alive?</div>
           <div class="ai-question-note">Theory note: matching planning rhythm to circadian preference reduces friction.</div>
           <div class="ai-choice-grid">
-            ${AI_CHRONOTYPE_OPTIONS.map((option) => `
+            ${EN_CHRONOTYPE_OPTIONS.map((option) => `
               <label class="ai-choice-chip">
                 <input type="radio" name="ai-overall-chronotype" data-ai-field="overall.chronotype" value="${option}" />
                 <span>${option}</span>
@@ -14144,7 +14490,7 @@ if (!window.__cleanAdventureUiFinalPass) {
           <div class="ai-question-copy">Which pattern feels most natural when you work on meaningful goals?</div>
           <div class="ai-question-note">Theory note: execution style affects how plans should be chunked and sequenced.</div>
           <div class="ai-choice-stack">
-            ${AI_WORKSTYLE_OPTIONS.map((option) => `
+            ${EN_WORKSTYLE_OPTIONS.map((option) => `
               <label class="ai-choice-line">
                 <input type="radio" name="ai-overall-workstyle" data-ai-field="overall.workStyle" value="${option.label}" />
                 <span>${option.id}. ${option.label}</span>
@@ -14157,7 +14503,7 @@ if (!window.__cleanAdventureUiFinalPass) {
           <div class="ai-question-copy">Select the patterns that usually make you stall.</div>
           <div class="ai-question-note">Theory note: identifying triggers makes future planning more realistic and compassionate.</div>
           <div class="ai-choice-stack">
-            ${AI_PROCRASTINATION_OPTIONS.map((option) => `
+            ${EN_PROCRASTINATION_OPTIONS.map((option) => `
               <label class="ai-choice-line">
                 <input type="checkbox" data-ai-list="overall.procrastination" value="${option}" />
                 <span>${option}</span>
@@ -14170,9 +14516,9 @@ if (!window.__cleanAdventureUiFinalPass) {
           <div class="ai-question-copy">Pick the three values you most want your plan to protect.</div>
           <div class="ai-question-note">Theory note: value-aligned goals are easier to sustain over longer horizons.</div>
           <div class="ai-three-grid">
-            <select class="ai-input" data-ai-field="overall.value1"><option value="">Top value 1</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
-            <select class="ai-input" data-ai-field="overall.value2"><option value="">Top value 2</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
-            <select class="ai-input" data-ai-field="overall.value3"><option value="">Top value 3</option>${AI_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+            <select class="ai-input" data-ai-field="overall.value1"><option value="">Top value 1</option>${EN_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+            <select class="ai-input" data-ai-field="overall.value2"><option value="">Top value 2</option>${EN_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
+            <select class="ai-input" data-ai-field="overall.value3"><option value="">Top value 3</option>${EN_VALUE_OPTIONS.map((option) => `<option value="${option}">${option}</option>`).join("")}</select>
           </div>
         </div>
         <div class="ai-field">
@@ -15179,57 +15525,59 @@ if (!window.__aiPlannerLayoutAndIconPass) {
 
     const needsRebuild =
       aiPage.dataset.aiPlannerLayout !== AI_PLANNER_LAYOUT ||
+      aiPage.dataset.aiPlannerLang !== getUiLanguage() ||
       !aiPage.querySelector('[data-ai-panel="overall"]') ||
       !aiPage.querySelector("#ai-cycle-select");
 
     if (needsRebuild) {
       aiPage.dataset.aiPlannerLayout = AI_PLANNER_LAYOUT;
+      aiPage.dataset.aiPlannerLang = getUiLanguage();
       aiPage.innerHTML = `
       <header class="page-hero ai-page-hero">
         <div class="ai-page-topbar">
           <button class="sheet-back ai-page-back" id="ai-page-back" type="button" aria-label="Back">
             <span class="ai-page-back-symbol">&lt;</span>
           </button>
-          <h1 class="ai-page-title">\u0041\u0049\u751f\u6210\u65e5\u7a0b</h1>
+          <h1 class="ai-page-title">${uiText("ai.title", "AI Planner")}</h1>
         </div>
       </header>
 
       <section class="paper-sheet ai-sheet ai-sheet-compact">
         <section class="ai-step">
-          <div class="settings-group-title">Planning horizon</div>
+          <div class="settings-group-title">${uiText("ai.horizon", "Planning horizon")}</div>
           <div class="settings-list-block ai-planning-select-card">
             <label class="ai-field" for="ai-cycle-select">
-              <span class="ai-field-label">Choose a planning level</span>
+              <span class="ai-field-label">${uiText("ai.horizon.pick", "Choose a planning level")}</span>
               <select class="ai-input" id="ai-cycle-select">
-                <option value="overall">Overall planning (Quarter / Year)</option>
-                <option value="weekly">Month / Week planning</option>
-                <option value="daily">Today / Tomorrow planning</option>
+                <option value="overall">${uiText("ai.horizon.overall", "Overall planning (Quarter / Year)")}</option>
+                <option value="weekly">${uiText("ai.horizon.weekly", "Month / Week planning")}</option>
+                <option value="daily">${uiText("ai.horizon.daily", "Today / Tomorrow planning")}</option>
               </select>
             </label>
           </div>
         </section>
 
         <section class="ai-step">
-          <div class="settings-group-title">Questionnaire</div>
+          <div class="settings-group-title">${uiText("ai.section.questionnaire", "Questionnaire")}</div>
           <div class="settings-list-block ai-questionnaire" id="ai-questionnaire">
             <div class="ai-form-panel" data-ai-panel="overall">
               <div class="ai-form-panel-head">
-                <strong>Overall planning</strong>
-                <span>Use this when you want quarter or year level direction.</span>
+                <strong>${uiText("ai.panel.overall.title", "Overall planning")}</strong>
+                <span>${uiText("ai.panel.overall.note", "Use this when you want quarter or year level direction.")}</span>
               </div>
               <div class="ai-form-panel-body">${buildAiQuestionnaire("overall")}</div>
             </div>
             <div class="ai-form-panel" data-ai-panel="weekly">
               <div class="ai-form-panel-head">
-                <strong>Month / Week planning</strong>
-                <span>Use this when you want a short-cycle review and execution plan.</span>
+                <strong>${uiText("ai.panel.weekly.title", "Month / Week planning")}</strong>
+                <span>${uiText("ai.panel.weekly.note", "Use this when you want a short-cycle review and execution plan.")}</span>
               </div>
               <div class="ai-form-panel-body">${buildAiQuestionnaire("weekly")}</div>
             </div>
             <div class="ai-form-panel" data-ai-panel="daily">
               <div class="ai-form-panel-head">
-                <strong>Today / Tomorrow planning</strong>
-                <span>Use this for day-level prioritization and time windows.</span>
+                <strong>${uiText("ai.panel.daily.title", "Today / Tomorrow planning")}</strong>
+                <span>${uiText("ai.panel.daily.note", "Use this for day-level prioritization and time windows.")}</span>
               </div>
               <div class="ai-form-panel-body">${buildAiQuestionnaire("daily")}</div>
             </div>
@@ -15237,31 +15585,31 @@ if (!window.__aiPlannerLayoutAndIconPass) {
         </section>
 
         <section class="ai-step">
-          <div class="settings-group-title">Generate Prompt</div>
+          <div class="settings-group-title">${uiText("ai.section.generate", "Generate Prompt")}</div>
           <div class="settings-list-block ai-actions">
             <div class="ai-card-tools">
-              <button class="ghost-button ai-action-button" id="ai-generate-prompt" type="button">Generate Prompt</button>
+              <button class="ghost-button ai-action-button" id="ai-generate-prompt" type="button">${uiText("ai.button.generate", "Generate Prompt")}</button>
             </div>
             <div class="ai-textarea-wrap">
-              <button class="ghost-button ai-action-button ai-inline-copy" id="ai-copy-prompt" type="button">Copy Prompt</button>
-              <textarea id="ai-prompt-output" rows="12" readonly placeholder="Prompt output will appear here."></textarea>
+              <button class="ghost-button ai-action-button ai-inline-copy" id="ai-copy-prompt" type="button">${uiText("ai.button.copy", "Copy Prompt")}</button>
+              <textarea id="ai-prompt-output" rows="12" readonly placeholder="${uiText("ai.placeholder.prompt", "Prompt output will appear here.")}"></textarea>
             </div>
           </div>
         </section>
 
         <section class="ai-step">
-          <div class="settings-group-title">Paste AI Result</div>
+          <div class="settings-group-title">${uiText("ai.section.paste", "Paste AI Result")}</div>
           <div class="settings-list-block ai-actions">
-            <textarea id="ai-result-input" rows="10" placeholder="Paste the AI result here."></textarea>
+            <textarea id="ai-result-input" rows="10" placeholder="${uiText("ai.placeholder.result", "Paste the AI result here.")}"></textarea>
           </div>
         </section>
 
         <section class="ai-step">
-          <div class="settings-group-title">Preview Import</div>
+          <div class="settings-group-title">${uiText("ai.section.preview", "Preview Import")}</div>
           <div class="settings-list-block ai-actions">
             <div class="sheet-button-row ai-import-actions">
-              <button class="ghost-button ai-action-button" id="ai-preview-import" type="button">Preview</button>
-              <button class="ghost-button ai-action-button" id="ai-import-plan" type="button">Import</button>
+              <button class="ghost-button ai-action-button" id="ai-preview-import" type="button">${uiText("ai.button.preview", "Preview")}</button>
+              <button class="ghost-button ai-action-button" id="ai-import-plan" type="button">${uiText("ai.button.import", "Import")}</button>
             </div>
             <div class="ai-preview-list" id="ai-preview-list"></div>
           </div>
@@ -15455,6 +15803,11 @@ if (!window.__settingsAdventureMinimalPass) {
     setText(".settings-group-appearance .settings-subtitle", uiText("settings.theme", "Theme"));
     setText("#ui-language-label", uiText("settings.language", "Language"));
     setText("#custom-background-row span:last-child", uiText("settings.uploadBg", "Upload Background"));
+    setText("#settings-priority-time-label", uiText("settings.prioritizeTime", "Prioritize nearest-time tasks"));
+    setText("#settings-priority-important-label", uiText("settings.prioritizeImportant", "Prioritize important tasks"));
+    setText("#settings-completed-label", uiText("settings.completedDefault", "Expand Completed by default"));
+    setText("#settings-default-duration-label", uiText("settings.defaultDuration", "Default task duration"));
+    setText("#settings-day-start-label", uiText("settings.dayStart", "Day starts at"));
 
     setSettingsRowLabel(dom.aiPlannerLink, uiText("settings.aiPlanner", "AI Planner"));
     setSettingsRowLabel(dom.apkDownloadButton, uiText("settings.downloadApk", "Download APK"));
@@ -15709,26 +16062,26 @@ if (!window.__settingsAdventureMinimalPass) {
             <span class="settings-row-arrow" aria-hidden="true">&rsaquo;</span>
           </button>
           <label class="settings-row settings-row-toggle" data-icon="\u23F3" data-tilt="b">
-            <span class="settings-row-label">\u4F18\u5148\u6700\u8FD1\u65F6\u95F4\u4EFB\u52A1</span>
+            <span class="settings-row-label" id="settings-priority-time-label">\u4F18\u5148\u6700\u8FD1\u65F6\u95F4\u4EFB\u52A1</span>
             <input type="checkbox" id="next-time-priority-toggle" />
           </label>
           <label class="settings-row settings-row-toggle" data-icon="\u2B50" data-tilt="c">
-            <span class="settings-row-label">\u4F18\u5148\u91CD\u8981\u4EFB\u52A1</span>
+            <span class="settings-row-label" id="settings-priority-important-label">\u4F18\u5148\u91CD\u8981\u4EFB\u52A1</span>
             <input type="checkbox" id="next-important-priority-toggle" />
           </label>
           <label class="settings-row settings-row-toggle" data-icon="\u2705" data-tilt="d">
-            <span class="settings-row-label">Completed \u9ED8\u8BA4\u5C55\u5F00</span>
+            <span class="settings-row-label" id="settings-completed-label">Completed \u9ED8\u8BA4\u5C55\u5F00</span>
             <input type="checkbox" id="completed-default-toggle" />
           </label>
           <button class="settings-row settings-row-link" id="default-duration-row" data-icon="\u23F1\uFE0F" data-tilt="a" type="button">
-            <span class="settings-row-label">\u9ED8\u8BA4\u4EFB\u52A1\u65F6\u957F</span>
+            <span class="settings-row-label" id="settings-default-duration-label">\u9ED8\u8BA4\u4EFB\u52A1\u65F6\u957F</span>
             <span class="settings-row-trail">
               <span id="default-duration-value">25 min</span>
               <span class="settings-row-arrow" aria-hidden="true">&rsaquo;</span>
             </span>
           </button>
           <button class="settings-row settings-row-link" id="day-start-row" data-icon="\uD83C\uDF18" data-tilt="b" type="button">
-            <span class="settings-row-label">\u4E00\u5929\u5F00\u59CB\u65F6\u95F4</span>
+            <span class="settings-row-label" id="settings-day-start-label">\u4E00\u5929\u5F00\u59CB\u65F6\u95F4</span>
             <span class="settings-row-trail">
               <span id="day-start-value">00:00</span>
               <span class="settings-row-arrow" aria-hidden="true">&rsaquo;</span>

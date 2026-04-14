@@ -9722,7 +9722,7 @@ body:not(.theme-minimalist) .next-scroll .task-star::after {
 /* Stats category selector: straight pale-wood board with a single arrow */
 .page[data-page="stats"] .stats-cascade-button {
   transform: none !important;
-  background: #f8f3da !important;
+  background: #f8f5e4 !important;
   border: 2px solid #4a453e !important;
   border-radius: 3px 8px 4px 6px !important;
   box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.05) !important;
