@@ -8713,6 +8713,13 @@ function renderCategoryStackItem(folder, category) {
           <span class="category-title">${escapeHtml(category.name)}</span>
         </div>
         <div class="tree-controls">
+          <button
+            class="tree-toggle ${category.expanded ? "is-open" : ""}"
+            data-toggle-category="${category.id}"
+            data-parent-folder="${folder.id}"
+            type="button"
+            aria-label="${category.expanded ? "Collapse category" : "Expand category"}"
+          >${category.expanded ? "▾" : "▸"}</button>
           <button class="tree-plus-plain" data-add-child="task" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
           ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button" aria-label="Edit category">✎</button>` : ""}
         </div>
