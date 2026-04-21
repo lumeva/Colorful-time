@@ -5349,7 +5349,34 @@ function registerPwa() {
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").catch(() => {});
+      navigator.serviceWorker
+        .register("./sw.js")
+        .then((registration) => {
+          const requestImmediateActivation = (worker) => {
+            if (!worker) return;
+            worker.postMessage({ type: "SKIP_WAITING" });
+          };
+
+          registration.update().catch(() => {});
+          if (registration.waiting) requestImmediateActivation(registration.waiting);
+
+          registration.addEventListener("updatefound", () => {
+            const worker = registration.installing;
+            if (!worker) return;
+            worker.addEventListener("statechange", () => {
+              if (worker.state === "installed" && navigator.serviceWorker.controller) {
+                requestImmediateActivation(worker);
+              }
+            });
+          });
+        })
+        .catch(() => {});
+    });
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (window.__swReloading) return;
+      window.__swReloading = true;
+      window.location.reload();
     });
   }
   window.addEventListener("beforeinstallprompt", (event) => {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "colorful-time-v18";
+const CACHE_NAME = "colorful-time-v19";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -26,6 +26,12 @@ self.addEventListener("activate", (event) => {
       )
     ).then(() => self.clients.claim())
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {
