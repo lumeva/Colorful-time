@@ -5696,33 +5696,21 @@ body {
 .page[data-page="tasks"] .folder-headline,
 .page[data-page="tasks"] .category-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) var(--right-rail-final);
   align-items: center;
   column-gap: 8px;
 }
 
 .page[data-page="tasks"] .tree-controls {
-  width: auto;
+  width: var(--right-rail-final);
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 0;
 }
 
 .page[data-page="tasks"] .category-line {
   padding-left: 8px !important;
-}
-
-.page[data-page="tasks"] .tree-toggle {
-  display: inline-grid !important;
-  place-items: center;
-  min-width: 20px;
-  color: #4a3728 !important;
-  font-size: 0.92rem !important;
-}
-
-.page[data-page="tasks"] .tree-toggle::before {
-  content: none !important;
 }
 
 .page[data-page="tasks"] .template-list-flat {

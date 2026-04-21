@@ -8713,13 +8713,6 @@ function renderCategoryStackItem(folder, category) {
           <span class="category-title">${escapeHtml(category.name)}</span>
         </div>
         <div class="tree-controls">
-          <button
-            class="tree-toggle ${category.expanded ? "is-open" : ""}"
-            data-toggle-category="${category.id}"
-            data-parent-folder="${folder.id}"
-            type="button"
-            aria-label="${category.expanded ? "Collapse category" : "Expand category"}"
-          >${category.expanded ? "▾" : "▸"}</button>
           <button class="tree-plus-plain" data-add-child="task" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
           ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button" aria-label="Edit category">✎</button>` : ""}
         </div>
@@ -8732,6 +8725,7 @@ function renderCategoryStackItem(folder, category) {
 function bindTreeEvents() {
   const tree = dom.tasksTree;
   if (!tree) return;
+  const getEventElement = (target) => (target instanceof Element ? target : target?.parentElement || null);
 
   const sameId = (left, right) => String(left ?? "") === String(right ?? "");
   const toggleCategory = (folderId, categoryId) => {
@@ -8761,8 +8755,8 @@ function bindTreeEvents() {
   tree.dataset.boundTreeEventsV3 = "true";
 
   tree.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
+    const target = getEventElement(event.target);
+    if (!target) return;
 
     const editButton = target.closest("[data-edit-node]");
     if (editButton && tree.contains(editButton)) {
@@ -8832,8 +8826,8 @@ function bindTreeEvents() {
 
   tree.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
-    const target = event.target;
-    if (!(target instanceof Element)) return;
+    const target = getEventElement(event.target);
+    if (!target) return;
     if (target.closest("button,input,select,textarea,a")) return;
     const row = target.closest("[data-toggle-folder-row],[data-toggle-category-row]");
     if (!row || !tree.contains(row)) return;
