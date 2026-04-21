@@ -8712,22 +8712,25 @@ function renderTasksTree() {
 
 function renderCategoryStackItem(folder, category) {
   const templates = ensureCategoryTemplates(category);
+  const templateContent = templates.length
+    ? templates
+        .map(
+          (template) => `
+            <div class="template-row-flat">
+              <span>${escapeHtml(template.name)}</span>
+              <div class="template-tail">
+                <span class="template-duration">${template.durationMin} min</span>
+                ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="template" data-node-id="${template.id}" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button" aria-label="Edit template">✎</button>` : ""}
+              </div>
+            </div>
+          `
+        )
+        .join("")
+    : `<div class="template-empty-row" aria-live="polite">No third-level items yet</div>`;
   const templateMarkup = category.expanded
     ? `
       <div class="template-list-flat">
-        ${templates
-          .map(
-            (template) => `
-              <div class="template-row-flat">
-                <span>${escapeHtml(template.name)}</span>
-                <div class="template-tail">
-                  <span class="template-duration">${template.durationMin} min</span>
-                  ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="template" data-node-id="${template.id}" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button" aria-label="Edit template">✎</button>` : ""}
-                </div>
-              </div>
-            `
-          )
-          .join("")}
+        ${templateContent}
       </div>
     `
     : "";
@@ -8740,7 +8743,7 @@ function renderCategoryStackItem(folder, category) {
           <span class="category-title">${escapeHtml(category.name)}</span>
         </div>
         <div class="tree-controls">
-          <button class="tree-plus-plain" data-add-child="task" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
+          <button class="tree-plus-plain" data-add-child="template" data-parent-folder="${folder.id}" data-parent-category="${category.id}" type="button">+</button>
           ${state.ui.tasksEditMode ? `<button class="tree-mini" data-edit-node="category" data-node-id="${category.id}" data-parent-folder="${folder.id}" type="button" aria-label="Edit category">✎</button>` : ""}
         </div>
       </div>
@@ -8750,10 +8753,6 @@ function renderCategoryStackItem(folder, category) {
 }
 
 function bindTreeEvents() {
-  const tree = dom.tasksTree;
-  if (!tree) return;
-  const getEventElement = (target) => (target instanceof Element ? target : target?.parentElement || null);
-
   const sameId = (left, right) => String(left ?? "") === String(right ?? "");
   const toggleCategory = (folderId, categoryId) => {
     let category = null;
@@ -8778,31 +8777,59 @@ function bindTreeEvents() {
     persistState();
   };
 
-  if (tree.dataset.boundTreeEventsV3 === "true") return;
-  tree.dataset.boundTreeEventsV3 = "true";
+  dom.tasksTree.querySelectorAll("[data-toggle-folder-row]").forEach((row) => {
+    row.onclick = (event) => {
+      const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+      if (target?.closest("[data-add-child],[data-edit-node],[data-toggle-folder],[data-toggle-category]")) return;
+      toggleFolder(row.dataset.toggleFolderRow);
+    };
+    row.onkeydown = (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      row.click();
+    };
+  });
 
-  tree.addEventListener("click", (event) => {
-    const target = getEventElement(event.target);
-    if (!target) return;
+  dom.tasksTree.querySelectorAll("[data-toggle-category-row]").forEach((row) => {
+    row.onclick = (event) => {
+      const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+      if (target?.closest("[data-add-child],[data-edit-node],[data-toggle-folder],[data-toggle-category]")) return;
+      const key = row.dataset.categoryKey || "";
+      if (key.includes("::")) {
+        const [folderId, categoryId] = key.split("::");
+        toggleCategory(folderId, categoryId);
+        return;
+      }
+      toggleCategory(row.dataset.parentFolder, row.dataset.toggleCategoryRow);
+    };
+    row.onkeydown = (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      row.click();
+    };
+  });
 
-    const editButton = target.closest("[data-edit-node]");
-    if (editButton && tree.contains(editButton)) {
-      openTreeEditor({
-        mode: "edit",
-        type: editButton.dataset.editNode,
-        nodeId: editButton.dataset.nodeId,
-        parentFolderId: editButton.dataset.parentFolder || null,
-        parentCategoryId: editButton.dataset.parentCategory || null,
-      });
-      return;
-    }
+  dom.tasksTree.querySelectorAll("[data-toggle-folder]").forEach((button) => {
+    button.onclick = (event) => {
+      event.stopPropagation();
+      toggleFolder(button.dataset.toggleFolder);
+    };
+  });
 
-    const addButton = target.closest("[data-add-child]");
-    if (addButton && tree.contains(addButton)) {
-      if (addButton.dataset.addChild === "task") {
+  dom.tasksTree.querySelectorAll("[data-toggle-category]").forEach((button) => {
+    button.onclick = (event) => {
+      event.stopPropagation();
+      toggleCategory(button.dataset.parentFolder, button.dataset.toggleCategory);
+    };
+  });
+
+  dom.tasksTree.querySelectorAll("[data-add-child]").forEach((button) => {
+    button.onclick = (event) => {
+      event.stopPropagation();
+      if (button.dataset.addChild === "task") {
         state.ui.createTaskSelection = {
-          folderId: addButton.dataset.parentFolder || null,
-          categoryId: addButton.dataset.parentCategory || null,
+          folderId: button.dataset.parentFolder || null,
+          categoryId: button.dataset.parentCategory || null,
           templateId: null,
         };
         prepareTaskDraft();
@@ -8810,56 +8837,24 @@ function bindTreeEvents() {
       }
       openTreeEditor({
         mode: "create",
-        type: addButton.dataset.addChild,
-        parentFolderId: addButton.dataset.parentFolder || null,
-        parentCategoryId: addButton.dataset.parentCategory || null,
+        type: button.dataset.addChild,
+        parentFolderId: button.dataset.parentFolder || null,
+        parentCategoryId: button.dataset.parentCategory || null,
       });
-      return;
-    }
-
-    const folderButton = target.closest("[data-toggle-folder]");
-    if (folderButton && tree.contains(folderButton)) {
-      toggleFolder(folderButton.dataset.toggleFolder);
-      return;
-    }
-
-    const categoryButton = target.closest("[data-toggle-category]");
-    if (categoryButton && tree.contains(categoryButton)) {
-      const parentRow = categoryButton.closest("[data-toggle-category-row]");
-      toggleCategory(
-        categoryButton.dataset.parentFolder || parentRow?.dataset.parentFolder || null,
-        categoryButton.dataset.toggleCategory
-      );
-      return;
-    }
-
-    const folderRow = target.closest("[data-toggle-folder-row]");
-    if (folderRow && tree.contains(folderRow)) {
-      toggleFolder(folderRow.dataset.toggleFolderRow);
-      return;
-    }
-
-    const categoryRow = target.closest("[data-toggle-category-row]");
-    if (categoryRow && tree.contains(categoryRow)) {
-      const key = categoryRow.dataset.categoryKey || "";
-      if (key.includes("::")) {
-        const [folderId, categoryId] = key.split("::");
-        toggleCategory(folderId, categoryId);
-        return;
-      }
-      toggleCategory(categoryRow.dataset.parentFolder, categoryRow.dataset.toggleCategoryRow);
-    }
+    };
   });
 
-  tree.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    const target = getEventElement(event.target);
-    if (!target) return;
-    if (target.closest("button,input,select,textarea,a")) return;
-    const row = target.closest("[data-toggle-folder-row],[data-toggle-category-row]");
-    if (!row || !tree.contains(row)) return;
-    event.preventDefault();
-    row.click();
+  dom.tasksTree.querySelectorAll("[data-edit-node]").forEach((button) => {
+    button.onclick = (event) => {
+      event.stopPropagation();
+      openTreeEditor({
+        mode: "edit",
+        type: button.dataset.editNode,
+        nodeId: button.dataset.nodeId,
+        parentFolderId: button.dataset.parentFolder || null,
+        parentCategoryId: button.dataset.parentCategory || null,
+      });
+    };
   });
 }
 

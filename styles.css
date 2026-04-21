@@ -5718,6 +5718,13 @@ body {
   padding-left: 16px !important;
 }
 
+.template-empty-row {
+  padding: 8px 0 10px;
+  color: rgba(74, 69, 62, 0.62);
+  font-size: 0.92rem;
+  border-bottom: 1px dashed rgba(74, 69, 62, 0.14);
+}
+
 .page[data-page="tasks"] .template-row-flat {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 62px;
