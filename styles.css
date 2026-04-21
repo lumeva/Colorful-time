@@ -5715,7 +5715,7 @@ body {
 
 .page[data-page="tasks"] .template-list-flat {
   margin-left: 0 !important;
-  padding-left: 16px !important;
+  padding-left: 28px !important;
 }
 
 .template-empty-row {
@@ -9150,7 +9150,7 @@ body.theme-minimalist .page[data-page="tasks"] .category-stack-item {
 
 body.theme-minimalist .page[data-page="tasks"] .template-list-flat {
   margin-left: 0 !important;
-  padding-left: 32px !important;
+  padding-left: 44px !important;
   gap: 10px !important;
 }
 
